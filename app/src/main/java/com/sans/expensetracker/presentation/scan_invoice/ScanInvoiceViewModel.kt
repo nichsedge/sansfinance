@@ -90,7 +90,7 @@ class ScanInvoiceViewModel @Inject constructor(
                 _state.update { it.copy(imageUri = event.uri, isProcessing = true, suggestedTransactions = emptyList(), aiThinking = null) }
                 viewModelScope.launch {
                     val path = cacheFile(event.context, event.uri, "input_invoice.jpg")
-                    processInference(path)
+                    processInference(event.context, path)
                 }
             }
             is ScanInvoiceEvent.ToggleTransactionAcceptance -> {
@@ -152,15 +152,15 @@ class ScanInvoiceViewModel @Inject constructor(
         }
     }
 
-    private fun processInference(imagePath: String) {
+    private fun processInference(context: Context, imagePath: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val modelPath = _state.value.cachedModelPath ?: return@launch
 
                 val engineConfig = EngineConfig(
                     modelPath = modelPath,
-                    backend = Backend.GPU(), // Utilizing user's Dimensity 9300+
-                    visionBackend = Backend.GPU()
+                    backend = Backend.NPU(nativeLibraryDir = context.applicationInfo.nativeLibraryDir), // Utilizing user's Dimensity 9300+ NPU
+                    visionBackend = Backend.NPU(nativeLibraryDir = context.applicationInfo.nativeLibraryDir)
                 )
 
                 Engine(engineConfig).use { engine ->
