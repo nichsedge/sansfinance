@@ -159,19 +159,23 @@ class ScanInvoiceViewModel @Inject constructor(
 
                 val engineConfig = EngineConfig(
                     modelPath = modelPath,
-                    backend = Backend.CPU(), // Or GPU if requested
-                    visionBackend = Backend.CPU()
+                    backend = Backend.GPU(), // Utilizing user's Dimensity 9300+
+                    visionBackend = Backend.GPU()
                 )
 
                 Engine(engineConfig).use { engine ->
                     engine.initialize()
+
+                    val categoriesList = expenseRepository.getAllCategories().firstOrNull() ?: emptyList()
+                    val categoryNames = categoriesList.joinToString(", ") { it.name }
+                    val todayDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
 
                     val conversationConfig = ConversationConfig(
                         systemInstruction = Contents.of("You are a helpful assistant that acts as a JSON API.")
                     )
 
                     engine.createConversation(conversationConfig).use { conversation ->
-                        val prompt = "Extract all purchased items from this invoice. First, analyze the invoice step by step, identifying items, amounts, categories, and dates. Enclose this reasoning strictly inside <think>...</think> tags. Then, respond with a valid JSON array of the extracted items. Each object in the array must have these properties: 'title' (string), 'amount' (integer representing cents, so 50.00 becomes 5000), 'category' (string, e.g., 'Groceries', 'Food', 'Misc'), and 'dateString' (string, format YYYY-MM-DD if available, else null)."
+                        val prompt = "Extract all purchased items from this invoice. First, analyze the invoice step by step, identifying items, amounts, categories, and dates. Enclose this reasoning strictly inside <think>...</think> tags. Then, respond with a valid JSON array of the extracted items. Each object in the array must have these properties: 'title' (string), 'amount' (integer representing cents, multiply the displayed exact value by 100, e.g., if it says 529.000 or 529,000 the amount should be 52900000. If 50.00 it becomes 5000), 'category' (string, choose the closest match from these existing categories if possible: [${categoryNames}], else use 'Misc'), and 'dateString' (string, format YYYY-MM-DD. If the invoice date is missing or missing the year, use today's date: ${todayDate})."
 
                         val messageResponse = if (imagePath.isNotEmpty() && File(imagePath).exists()) {
                             conversation.sendMessage(
