@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TagDao {
-    @Query("SELECT * FROM tags")
+    @Query("SELECT * FROM tags ORDER BY orderIndex ASC, id ASC")
     fun getAllTags(): Flow<List<TagEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -22,6 +22,8 @@ interface TagDao {
 
     @Update(onConflict = OnConflictStrategy.REPLACE)
     suspend fun updateTag(tag: TagEntity)
+    @Update(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun updateTags(tags: List<TagEntity>)
 
     @Delete
     suspend fun deleteTag(tag: TagEntity)

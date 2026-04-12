@@ -17,6 +17,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.ui.composed
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.zIndex
+import androidx.compose.runtime.toMutableStateList
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -86,6 +96,17 @@ fun SettingsScreen(
     var tagToDelete by remember { mutableStateOf<TagEntity?>(null) }
     var showBudgetDialog by remember { mutableStateOf(false) }
     val currentBudget by viewModel.monthlyBudget.collectAsState()
+
+
+    val listState = rememberLazyListState()
+
+    val mutableCategories = remember(categories) { categories.toMutableStateList() }
+    var draggedCategoryIndex by remember { mutableStateOf<Int?>(null) }
+    var draggedCategoryOffset by remember { mutableStateOf(0f) }
+
+    val mutableTags = remember(tags) { tags.toMutableStateList() }
+    var draggedTagIndex by remember { mutableStateOf<Int?>(null) }
+    var draggedTagOffset by remember { mutableStateOf(0f) }
 
     LaunchedEffect(viewModel.syncMessage.value) {
         viewModel.syncMessage.value?.let {
@@ -285,12 +306,36 @@ fun SettingsScreen(
                 }
             }
 
-            items(categories) { category ->
+            itemsIndexed(mutableCategories, key = { _, item -> "cat_${item.id}" }) { index, category ->
+                val modifier = Modifier.reorderableModifier(
+                    itemKey = "cat_${category.id}",
+                    dragOffset = if (draggedCategoryIndex == index) draggedCategoryOffset else 0f,
+                    isDragged = draggedCategoryIndex == index,
+                    listState = listState,
+                    onDragStart = { draggedCategoryIndex = index },
+                    onDrag = { offset, targetKey ->
+                        draggedCategoryOffset += offset
+                        if (targetKey != null && targetKey is String && targetKey.startsWith("cat_")) {
+                            val targetIndex = mutableCategories.indexOfFirst { "cat_${it.id}" == targetKey }
+                            if (targetIndex != -1 && targetIndex != draggedCategoryIndex) {
+                                val item = mutableCategories.removeAt(draggedCategoryIndex!!)
+                                mutableCategories.add(targetIndex, item)
+                                draggedCategoryIndex = targetIndex
+                            }
+                        }
+                    },
+                    onDragEnd = {
+                        draggedCategoryIndex = null
+                        draggedCategoryOffset = 0f
+                        viewModel.onCategoriesReordered(mutableCategories.toList())
+                    }
+                )
                 SettingsItem(
                     title = category.name,
                     icon = category.icon,
                     onEdit = { categoryToEdit = category },
-                    onDelete = { categoryToDelete = category }
+                    onDelete = { categoryToDelete = category },
+                    modifier = modifier
                 )
             }
 
@@ -310,12 +355,36 @@ fun SettingsScreen(
                 }
             }
 
-            items(tags) { tag ->
+            itemsIndexed(mutableTags, key = { _, item -> "tag_${item.id}" }) { index, tag ->
+                val modifier = Modifier.reorderableModifier(
+                    itemKey = "tag_${tag.id}",
+                    dragOffset = if (draggedTagIndex == index) draggedTagOffset else 0f,
+                    isDragged = draggedTagIndex == index,
+                    listState = listState,
+                    onDragStart = { draggedTagIndex = index },
+                    onDrag = { offset, targetKey ->
+                        draggedTagOffset += offset
+                        if (targetKey != null && targetKey is String && targetKey.startsWith("tag_")) {
+                            val targetIndex = mutableTags.indexOfFirst { "tag_${it.id}" == targetKey }
+                            if (targetIndex != -1 && targetIndex != draggedTagIndex) {
+                                val item = mutableTags.removeAt(draggedTagIndex!!)
+                                mutableTags.add(targetIndex, item)
+                                draggedTagIndex = targetIndex
+                            }
+                        }
+                    },
+                    onDragEnd = {
+                        draggedTagIndex = null
+                        draggedTagOffset = 0f
+                        viewModel.onTagsReordered(mutableTags.toList())
+                    }
+                )
                 SettingsItem(
                     title = tag.name,
                     icon = "🏷️",
                     onEdit = { tagToEdit = tag },
-                    onDelete = { tagToDelete = tag }
+                    onDelete = { tagToDelete = tag },
+                    modifier = modifier
                 )
             }
 
@@ -455,10 +524,11 @@ fun SettingsItem(
     title: String,
     icon: String,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         shape = MaterialTheme.shapes.medium,
@@ -492,6 +562,12 @@ fun SettingsItem(
                     tint = MaterialTheme.colorScheme.error
                 )
             }
+            Icon(
+                Icons.Default.DragHandle,
+                contentDescription = "Reorder",
+                modifier = Modifier.size(24.dp).padding(start = 8.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -601,4 +677,50 @@ fun TagEditDialog(
             }
         }
     )
+}
+
+
+fun Modifier.reorderableModifier(
+    itemKey: Any,
+    dragOffset: Float,
+    isDragged: Boolean,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    onDragStart: () -> Unit,
+    onDrag: (Float, Any?) -> Unit,
+    onDragEnd: () -> Unit
+): Modifier = composed {
+    val zIndexValue = if (isDragged) 1f else 0f
+    val translationY = if (isDragged) dragOffset else 0f
+
+    this
+        .zIndex(zIndexValue)
+        .graphicsLayer {
+            this.translationY = translationY
+            this.shadowElevation = if (isDragged) 8f else 0f
+        }
+        .pointerInput(Unit) {
+            detectDragGesturesAfterLongPress(
+                onDragStart = { offset ->
+                    onDragStart()
+                },
+                onDrag = { change, dragAmount ->
+                    change.consume()
+                    val currentOffset = dragOffset + dragAmount.y
+                    var targetKey: Any? = null
+
+                    val currentItemInfo = listState.layoutInfo.visibleItemsInfo.find { it.key == itemKey }
+                    currentItemInfo?.let { info ->
+                        val middleY = info.offset + currentOffset + info.size / 2f
+                        val targetItem = listState.layoutInfo.visibleItemsInfo.find {
+                            middleY >= it.offset && middleY <= (it.offset + it.size)
+                        }
+                        targetKey = targetItem?.key
+                    }
+
+                    onDrag(dragAmount.y, targetKey)
+                },
+                onDragEnd = onDragEnd,
+                onDragCancel = onDragEnd
+            )
+        }
 }

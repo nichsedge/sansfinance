@@ -29,11 +29,13 @@ interface ExpenseRepository {
     fun getAllCategories(): Flow<List<com.sans.expensetracker.data.local.entity.CategoryEntity>>
     suspend fun insertCategory(category: com.sans.expensetracker.data.local.entity.CategoryEntity)
     suspend fun updateCategory(category: com.sans.expensetracker.data.local.entity.CategoryEntity)
+    suspend fun updateCategories(categories: List<com.sans.expensetracker.data.local.entity.CategoryEntity>)
     suspend fun deleteCategory(category: com.sans.expensetracker.data.local.entity.CategoryEntity)
 
     // Tag management
     fun getAllTagEntities(): Flow<List<com.sans.expensetracker.data.local.entity.TagEntity>>
     suspend fun updateTag(tag: com.sans.expensetracker.data.local.entity.TagEntity)
+    suspend fun updateTags(tags: List<com.sans.expensetracker.data.local.entity.TagEntity>)
     suspend fun deleteTag(tag: com.sans.expensetracker.data.local.entity.TagEntity)
 
     fun getSpendingByCategoryBetween(

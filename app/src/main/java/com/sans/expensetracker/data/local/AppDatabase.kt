@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
         TagEntity::class,
         ExpenseTagCrossRef::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -57,12 +57,12 @@ abstract class AppDatabase : RoomDatabase() {
 
                 // Always ensure basic categories exist
                 if (categoryDao.getCount() == 0) {
-                    categoryDao.insertCategory(CategoryEntity(name = "Food", icon = "🍔"))
-                    categoryDao.insertCategory(CategoryEntity(name = "Health", icon = "💊"))
-                    categoryDao.insertCategory(CategoryEntity(name = "Shopping", icon = "🛍️"))
-                    categoryDao.insertCategory(CategoryEntity(name = "Transport", icon = "🚗"))
-                    categoryDao.insertCategory(CategoryEntity(name = "Subscriptions", icon = "🌐"))
-                    categoryDao.insertCategory(CategoryEntity(name = "Others", icon = "📁"))
+                    categoryDao.insertCategory(CategoryEntity(name = "Food", icon = "🍔", orderIndex = 0))
+                    categoryDao.insertCategory(CategoryEntity(name = "Health", icon = "💊", orderIndex = 1))
+                    categoryDao.insertCategory(CategoryEntity(name = "Shopping", icon = "🛍️", orderIndex = 2))
+                    categoryDao.insertCategory(CategoryEntity(name = "Transport", icon = "🚗", orderIndex = 3))
+                    categoryDao.insertCategory(CategoryEntity(name = "Subscriptions", icon = "🌐", orderIndex = 4))
+                    categoryDao.insertCategory(CategoryEntity(name = "Others", icon = "📁", orderIndex = 5))
                 }
 
                 // Inject Seed Data from CSV ONLY if EVERYTHING is empty
@@ -122,6 +122,13 @@ abstract class AppDatabase : RoomDatabase() {
                     WHERE e.platform IS NOT NULL AND e.platform != ''
                 """.trimIndent()
                 )
+            }
+        }
+
+        val MIGRATION_6_7 = object : androidx.room.migration.Migration(6, 7) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE categories ADD COLUMN orderIndex INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE tags ADD COLUMN orderIndex INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

@@ -31,7 +31,7 @@ object AppModule {
             AppDatabase::class.java,
             "expense_tracker_db"
         )
-            .addMigrations(AppDatabase.MIGRATION_5_6)
+            .addMigrations(AppDatabase.MIGRATION_5_6, AppDatabase.MIGRATION_6_7)
             .addCallback(callback)
             .build()
     }

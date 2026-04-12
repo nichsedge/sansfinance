@@ -76,6 +76,16 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+
+    fun onCategoriesReordered(reorderedCategories: List<CategoryEntity>) {
+        viewModelScope.launch {
+            val updatedCategories = reorderedCategories.mapIndexed { index, category ->
+                category.copy(orderIndex = index)
+            }
+            repository.updateCategories(updatedCategories)
+        }
+    }
+
     fun deleteCategory(category: CategoryEntity) {
         viewModelScope.launch {
             repository.deleteCategory(category)
@@ -86,6 +96,16 @@ class SettingsViewModel @Inject constructor(
     fun updateTag(tag: TagEntity) {
         viewModelScope.launch {
             repository.updateTag(tag)
+        }
+    }
+
+
+    fun onTagsReordered(reorderedTags: List<TagEntity>) {
+        viewModelScope.launch {
+            val updatedTags = reorderedTags.mapIndexed { index, tag ->
+                tag.copy(orderIndex = index)
+            }
+            repository.updateTags(updatedTags)
         }
     }
 

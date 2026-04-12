@@ -140,6 +140,10 @@ class ExpenseRepositoryImpl(
         categoryDao.updateCategory(category)
     }
 
+    override suspend fun updateCategories(categories: List<com.sans.expensetracker.data.local.entity.CategoryEntity>) {
+        categoryDao.updateCategories(categories)
+    }
+
     override suspend fun deleteCategory(category: com.sans.expensetracker.data.local.entity.CategoryEntity) {
         categoryDao.deleteCategory(category)
     }
@@ -150,6 +154,10 @@ class ExpenseRepositoryImpl(
 
     override suspend fun updateTag(tag: com.sans.expensetracker.data.local.entity.TagEntity) {
         tagDao.updateTag(tag)
+    }
+
+    override suspend fun updateTags(tags: List<com.sans.expensetracker.data.local.entity.TagEntity>) {
+        tagDao.updateTags(tags)
     }
 
     override suspend fun deleteTag(tag: com.sans.expensetracker.data.local.entity.TagEntity) {
