@@ -2,6 +2,7 @@ package com.sans.expensetracker.presentation.scan_invoice
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.ai.edge.litertlm.Backend
@@ -240,7 +241,7 @@ class ScanInvoiceViewModel @Inject constructor(
                             )
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        Log.e("ScanInvoiceViewModel", "Could not parse AI response", e)
                         parseError = "Could not parse AI response. Raw: ${cleanJson.take(200)}"
                     }
 
@@ -257,7 +258,7 @@ class ScanInvoiceViewModel @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("ScanInvoiceViewModel", "Error during inference", e)
             val msg = e.localizedMessage ?: e.javaClass.simpleName
             withContext(Dispatchers.Main) {
                 _state.update { it.copy(isProcessing = false, errorMessage = "Error during inference: $msg") }

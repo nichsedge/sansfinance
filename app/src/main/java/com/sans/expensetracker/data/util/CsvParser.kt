@@ -1,6 +1,7 @@
 package com.sans.expensetracker.data.util
 
 import android.content.Context
+import android.util.Log
 import com.sans.expensetracker.data.local.entity.ExpenseEntity
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -34,7 +35,7 @@ object CsvParser {
             }
             reader.close()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("CsvParser", "Error parsing CSV file", e)
         }
 
         return expenses

@@ -1,5 +1,6 @@
 package com.sans.expensetracker.data.local
 
+import android.util.Log
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.sans.expensetracker.data.local.dao.CategoryDao
@@ -73,7 +74,7 @@ abstract class AppDatabase : RoomDatabase() {
                             expenseDao.insertExpenses(expenses)
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        Log.e("AppDatabase", "Failed to inject seed data", e)
                     }
                 }
             }
