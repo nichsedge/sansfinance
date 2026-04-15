@@ -58,4 +58,31 @@
     <string name="yearly">Yearly</string>
     <string name="recurring_expenses">Recurring Expenses</string>
     <string name="back">Back</string>
+
+    <!-- Scan Receipt feature -->
+    <string name="scan_receipt">Scan Receipt</string>
+    <string name="step1_select_model">Step 1: Select AI Model</string>
+    <string name="step1_model_desc">Select the LiteRT model file (.litertlm) to use for inference.</string>
+    <string name="select_model">Select Model</string>
+    <string name="caching_model">Caching model to storage…</string>
+    <string name="step2_select_image">Step 2: Select Receipt Image</string>
+    <string name="model_ready">Model Ready: %1$s</string>
+    <string name="select_image_gallery">Select from Gallery</string>
+    <string name="take_photo">Take Photo</string>
+    <string name="analyzing_receipt">Analyzing receipt with AI…</string>
+    <string name="first_run_note">This may take up to 30 seconds on the first run</string>
+    <string name="found_transactions">Found %1$d transactions:</string>
+    <string name="no_transactions_found">No Items Found</string>
+    <string name="no_transactions_desc">The AI couldn\'t extract any items. Try a clearer photo or a different receipt.</string>
+    <string name="view_ai_thinking">View AI Thinking Process</string>
+    <string name="hide_ai_thinking">Hide AI Thinking Process</string>
+    <string name="save_selected">Save Selected</string>
+    <string name="saving">Saving…</string>
+    <string name="inference_error">Inference Error</string>
+    <string name="retry">Retry</string>
+    <string name="new_image">New Image</string>
+    <string name="merchant_label">Merchant: %1$s</string>
+    <string name="date_label">Date: %1$s</string>
+    <string name="edit_transaction_title">Item Name</string>
+    <string name="amount_label">Amount</string>
 </resources>

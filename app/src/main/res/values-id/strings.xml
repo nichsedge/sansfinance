@@ -37,4 +37,31 @@
     <string name="by_category">Berdasarkan Kategori</string>
     <string name="spending_trend">Tren Pengeluaran</string>
     <string name="backup_to_downloads">Snapshot disimpan ke folder Unduhan</string>
+
+    <!-- Scan Receipt feature -->
+    <string name="scan_receipt">Pindai Struk</string>
+    <string name="step1_select_model">Langkah 1: Pilih Model AI</string>
+    <string name="step1_model_desc">Pilih file model LiteRT (.litertlm) untuk inferensi.</string>
+    <string name="select_model">Pilih Model</string>
+    <string name="caching_model">Menyimpan model ke penyimpanan…</string>
+    <string name="step2_select_image">Langkah 2: Pilih Gambar Struk</string>
+    <string name="model_ready">Model Siap: %1$s</string>
+    <string name="select_image_gallery">Pilih dari Galeri</string>
+    <string name="take_photo">Ambil Foto</string>
+    <string name="analyzing_receipt">Menganalisis struk dengan AI…</string>
+    <string name="first_run_note">Mungkin memakan waktu hingga 30 detik pada percobaan pertama</string>
+    <string name="found_transactions">Ditemukan %1$d transaksi:</string>
+    <string name="no_transactions_found">Tidak Ada Item Ditemukan</string>
+    <string name="no_transactions_desc">AI tidak dapat mengekstrak item apa pun. Coba foto yang lebih jelas atau struk yang berbeda.</string>
+    <string name="view_ai_thinking">Lihat Proses Berpikir AI</string>
+    <string name="hide_ai_thinking">Sembunyikan Proses Berpikir AI</string>
+    <string name="save_selected">Simpan Terpilih</string>
+    <string name="saving">Menyimpan…</string>
+    <string name="inference_error">Kesalahan Inferensi</string>
+    <string name="retry">Coba Lagi</string>
+    <string name="new_image">Gambar Baru</string>
+    <string name="merchant_label">Toko: %1$s</string>
+    <string name="date_label">Tanggal: %1$s</string>
+    <string name="edit_transaction_title">Nama Item</string>
+    <string name="amount_label">Jumlah</string>
 </resources>

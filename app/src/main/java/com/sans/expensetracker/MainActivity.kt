@@ -13,7 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import com.sans.expensetracker.presentation.add_expense.AddExpenseScreen
 import com.sans.expensetracker.presentation.expense_list.ExpenseListScreen
 import com.sans.expensetracker.presentation.navigation.Screen
-import com.sans.expensetracker.presentation.scan_invoice.ScanInvoiceScreen
+import com.sans.expensetracker.presentation.scan_receipt.ScanReceiptScreen
 import com.sans.expensetracker.presentation.settings.SettingsScreen
 import com.sans.expensetracker.ui.theme.ExpenseTrackerTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -56,8 +56,8 @@ fun AppNavigation(onLanguageToggle: () -> Unit) {
                 onAddExpenseClick = {
                     navController.navigate(Screen.AddExpense)
                 },
-                onScanInvoiceClick = {
-                    navController.navigate(Screen.ScanInvoice)
+                onScanReceiptClick = {
+                    navController.navigate(Screen.ScanReceipt)
                 },
                 onInstallmentsClick = {
                     navController.navigate(Screen.Installments)
@@ -76,8 +76,8 @@ fun AppNavigation(onLanguageToggle: () -> Unit) {
         composable<Screen.AddExpense> {
             AddExpenseScreen(onBack = { navController.popBackStack() })
         }
-        composable<Screen.ScanInvoice> {
-            ScanInvoiceScreen(onBack = { navController.popBackStack() })
+        composable<Screen.ScanReceipt> {
+            ScanReceiptScreen(onBack = { navController.popBackStack() })
         }
         composable<Screen.EditExpense> {
             AddExpenseScreen(onBack = { navController.popBackStack() })

@@ -476,7 +476,7 @@ fun SettingsContent(
                     )
                     Spacer(Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("AI Model (Scan Invoice)")
+                        Text("AI Model (Scan Receipt)")
                         Text(
                             aiModelPath?.substringAfterLast("/") ?: "Not Set",
                             style = MaterialTheme.typography.bodySmall,
