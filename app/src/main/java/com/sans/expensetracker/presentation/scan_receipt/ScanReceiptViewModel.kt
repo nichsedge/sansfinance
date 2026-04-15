@@ -20,6 +20,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -83,6 +85,9 @@ sealed class ScanReceiptEvent {
     data class EditTransactionAmount(val id: String, val amountCents: Long) : ScanReceiptEvent()
     data class EditTransactionCategory(val id: String, val category: String) : ScanReceiptEvent()
     data class EditTransactionDate(val id: String, val dateString: String?) : ScanReceiptEvent()
+    object CancelInference : ScanReceiptEvent()
+    data class DeleteTransaction(val id: String) : ScanReceiptEvent()
+    object ResetForNewScan : ScanReceiptEvent()
 }
 
 @HiltViewModel
@@ -99,6 +104,7 @@ class ScanReceiptViewModel @Inject constructor(
     // Closed in onCleared() when the screen leaves composition.
     private var engine: Engine? = null
     private var engineInitJob: Job? = null
+    private var inferenceJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -169,6 +175,7 @@ class ScanReceiptViewModel @Inject constructor(
                 }
             }
             is ScanReceiptEvent.ImageSelected -> {
+                inferenceJob?.cancel()
                 _state.update {
                     it.copy(
                         imageUri = event.uri,
@@ -181,7 +188,7 @@ class ScanReceiptViewModel @Inject constructor(
                         streamingText = ""
                     )
                 }
-                viewModelScope.launch(Dispatchers.IO) {
+                inferenceJob = viewModelScope.launch(Dispatchers.IO) {
                     val imagePath = prepareImageFile(event.context, event.uri)
                     withContext(Dispatchers.Main) {
                         _state.update { it.copy(preprocessedImagePath = imagePath) }
@@ -255,6 +262,41 @@ class ScanReceiptViewModel @Inject constructor(
                     s.copy(suggestedTransactions = s.suggestedTransactions.map {
                         if (it.id == event.id) it.copy(dateString = event.dateString) else it
                     })
+                }
+            }
+            is ScanReceiptEvent.CancelInference -> {
+                inferenceJob?.cancel()
+                inferenceJob = null
+                _state.update {
+                    it.copy(
+                        isProcessing = false,
+                        streamingText = "",
+                        errorMessage = null
+                    )
+                }
+            }
+            is ScanReceiptEvent.DeleteTransaction -> {
+                _state.update { s ->
+                    val remaining = s.suggestedTransactions.filter { it.id != event.id }
+                    s.copy(
+                        suggestedTransactions = remaining,
+                        noResultsFound = remaining.isEmpty()
+                    )
+                }
+            }
+            is ScanReceiptEvent.ResetForNewScan -> {
+                _state.update {
+                    it.copy(
+                        imageUri = null,
+                        isProcessing = false,
+                        isSaved = false,
+                        streamingText = "",
+                        preprocessedImagePath = null,
+                        suggestedTransactions = emptyList(),
+                        aiThinking = null,
+                        errorMessage = null,
+                        noResultsFound = false
+                    )
                 }
             }
         }
@@ -406,15 +448,17 @@ class ScanReceiptViewModel @Inject constructor(
 
                     val fullTextBuilder = StringBuilder()
 
-                    messageFlow.collect { messageResponse ->
-                        val chunk = messageResponse.contents.contents
-                            .filterIsInstance<Content.Text>()
-                            .joinToString("\n") { it.text }
+                    withTimeout(120_000L) {
+                        messageFlow.collect { messageResponse ->
+                            val chunk = messageResponse.contents.contents
+                                .filterIsInstance<Content.Text>()
+                                .joinToString("\n") { it.text }
 
-                        fullTextBuilder.append(chunk)
+                            fullTextBuilder.append(chunk)
 
-                        withContext(Dispatchers.Main) {
-                            _state.update { it.copy(streamingText = fullTextBuilder.toString()) }
+                            withContext(Dispatchers.Main) {
+                                _state.update { it.copy(streamingText = fullTextBuilder.toString()) }
+                            }
                         }
                     }
 
@@ -475,7 +519,13 @@ class ScanReceiptViewModel @Inject constructor(
             } finally {
                 fallbackEngine?.close()
             }
+        } catch (e: TimeoutCancellationException) {
+            Log.w("ScanReceiptViewModel", "Inference timed out after 120s")
+            withContext(Dispatchers.Main) {
+                _state.update { it.copy(isProcessing = false, errorMessage = "Receipt analysis timed out. Please try again.") }
+            }
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) return
             Log.e("ScanReceiptViewModel", "Error during inference", e)
             val msg = e.localizedMessage ?: e.javaClass.simpleName
             withContext(Dispatchers.Main) {

@@ -85,4 +85,7 @@
     <string name="date_label">Date: %1$s</string>
     <string name="edit_transaction_title">Item Name</string>
     <string name="amount_label">Amount</string>
+    <string name="date">Date</string>
+    <string name="ok">OK</string>
+    <string name="scan_another_receipt">Scan Another Receipt</string>
 </resources>

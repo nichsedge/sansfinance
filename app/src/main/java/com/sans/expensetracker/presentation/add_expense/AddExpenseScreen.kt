@@ -40,6 +40,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,7 +67,7 @@ fun AddExpenseScreen(
     val categories by viewModel.categories.collectAsState()
     val datePickerState =
         rememberDatePickerState(initialSelectedDateMillis = viewModel.selectedDate)
-    var showDatePicker by androidx.compose.runtime.mutableStateOf(false)
+    var showDatePicker by remember { androidx.compose.runtime.mutableStateOf(false) }
     val dateFormatter = DateFormatterUtils.getStandardFormatter()
     val focusManager = LocalFocusManager.current
 

@@ -34,8 +34,29 @@
     <string name="tags">Tag</string>
     <string name="data_management">Manajemen Data</string>
     <string name="full_backup">Cadangan Basis Data</string>
+    <string name="statistics">Statistik</string>
+    <string name="this_year">Tahun Ini</string>
+    <string name="last_year">Tahun Lalu</string>
+    <string name="yearly_summary">Ringkasan Tahunan</string>
     <string name="by_category">Berdasarkan Kategori</string>
     <string name="spending_trend">Tren Pengeluaran</string>
+    <string name="filter_7d">7H</string>
+    <string name="filter_30d">30H</string>
+    <string name="filter_month">Bulan Ini</string>
+    <string name="filter_all">Semua</string>
+    <string name="search_expenses">Cari transaksi…</string>
+    <string name="filters">Filter Lanjutan</string>
+    <string name="min_amount">Jumlah Min</string>
+    <string name="max_amount">Jumlah Maks</string>
+    <string name="clear_filters">Hapus Filter</string>
+    <string name="apply_filters">Terapkan Filter</string>
+    <string name="daily">Harian</string>
+    <string name="weekly">Mingguan</string>
+    <string name="monthly">Bulanan</string>
+    <string name="quarterly">Kuartalan</string>
+    <string name="yearly">Tahunan</string>
+    <string name="recurring_expenses">Pengeluaran Berulang</string>
+    <string name="back">Kembali</string>
     <string name="backup_to_downloads">Snapshot disimpan ke folder Unduhan</string>
 
     <!-- Scan Receipt feature -->
@@ -64,4 +85,7 @@
     <string name="date_label">Tanggal: %1$s</string>
     <string name="edit_transaction_title">Nama Item</string>
     <string name="amount_label">Jumlah</string>
+    <string name="date">Tanggal</string>
+    <string name="ok">OK</string>
+    <string name="scan_another_receipt">Pindai Struk Lain</string>
 </resources>

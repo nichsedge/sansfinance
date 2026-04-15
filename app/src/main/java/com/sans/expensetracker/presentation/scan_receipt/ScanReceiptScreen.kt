@@ -17,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Photo
@@ -43,6 +44,10 @@ import com.sans.expensetracker.core.util.CurrencyFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -187,11 +192,21 @@ fun ScanReceiptScreen(
                         transaction = tx,
                         availableCategories = state.availableCategories,
                         onToggle = { viewModel.onEvent(ScanReceiptEvent.ToggleTransactionAcceptance(tx.id)) },
+                        onDelete = { viewModel.onEvent(ScanReceiptEvent.DeleteTransaction(tx.id)) },
                         onEditTitle = { viewModel.onEvent(ScanReceiptEvent.EditTransactionTitle(tx.id, it)) },
                         onEditAmount = { viewModel.onEvent(ScanReceiptEvent.EditTransactionAmount(tx.id, it)) },
                         onEditCategory = { viewModel.onEvent(ScanReceiptEvent.EditTransactionCategory(tx.id, it)) },
                         onEditDate = { viewModel.onEvent(ScanReceiptEvent.EditTransactionDate(tx.id, it)) }
                     )
+                }
+
+                item {
+                    OutlinedButton(
+                        onClick = { viewModel.onEvent(ScanReceiptEvent.ResetForNewScan) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.scan_another_receipt))
+                    }
                 }
 
                 item { Spacer(modifier = Modifier.height(80.dp)) } // FAB clearance
@@ -262,13 +277,16 @@ fun ScanReceiptScreen(
                         }
 
                         CircularProgressIndicator(modifier = Modifier.size(64.dp), strokeWidth = 6.dp)
-                        Spacer(Modifier.height(24.dp))
+                        Spacer(Modifier.height(16.dp))
                         Text(
                             stringResource(R.string.analyzing_receipt),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(Modifier.height(16.dp))
+                        TextButton(onClick = { viewModel.onEvent(ScanReceiptEvent.CancelInference) }) {
+                            Text(stringResource(R.string.cancel))
+                        }
+                        Spacer(Modifier.height(8.dp))
 
                         if (state.streamingText.isNotEmpty()) {
                             val scrollState = rememberScrollState()
@@ -446,21 +464,33 @@ fun AiThinkingCard(thinkingText: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SuggestedTransactionCard(
     transaction: SuggestedTransaction,
     availableCategories: List<String>,
     onToggle: () -> Unit,
+    onDelete: () -> Unit,
     onEditTitle: (String) -> Unit,
     onEditAmount: (Long) -> Unit,
     onEditCategory: (String) -> Unit,
     onEditDate: (String?) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
     // Local edit states — keyed to the card's identity via LazyColumn key={tx.id}
     var titleText by remember { mutableStateOf(transaction.title) }
     var amountText by remember { mutableStateOf((transaction.amount / 100).toString()) }
-    var dateText by remember { mutableStateOf(transaction.dateString ?: "") }
+
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = transaction.dateString?.let { ds ->
+            runCatching {
+                SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }.parse(ds)?.time
+            }.getOrNull()
+        } ?: System.currentTimeMillis()
+    )
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -524,6 +554,13 @@ fun SuggestedTransactionCard(
                     contentDescription = null
                 )
             }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.delete),
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
         }
 
         // ── Inline edit panel ─────────────────────────────────────────────
@@ -573,14 +610,52 @@ fun SuggestedTransactionCard(
                     }
                 }
 
-                OutlinedTextField(
-                    value = dateText,
-                    onValueChange = { dateText = it; onEditDate(it.ifEmpty { null }) },
-                    label = { Text("Date (YYYY-MM-DD)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
+                val displayDate = transaction.dateString
+                    ?: SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showDatePicker = true }
+                ) {
+                    OutlinedTextField(
+                        value = displayDate,
+                        onValueChange = {},
+                        label = { Text(stringResource(R.string.date)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = false,
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                            disabledBorderColor = MaterialTheme.colorScheme.outline,
+                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                }
             }
+        }
+    }
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDatePicker = false
+                    val millis = datePickerState.selectedDateMillis
+                    if (millis != null) {
+                        val formatted = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+                            timeZone = TimeZone.getTimeZone("UTC")
+                        }.format(Date(millis))
+                        onEditDate(formatted)
+                    }
+                }) { Text(stringResource(R.string.ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }
