@@ -45,8 +45,7 @@ private data class AiTransactionDto(
     val title: String = "Unknown Item",
     val amount: Long = 0L,
     val category: String = "Misc",
-    val dateString: String? = null,
-    val merchant: String? = null
+    val dateString: String? = null
 )
 
 data class SuggestedTransaction(
@@ -55,7 +54,6 @@ data class SuggestedTransaction(
     val amount: Long,
     val category: String,
     val dateString: String? = null,
-    val merchant: String? = null,
     val isAccepted: Boolean = true
 )
 
@@ -228,7 +226,7 @@ class ScanReceiptViewModel @Inject constructor(
                                 itemName = tx.title,
                                 amount = tx.amount,
                                 categoryId = catId,
-                                merchant = tx.merchant,
+                                merchant = null,
                                 tags = listOf("Scanned Receipt")
                             )
                         )
@@ -407,31 +405,22 @@ class ScanReceiptViewModel @Inject constructor(
                 val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 
                 val systemInstruction = """
-                    You are a receipt parsing API. Your only output is a valid JSON array.
-                    Never output markdown, explanations, or any text outside a <think> block or the JSON array.
-                    The JSON must be parseable with no trailing commas.
+                    You are a receipt parsing API. Output ONLY a valid JSON array.
+                    No markdown, no talk. Use <think>...</think> for thoughts.
                 """.trimIndent()
 
                 val prompt = """
-                    Analyze this receipt image and extract all purchased line items.
-
-                    First, reason step-by-step inside <think>...</think>:
-                    - Identify the merchant/store name
-                    - List all purchased item lines (ignore subtotals, taxes, discounts, tips, totals)
-                    - For each item determine the per-item price, category, and receipt date
-
-                    Then output ONLY a JSON array. Each object must have exactly:
-                    - "title": string — item name
-                    - "amount": integer — per-item price × 100 (e.g. 50.00 → 5000; 529,000 IDR → 52900000)
-                    - "category": string — closest match from [$categoryNames], else "Misc"
-                    - "dateString": string — receipt date as YYYY-MM-DD; if absent use $todayDate
-                    - "merchant": string — store/merchant name from the receipt; if absent use null
-
-                    If the receipt shows only a grand total with no line items, produce one object
-                    using the total amount with your best guess for title and category.
-                    Do NOT include discount lines, tax lines, service charges, or subtotals as items.
-
-                    Output only the JSON array after the closing </think> tag.
+                    Extract items from this receipt as a JSON array.
+                    
+                    Inside <think>...</think>, list found items and total.
+                    
+                    Output only the JSON array with these keys:
+                    - "title": (string) item name
+                    - "amount": (int) ("amount" or "jumlah") multiply by 100
+                    - "category": (string) one of [$categoryNames]
+                    - "dateString": (string) YYYY-MM-DD, default $todayDate
+                    
+                    Ignore taxes, discounts, and totals.
                 """.trimIndent()
 
                 val conversationConfig = ConversationConfig(
@@ -494,8 +483,7 @@ class ScanReceiptViewModel @Inject constructor(
                                     title = dto.title,
                                     amount = dto.amount,
                                     category = dto.category,
-                                    dateString = dto.dateString,
-                                    merchant = dto.merchant
+                                    dateString = dto.dateString
                                 )
                             )
                         }

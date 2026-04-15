@@ -526,13 +526,6 @@ fun SuggestedTransactionCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                transaction.merchant?.let { merchant ->
-                    Text(
-                        text = stringResource(R.string.merchant_label, merchant),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
                 transaction.dateString?.let { dateStr ->
                     Text(
                         text = stringResource(R.string.date_label, dateStr),
