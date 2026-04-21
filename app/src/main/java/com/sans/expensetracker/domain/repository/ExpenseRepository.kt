@@ -17,6 +17,8 @@ interface ExpenseRepository {
     ): Flow<List<Expense>>
 
     suspend fun getExpenseById(id: Long): Expense?
+    suspend fun getItemNameSuggestions(query: String): List<String>
+    suspend fun getMerchantSuggestions(query: String): List<String>
     suspend fun insertExpense(expense: Expense): Long
     suspend fun updateExpense(expense: Expense)
     suspend fun deleteExpense(expense: Expense)

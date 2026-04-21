@@ -75,6 +75,12 @@ interface ExpenseDao {
     @Query("SELECT COUNT(*) FROM expenses")
     suspend fun getExpenseCount(): Int
 
+    @Query("SELECT DISTINCT item_name FROM expenses WHERE item_name LIKE '%' || :query || '%' ORDER BY item_name ASC LIMIT 5")
+    suspend fun getItemNameSuggestions(query: String): List<String>
+
+    @Query("SELECT DISTINCT merchant FROM expenses WHERE merchant LIKE '%' || :query || '%' AND merchant IS NOT NULL AND merchant != '' ORDER BY merchant ASC LIMIT 5")
+    suspend fun getMerchantSuggestions(query: String): List<String>
+
     @Query("SELECT SUM(final_price) FROM expenses WHERE date >= :since AND is_installment = 0")
     fun getTotalSpentSince(since: Long): Flow<Long?>
 
