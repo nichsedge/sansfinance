@@ -12,15 +12,24 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.sans.expensetracker.domain.model.Expense
 import com.sans.expensetracker.domain.usecase.AddExpenseUseCase
+import androidx.compose.runtime.snapshotFlow
 import com.sans.expensetracker.domain.usecase.GetExpenseByIdUseCase
+import com.sans.expensetracker.domain.usecase.GetItemNameSuggestionsUseCase
+import com.sans.expensetracker.domain.usecase.GetMerchantSuggestionsUseCase
 import com.sans.expensetracker.domain.usecase.UpdateExpenseUseCase
 import com.sans.expensetracker.presentation.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.FlowPreview
 
+@OptIn(FlowPreview::class)
 @HiltViewModel
 class AddExpenseViewModel @Inject constructor(
     private val addExpenseUseCase: AddExpenseUseCase,
@@ -28,6 +37,8 @@ class AddExpenseViewModel @Inject constructor(
     private val getExpenseByIdUseCase: GetExpenseByIdUseCase,
     private val getCategoriesUseCase: com.sans.expensetracker.domain.usecase.GetCategoriesUseCase,
     private val createInstallmentPlanUseCase: com.sans.expensetracker.domain.usecase.CreateInstallmentPlanUseCase,
+    private val getItemNameSuggestionsUseCase: GetItemNameSuggestionsUseCase,
+    private val getMerchantSuggestionsUseCase: GetMerchantSuggestionsUseCase,
     private val installmentRepository: com.sans.expensetracker.domain.repository.InstallmentRepository,
     private val expenseRepository: com.sans.expensetracker.domain.repository.ExpenseRepository,
     savedStateHandle: SavedStateHandle
@@ -61,6 +72,30 @@ class AddExpenseViewModel @Inject constructor(
                 }
             }
         }
+
+        snapshotFlow { itemName }
+            .debounce(300)
+            .distinctUntilChanged()
+            .onEach { query ->
+                if (query.length >= 2) {
+                    itemNameSuggestions = getItemNameSuggestionsUseCase(query)
+                } else {
+                    itemNameSuggestions = emptyList()
+                }
+            }
+            .launchIn(viewModelScope)
+
+        snapshotFlow { merchant }
+            .debounce(300)
+            .distinctUntilChanged()
+            .onEach { query ->
+                if (query.length >= 2) {
+                    merchantSuggestions = getMerchantSuggestionsUseCase(query)
+                } else {
+                    merchantSuggestions = emptyList()
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     val categories = getCategoriesUseCase().stateIn(
@@ -77,6 +112,12 @@ class AddExpenseViewModel @Inject constructor(
     var durationMonths by mutableStateOf("")
     var selectedDate by mutableLongStateOf(System.currentTimeMillis())
     var selectedTags by mutableStateOf(listOf<String>())
+
+    var itemNameSuggestions by mutableStateOf(emptyList<String>())
+        private set
+    var merchantSuggestions by mutableStateOf(emptyList<String>())
+        private set
+
     var newTagText by mutableStateOf("")
 
     val allTags = expenseRepository.getAllTags().stateIn(

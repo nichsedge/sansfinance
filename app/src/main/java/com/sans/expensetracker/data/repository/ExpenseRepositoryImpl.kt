@@ -82,6 +82,14 @@ class ExpenseRepositoryImpl(
         return dao.getExpenseById(id)?.toDomain()
     }
 
+    override suspend fun getItemNameSuggestions(query: String): List<String> {
+        return dao.getItemNameSuggestions(query)
+    }
+
+    override suspend fun getMerchantSuggestions(query: String): List<String> {
+        return dao.getMerchantSuggestions(query)
+    }
+
     override suspend fun insertExpense(expense: Expense): Long {
         val expenseId = dao.insertExpense(expense.toEntity())
         syncTags(expenseId, expense.tags)

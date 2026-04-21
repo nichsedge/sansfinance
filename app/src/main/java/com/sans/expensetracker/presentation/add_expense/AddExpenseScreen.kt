@@ -25,7 +25,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -70,6 +73,8 @@ fun AddExpenseScreen(
     var showDatePicker by remember { androidx.compose.runtime.mutableStateOf(false) }
     val dateFormatter = DateFormatterUtils.getStandardFormatter()
     val focusManager = LocalFocusManager.current
+    var itemNameExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var merchantExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -222,39 +227,87 @@ fun AddExpenseScreen(
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
             )
 
-            OutlinedTextField(
-                value = viewModel.itemName,
-                onValueChange = { viewModel.itemName = it },
-                label = { Text(stringResource(R.string.what_did_you_buy)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
-                ),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-            )
+            @OptIn(ExperimentalMaterial3Api::class)
+            ExposedDropdownMenuBox(
+                expanded = itemNameExpanded && viewModel.itemNameSuggestions.isNotEmpty(),
+                onExpandedChange = { itemNameExpanded = !itemNameExpanded }
+            ) {
+                OutlinedTextField(
+                    value = viewModel.itemName,
+                    onValueChange = {
+                        viewModel.itemName = it
+                        itemNameExpanded = true
+                    },
+                    label = { Text(stringResource(R.string.what_did_you_buy)) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
+                    ),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                )
 
-            OutlinedTextField(
-                value = viewModel.merchant,
-                onValueChange = { viewModel.merchant = it },
-                label = { Text(stringResource(R.string.merchant_store)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = if (viewModel.isInstallment) ImeAction.Next else ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { if (viewModel.isInstallment) focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) else focusManager.clearFocus() },
-                    onDone = {
-                        focusManager.clearFocus()
-                        if (!viewModel.isInstallment) viewModel.onSaveClick(onBack)
+                ExposedDropdownMenu(
+                    expanded = itemNameExpanded && viewModel.itemNameSuggestions.isNotEmpty(),
+                    onDismissRequest = { itemNameExpanded = false }
+                ) {
+                    viewModel.itemNameSuggestions.forEach { suggestion ->
+                        DropdownMenuItem(
+                            text = { Text(suggestion) },
+                            onClick = {
+                                viewModel.itemName = suggestion
+                                itemNameExpanded = false
+                            }
+                        )
                     }
-                ),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-            )
+                }
+            }
+
+            @OptIn(ExperimentalMaterial3Api::class)
+            ExposedDropdownMenuBox(
+                expanded = merchantExpanded && viewModel.merchantSuggestions.isNotEmpty(),
+                onExpandedChange = { merchantExpanded = !merchantExpanded }
+            ) {
+                OutlinedTextField(
+                    value = viewModel.merchant,
+                    onValueChange = {
+                        viewModel.merchant = it
+                        merchantExpanded = true
+                    },
+                    label = { Text(stringResource(R.string.merchant_store)) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = if (viewModel.isInstallment) ImeAction.Next else ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { if (viewModel.isInstallment) focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) else focusManager.clearFocus() },
+                        onDone = {
+                            focusManager.clearFocus()
+                            if (!viewModel.isInstallment) viewModel.onSaveClick(onBack)
+                        }
+                    ),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = merchantExpanded && viewModel.merchantSuggestions.isNotEmpty(),
+                    onDismissRequest = { merchantExpanded = false }
+                ) {
+                    viewModel.merchantSuggestions.forEach { suggestion ->
+                        DropdownMenuItem(
+                            text = { Text(suggestion) },
+                            onClick = {
+                                viewModel.merchant = suggestion
+                                merchantExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
