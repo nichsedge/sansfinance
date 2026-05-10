@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Simple idempotent sync script for development
-PACKAGE_NAME="com.sans.expensetracker"
-SNAPSHOT_NAME="expense_tracker_db_snapshot.sqlite"
-DB_NAME="expense_tracker_db"
+PACKAGE_NAME="com.sans.finance"
+SNAPSHOT_NAME="sans_finance_db_snapshot.sqlite"
+DB_NAME="sans_finance_db"
 
 echo "🔄 Initializing Snapshot Pull (App -> PC)..."
 adb pull /sdcard/Download/$SNAPSHOT_NAME .

@@ -3,12 +3,12 @@
 ## Project Structure & Module Organization
 
 - `app/` is the single Android application module.
-- Source code lives in `app/src/main/java/com/sans/expensetracker`.
+- Source code lives in `app/src/main/java/com/sans/finance`.
 - UI and resources are in `app/src/main/res` (Compose UI lives in Kotlin under `presentation/`).
-- Unit tests are in `app/src/test/java/com/sans/expensetracker`.
-- Instrumentation tests are in `app/src/androidTest/java/com/sans/expensetracker`.
+- Unit tests are in `app/src/test/java/com/sans/finance`.
+- Instrumentation tests are in `app/src/androidTest/java/com/sans/finance`.
 - Utility scripts at repo root: `backup.sh`, `restore.sh`, `sync.sh`.
-- A sample database snapshot exists at `expense_tracker_db_snapshot.sqlite` (do not edit in-place).
+- A sample database snapshot exists at `sans_finance_db_snapshot.sqlite` (do not edit in-place).
 
 ## Build, Test, and Development Commands
 
@@ -24,7 +24,7 @@ Use the Gradle wrapper from the repo root:
 ## Coding Style & Naming Conventions
 
 - Language: Kotlin (JDK 17). Use 4-space indentation and Kotlin standard style.
-- Packages follow `com.sans.expensetracker.<layer>` conventions.
+- Packages follow `com.sans.finance.<layer>` conventions.
 - Compose: prefer small, focused `@Composable` functions with clear names like `SpendingTrendChart`.
 - No repo-level formatter/linter is configured; keep changes consistent with nearby code.
 

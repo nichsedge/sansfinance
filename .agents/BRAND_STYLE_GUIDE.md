@@ -1,7 +1,7 @@
-# Brand & Style Guide - Atracker
+# Brand & Style Guide - Sans Finance
 
 ## 1. Brand Identity
-**App Name:** Atracker
+**App Name:** Sans Finance
 **Core Value:** A modern, streamlined activity and state tracking application.
 **Aesthetic:** Clean, professional, and "alive" with subtle animations and mesh gradients.
 
@@ -59,7 +59,7 @@ The application follows a rounded and soft aesthetic.
 
 ## 5. UI Components & Patterns
 
-### 5.1 Atracker Cards
+### 5.1 Sans Finance Cards
 - **Shape:** Large (24dp rounded).
 - **Border:** 1dp linear gradient from Primary (60% alpha) to Tertiary (40% alpha).
 - **Padding:** 24dp internal padding.

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Pelacak Pengeluaran</string>
+    <string name="app_name">Sans Finance</string>
     <string name="this_month">BULAN INI</string>
     <string name="total_filtered">TOTAL PERIODE INI</string>
     <string name="recent_transactions">Transaksi Terakhir</string>

@@ -21,6 +21,6 @@ echo "📂 APK location: $APK_PATH"
 
 # Create release directory if not exists
 mkdir -p release
-cp "$APK_PATH" release/expense-tracker-release.apk
+cp "$APK_PATH" release/sans-finance-release.apk
 
-echo "📁 Copied to: release/expense-tracker-release.apk"
+echo "📁 Copied to: release/sans-finance-release.apk"

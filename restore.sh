@@ -1,8 +1,8 @@
 #!/bin/bash
 # 📤 RESTORE: PC -> APP
-PACKAGE_NAME="com.sans.expensetracker"
-SNAPSHOT_NAME="expense_tracker_db_snapshot.sqlite"
-DB_NAME="expense_tracker_db"
+PACKAGE_NAME="com.sans.finance"
+SNAPSHOT_NAME="sans_finance_db_snapshot.sqlite"
+DB_NAME="sans_finance_db"
 
 if [ ! -f "$SNAPSHOT_NAME" ]; then
     echo "❌ Error: $SNAPSHOT_NAME not found in current directory!"

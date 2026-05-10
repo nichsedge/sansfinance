@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.sans.expensetracker"
+    namespace = "com.sans.finance"
     compileSdk = 36 // Simplified
 
     defaultConfig {
-        applicationId = "com.sans.expensetracker"
+        applicationId = "com.sans.finance"
         minSdk = 36
         targetSdk = 36
         versionCode = 1

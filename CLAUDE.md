@@ -15,7 +15,7 @@ Min/target SDK is 36; ensure your emulator/device matches.
 
 ## High-Level Architecture
 
-This is a single-module Android app (`app/`) following **Clean Architecture** with MVVM presentation. Source lives under `app/src/main/java/com/sans/expensetracker/`.
+This is a single-module Android app (`app/`) following **Clean Architecture** with MVVM presentation. Source lives under `app/src/main/java/com/sans/finance/`.
 
 ### Layers
 
@@ -56,7 +56,7 @@ ViewModels use `MutableStateFlow` for state; repositories return `Flow<T>`. Comp
 
 ### Database
 
-Room database at version 7 with migrations from 5→6 (tag system) and 6→7 (category/tag ordering). A `RoomDatabase.Callback` seeds default categories on first create; CSV seed data is injected if the database is empty. Do not edit `expense_tracker_db_snapshot.sqlite` in-place (it is a reference snapshot).
+Room database at version 7 with migrations from 5→6 (tag system) and 6→7 (category/tag ordering). A `RoomDatabase.Callback` seeds default categories on first create; CSV seed data is injected if the database is empty. Do not edit `sans_finance_db_snapshot.sqlite` in-place (it is a reference snapshot).
 
 ### Invoice Scanning
 
@@ -65,7 +65,7 @@ Room database at version 7 with migrations from 5→6 (tag system) and 6→7 (ca
 ## Coding Conventions
 
 - Kotlin, JDK 17, 4-space indentation.
-- Packages follow `com.sans.expensetracker.<layer>` — keep new code in the correct layer.
+- Packages follow `com.sans.finance.<layer>` — keep new code in the correct layer.
 - Compose: small, focused `@Composable` functions with descriptive names (e.g. `SpendingTrendChart`).
 - Commit messages use conventional style: `feat:`, `fix:`, `refactor:`.
 - PRs should include a short summary, steps to test, and screenshots/recordings for UI changes.

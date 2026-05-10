@@ -32,5 +32,5 @@
 }
 
 # Keep domain models that might be serialized/deserialized
--keep class com.sans.expensetracker.domain.model.** { *; }
--keep class com.sans.expensetracker.data.local.entity.** { *; }
+-keep class com.sans.finance.domain.model.** { *; }
+-keep class com.sans.finance.data.local.entity.** { *; }
