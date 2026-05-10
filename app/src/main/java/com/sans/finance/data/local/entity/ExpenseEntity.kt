@@ -16,6 +16,7 @@ data class ExpenseEntity(
     @ColumnInfo(name = "final_price") val finalPrice: Long,
     @ColumnInfo(name = "category_id") val categoryId: Long,
     @ColumnInfo(name = "account_id") val accountId: Long = 1, // Default to 1 (Cash) for migration
+    @ColumnInfo(name = "to_account_id") val toAccountId: Long? = null,
     val type: String = "EXPENSE", // "INCOME", "EXPENSE", "TRANSFER"
     val status: String,
     @ColumnInfo(name = "is_recurring") val isRecurring: Boolean,

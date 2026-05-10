@@ -33,7 +33,7 @@ import kotlinx.coroutines.launch
         GoalEntity::class,
         BudgetEntity::class
     ],
-    version = 14,
+    version = 13,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -113,10 +113,10 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS `expense_tag_ref` (
-                        `expenseId` INTEGER NOT NULL, 
-                        `tagId` INTEGER NOT NULL, 
-                        PRIMARY KEY(`expenseId`, `tagId`), 
-                        FOREIGN KEY(`expenseId`) REFERENCES `expenses`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE, 
+                        `expenseId` INTEGER NOT NULL,
+                        `tagId` INTEGER NOT NULL,
+                        PRIMARY KEY(`expenseId`, `tagId`),
+                        FOREIGN KEY(`expenseId`) REFERENCES `expenses`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
                         FOREIGN KEY(`tagId`) REFERENCES `tags`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
                     )
                 """.trimIndent()
@@ -210,12 +210,6 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE expenses RENAME COLUMN item_name TO note")
                 db.execSQL("ALTER TABLE expenses RENAME COLUMN merchant TO description")
-            }
-        }
-
-        val MIGRATION_13_14 = object : androidx.room.migration.Migration(13, 14) {
-            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE expenses ADD COLUMN to_account_id INTEGER")
             }
         }
     }

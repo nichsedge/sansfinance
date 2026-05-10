@@ -1,0 +1,40 @@
+--- app/src/main/java/com/sans/finance/presentation/add_expense/AddExpenseScreen.kt
++++ app/src/main/java/com/sans/finance/presentation/add_expense/AddExpenseScreen.kt
+@@ -165,6 +165,34 @@
+                 }
+             }
+
++            if (viewModel.transactionType == "TRANSFER") {
++                ExposedDropdownMenuBox(
++                    expanded = toAccountExpanded,
++                    onExpandedChange = { toAccountExpanded = !toAccountExpanded }
++                ) {
++                    val selectedToAccount = accounts.find { it.id == viewModel.toAccountId }
++                    OutlinedTextField(
++                        value = selectedToAccount?.name ?: "Unknown Account",
++                        onValueChange = {},
++                        readOnly = true,
++                        label = { Text("To Account") },
++                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = toAccountExpanded) },
++                        modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
++                        shape = MaterialTheme.shapes.medium
++                    )
++                    ExposedDropdownMenu(
++                        expanded = toAccountExpanded,
++                        onDismissRequest = { toAccountExpanded = false }
++                    ) {
++                        accounts.forEach { account ->
++                            DropdownMenuItem(
++                                text = { Text(account.name) },
++                                onClick = {
++                                    viewModel.toAccountId = account.id
++                                    toAccountExpanded = false
++                                }
++                            )
++                        }
++                    }
++                }
++            }
++
+             // Amount Input with large text
+             OutlinedTextField(

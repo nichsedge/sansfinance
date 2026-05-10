@@ -1,0 +1,20 @@
+--- app/src/main/java/com/sans/finance/data/local/entity/ExpenseEntity.kt
++++ app/src/main/java/com/sans/finance/data/local/entity/ExpenseEntity.kt
+@@ -16,6 +16,7 @@
+     @ColumnInfo(name = "final_price") val finalPrice: Long,
+     @ColumnInfo(name = "category_id") val categoryId: Long,
+     @ColumnInfo(name = "account_id") val accountId: Long = 1, // Default to 1 (Cash) for migration
++    @ColumnInfo(name = "to_account_id") val toAccountId: Long? = null,
+     val type: String = "EXPENSE", // "INCOME", "EXPENSE", "TRANSFER"
+     val status: String,
+     @ColumnInfo(name = "is_recurring") val isRecurring: Boolean,
+--- app/src/main/java/com/sans/finance/domain/model/Expense.kt
++++ app/src/main/java/com/sans/finance/domain/model/Expense.kt
+@@ -12,6 +12,7 @@
+     val isInstallmentPayment: Boolean = false,
+     val description: String? = null,
+     val accountId: Long = 1,
++    val toAccountId: Long? = null,
+     val type: String = "EXPENSE",
+     val tags: List<String> = emptyList(),
+     val quantity: Int = 1,
