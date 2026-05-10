@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +25,7 @@ fun GoalScreen(
 ) {
     val goals by viewModel.goals.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+    var goalToEdit by remember { mutableStateOf<GoalEntity?>(null) }
 
     Scaffold(
         topBar = {
@@ -47,18 +49,28 @@ fun GoalScreen(
             items(goals) { goal ->
                 GoalItem(
                     goal = goal,
+                    onEdit = { goalToEdit = goal },
                     onDelete = { viewModel.deleteGoal(goal) },
                     onAddContribution = { viewModel.updateProgress(goal, it) }
                 )
             }
         }
 
-        if (showAddDialog) {
+        if (showAddDialog || goalToEdit != null) {
             AddGoalDialog(
-                onDismiss = { showAddDialog = false },
-                onConfirm = { name, amount ->
-                    viewModel.addGoal(name, amount)
+                goalToEdit = goalToEdit,
+                onDismiss = {
                     showAddDialog = false
+                    goalToEdit = null
+                },
+                onConfirm = { name, amount ->
+                    if (goalToEdit != null) {
+                        viewModel.updateGoalDetails(goalToEdit!!, name, amount)
+                    } else {
+                        viewModel.addGoal(name, amount)
+                    }
+                    showAddDialog = false
+                    goalToEdit = null
                 }
             )
         }
@@ -68,6 +80,7 @@ fun GoalScreen(
 @Composable
 fun GoalItem(
     goal: GoalEntity,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
     onAddContribution: (Long) -> Unit
 ) {
@@ -85,8 +98,13 @@ fun GoalItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(goal.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                Row {
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit")
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
             
@@ -164,15 +182,19 @@ fun GoalItem(
 
 @Composable
 fun AddGoalDialog(
+    goalToEdit: GoalEntity? = null,
     onDismiss: () -> Unit,
     onConfirm: (String, Long) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
+    val isEditing = goalToEdit != null
+    var name by remember(goalToEdit) { mutableStateOf(goalToEdit?.name ?: "") }
+    var amount by remember(goalToEdit) {
+        mutableStateOf(goalToEdit?.targetAmount?.let { (it / 100).toString() } ?: "")
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New Saving Goal") },
+        title = { Text(if (isEditing) "Edit Saving Goal" else "New Saving Goal") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -194,7 +216,7 @@ fun AddGoalDialog(
                 val target = amount.toLongOrNull() ?: 0L
                 onConfirm(name, target * 100)
             }) {
-                Text("Create")
+                Text(if (isEditing) "Save" else "Create")
             }
         },
         dismissButton = {

@@ -35,7 +35,20 @@ class GoalViewModel @Inject constructor(
 
     fun updateProgress(goal: GoalEntity, amount: Long) {
         viewModelScope.launch {
-            goalRepository.updateGoal(goal.copy(currentAmount = goal.currentAmount + amount))
+            goalRepository.updateGoal(goal.copy(
+                currentAmount = goal.currentAmount + amount,
+                updatedAt = System.currentTimeMillis()
+            ))
+        }
+    }
+
+    fun updateGoalDetails(goal: GoalEntity, newName: String, newTargetAmount: Long) {
+        viewModelScope.launch {
+            goalRepository.updateGoal(goal.copy(
+                name = newName,
+                targetAmount = newTargetAmount,
+                updatedAt = System.currentTimeMillis()
+            ))
         }
     }
 
