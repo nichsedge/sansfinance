@@ -1,9 +1,16 @@
 package com.sans.finance.core.util
 
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
+import java.util.Locale
 
 class CurrencyFormatterTest {
+
+    @Before
+    fun setup() {
+        Locale.setDefault(Locale("id", "ID"))
+    }
 
     @Test
     fun `formatAmount correctly formats positive amounts`() {

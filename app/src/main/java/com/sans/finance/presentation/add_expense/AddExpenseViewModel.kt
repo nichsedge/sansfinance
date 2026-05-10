@@ -76,8 +76,9 @@ class AddExpenseViewModel @Inject constructor(
     var categoryId by mutableLongStateOf(1L)
     var accountId by mutableLongStateOf(1L)
     // transactionType moved up
-    var isInstallment by mutableStateOf(false)
-    var isRecurring by mutableStateOf(false)
+    var paymentType by mutableStateOf("ONE_TIME") // "ONE_TIME", "RECURRING", "INSTALLMENT"
+    val isInstallment get() = paymentType == "INSTALLMENT"
+    val isRecurring get() = paymentType == "RECURRING"
     var recurrenceInterval by mutableStateOf("MONTHLY")
     var durationMonths by mutableStateOf("")
     var selectedDate by mutableLongStateOf(System.currentTimeMillis())
@@ -112,8 +113,10 @@ class AddExpenseViewModel @Inject constructor(
                     categoryId = expense.categoryId
                     accountId = expense.accountId
                     transactionType = expense.type
-                    isInstallment = expense.isInstallment
-                    isRecurring = expense.isRecurring
+                    if (expense.isInstallment) paymentType = "INSTALLMENT"
+                    else if (expense.isRecurring) paymentType = "RECURRING"
+                    else paymentType = "ONE_TIME"
+
                     recurrenceInterval = expense.recurrenceInterval ?: "MONTHLY"
                     selectedDate = expense.date
                     selectedTags = expense.tags

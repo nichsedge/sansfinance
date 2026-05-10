@@ -1,6 +1,8 @@
 <resources>
     <string name="app_name">Sans Finance</string>
     <string name="this_month">THIS MONTH</string>
+    <string name="one_time">One-time</string>
+    <string name="installment">Installment</string>
     <string name="total_filtered">TOTAL FOR PERIOD</string>
     <string name="recent_transactions">Recent Transactions</string>
     <string name="add_expense">Record Expense</string>

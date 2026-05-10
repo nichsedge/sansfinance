@@ -376,25 +376,26 @@ fun AddExpenseScreen(
                 }
             }
 
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                onClick = { viewModel.isRecurring = !viewModel.isRecurring }
+            val paymentTypes = listOf("ONE_TIME", "RECURRING", "INSTALLMENT")
+            val paymentLabels = listOf(
+                stringResource(R.string.one_time),
+                stringResource(R.string.recurring_expenses),
+                stringResource(R.string.installment)
+            )
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = viewModel.isRecurring,
-                        onCheckedChange = { viewModel.isRecurring = it }
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        stringResource(R.string.recurring_expenses),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
+                paymentTypes.forEachIndexed { index, type ->
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = paymentTypes.size),
+                        onClick = { viewModel.paymentType = type },
+                        selected = viewModel.paymentType == type,
+                        label = {
+                            Text(
+                                paymentLabels[index],
+                                fontWeight = if (viewModel.paymentType == type) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
                     )
                 }
             }
@@ -428,29 +429,6 @@ fun AddExpenseScreen(
                             )
                         }
                     }
-                }
-            }
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                onClick = { viewModel.isInstallment = !viewModel.isInstallment }
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = viewModel.isInstallment,
-                        onCheckedChange = { viewModel.isInstallment = it }
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        stringResource(R.string.is_installment),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
-                    )
                 }
             }
 
