@@ -86,17 +86,11 @@ fun SettingsScreen(
     val currentLanguage = viewModel.currentLanguage.value
     val snackbarHostState = remember { SnackbarHostState() }
     val currentBudget by viewModel.monthlyBudget.collectAsState()
-    val aiModelPath by viewModel.aiModelPath.collectAsState()
+
     val isLoading by viewModel.isLoading
 
     val context = LocalContext.current
-    val modelPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            viewModel.updateAiModel(context, uri)
-        }
-    }
+
 
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var categoryToEdit by remember { mutableStateOf<CategoryEntity?>(null) }
@@ -151,8 +145,7 @@ fun SettingsScreen(
             onLanguageToggle = onLanguageToggle,
             currentLanguage = currentLanguage,
             currentBudget = currentBudget,
-            aiModelPath = aiModelPath,
-            onAiModelClick = { modelPickerLauncher.launch("*/*") },
+
             isLoading = isLoading
         )
     }
@@ -294,8 +287,7 @@ fun SettingsContent(
     onLanguageToggle: () -> Unit,
     currentLanguage: String,
     currentBudget: Long,
-    aiModelPath: String?,
-    onAiModelClick: () -> Unit,
+
     isLoading: Boolean
 ) {
     val context = LocalContext.current
@@ -455,37 +447,7 @@ fun SettingsContent(
                 }
             }
 
-            Surface(
-                onClick = onAiModelClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 1.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.SmartToy,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("AI Model (Scan Receipt)")
-                        Text(
-                            aiModelPath?.substringAfterLast("/") ?: "Not Set",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
+
         }
 
         // Categories Section

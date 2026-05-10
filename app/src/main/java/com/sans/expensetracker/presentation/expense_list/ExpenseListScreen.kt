@@ -84,7 +84,7 @@ import com.sans.expensetracker.presentation.components.CategoryIcon
 @Composable
 fun ExpenseListScreen(
     onAddExpenseClick: () -> Unit,
-    onScanReceiptClick: () -> Unit,
+
     onInstallmentsClick: () -> Unit,
     onStatsClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -125,20 +125,13 @@ fun ExpenseListScreen(
             )
         },
         floatingActionButton = {
-            Column(horizontalAlignment = Alignment.End) {
-                ExtendedFloatingActionButton(
-                    onClick = onScanReceiptClick,
-                    icon = { Icon(Icons.Default.DocumentScanner, contentDescription = stringResource(R.string.scan_receipt)) },
-                    text = { Text(stringResource(R.string.scan_receipt)) },
-                    modifier = Modifier.padding(bottom = 16.dp),
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-                ExtendedFloatingActionButton(
-                    onClick = onAddExpenseClick,
-                    icon = { Icon(Icons.Default.Add, contentDescription = "Add Expense") },
-                    text = { Text("Add Expense") }
-                )
+            FloatingActionButton(
+                onClick = onAddExpenseClick,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add Expense")
             }
         }
     ) { paddingValues ->
