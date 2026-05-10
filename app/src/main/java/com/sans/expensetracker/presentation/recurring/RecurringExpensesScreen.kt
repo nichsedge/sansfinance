@@ -73,7 +73,7 @@ fun RecurringExpensesScreen(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 ),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
+                shape = MaterialTheme.shapes.large
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp)

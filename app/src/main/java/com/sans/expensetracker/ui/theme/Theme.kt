@@ -12,36 +12,38 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = DeepViolet,
+    primary = Indigo500,
     onPrimary = Color.White,
-    secondary = Mint,
-    tertiary = Rose,
-    background = DarkBg,
-    surface = SurfaceBg,
-    onBackground = Color.White,
-    onSurface = Color.White,
-    surfaceVariant = BorderColor,
-    onSurfaceVariant = Color(0xFF94A3B8)
+    secondary = Emerald500,
+    tertiary = Rose500,
+    error = Rose500,
+    background = Slate900,
+    surface = Slate800,
+    onBackground = Slate50,
+    onSurface = Slate50,
+    surfaceVariant = Slate700,
+    onSurfaceVariant = Slate400
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = DeepViolet,
+    primary = Indigo600,
     onPrimary = Color.White,
-    secondary = Mint,
-    tertiary = Rose,
-    background = Color(0xFFF8FAFC),
+    secondary = Emerald500,
+    tertiary = Rose500,
+    error = Rose500,
+    background = Slate50,
     surface = Color.White,
-    onBackground = DarkBg,
-    onSurface = DarkBg,
-    surfaceVariant = Color(0xFFF1F5F9),
-    onSurfaceVariant = Color(0xFF64748B)
+    onBackground = Slate900,
+    onSurface = Slate900,
+    surfaceVariant = Slate100,
+    onSurfaceVariant = Slate500
 )
 
 @Composable
 fun ExpenseTrackerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false, // Disabled by default to strictly follow Atracker brand colors
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -49,7 +51,6 @@ fun ExpenseTrackerTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
@@ -57,6 +58,7 @@ fun ExpenseTrackerTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
+        shapes = Shapes,
         content = content
     )
 }

@@ -270,7 +270,7 @@ fun ScanReceiptScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(160.dp)
-                                    .clip(RoundedCornerShape(12.dp)),
+                                    .clip(MaterialTheme.shapes.small),
                                 contentScale = ContentScale.Crop
                             )
                             Spacer(Modifier.height(16.dp))
@@ -598,7 +598,7 @@ fun SuggestedTransactionCard(
                                 selected = cat.equals(transaction.category, ignoreCase = true),
                                 onClick = { onEditCategory(cat) },
                                 label = { Text(cat) },
-                                shape = RoundedCornerShape(12.dp)
+                                shape = MaterialTheme.shapes.small
                             )
                         }
                     }
