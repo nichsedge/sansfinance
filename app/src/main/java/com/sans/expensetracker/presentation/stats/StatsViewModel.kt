@@ -95,7 +95,7 @@ class StatsViewModel @Inject constructor(
             TrendPeriod.YEARLY -> 0L // All time
         }
 
-        expenseRepository.getDailySpendingBetween(since, Long.MAX_VALUE)
+        expenseRepository.getDailySpendingBetween(since, now.timeInMillis)
             .map { daily ->
                 groupSpendingByPeriod(daily, period)
             }
@@ -109,8 +109,6 @@ class StatsViewModel @Inject constructor(
         daily: List<com.sans.expensetracker.data.local.entity.DaySpent>,
         period: TrendPeriod
     ): List<com.sans.expensetracker.data.local.entity.DaySpent> {
-        if (period == TrendPeriod.DAILY) return daily
-
         val calendar = CalendarUtils.getInstance()
 
         // 1. Group by the start of the period

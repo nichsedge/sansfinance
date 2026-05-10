@@ -64,6 +64,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 
@@ -287,7 +288,7 @@ fun SpendingTrendChart(
                     val bottomPadding = textLayoutResults.maxOfOrNull { it.size.height }?.toFloat() ?: 40f
                     val yAxisLabels = 5
                     val yAxisLabelWidth = textMeasurer.measure(
-                        CurrencyFormatter.formatAmount(maxAmount), style = labelStyle
+                        CurrencyFormatter.formatAmountCompact(maxAmount), style = labelStyle
                     ).size.width.toFloat() + 16f
 
                     val chartLeft = yAxisLabelWidth
@@ -312,7 +313,7 @@ fun SpendingTrendChart(
                         )
 
                         val textLayoutResult = textMeasurer.measure(
-                            CurrencyFormatter.formatAmount(value), style = labelStyle
+                            CurrencyFormatter.formatAmountCompact(value), style = labelStyle
                         )
                         drawText(
                             textLayoutResult = textLayoutResult,
@@ -348,6 +349,23 @@ fun SpendingTrendChart(
                                 p2.x, p2.y
                             )
                         }
+
+                        // Area fill under the path
+                        val fillPath = Path().apply {
+                            addPath(path)
+                            lineTo(points.last().x, chartBottom)
+                            lineTo(points.first().x, chartBottom)
+                            close()
+                        }
+
+                        drawPath(
+                            path = fillPath,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(primaryColor.copy(alpha = 0.3f), Color.Transparent),
+                                startY = chartTop,
+                                endY = chartBottom
+                            )
+                        )
 
                         drawPath(
                             path = path,
