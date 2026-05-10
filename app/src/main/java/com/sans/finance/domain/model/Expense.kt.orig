@@ -13,7 +13,6 @@ data class Expense(
     val isInstallmentPayment: Boolean = false,
     val description: String? = null,
     val accountId: Long = 1,
-    val toAccountId: Long? = null,
     val type: String = "EXPENSE",
     val tags: List<String> = emptyList(),
     val quantity: Int = 1,

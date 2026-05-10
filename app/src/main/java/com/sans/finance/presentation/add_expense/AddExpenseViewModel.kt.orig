@@ -75,11 +75,9 @@ class AddExpenseViewModel @Inject constructor(
     var description by mutableStateOf("")
     var categoryId by mutableLongStateOf(1L)
     var accountId by mutableLongStateOf(1L)
-    var toAccountId by mutableLongStateOf(2L)
     // transactionType moved up
-    var paymentType by mutableStateOf("ONE_TIME") // "ONE_TIME", "RECURRING", "INSTALLMENT"
-    val isInstallment get() = paymentType == "INSTALLMENT"
-    val isRecurring get() = paymentType == "RECURRING"
+    var isInstallment by mutableStateOf(false)
+    var isRecurring by mutableStateOf(false)
     var recurrenceInterval by mutableStateOf("MONTHLY")
     var durationMonths by mutableStateOf("")
     var selectedDate by mutableLongStateOf(System.currentTimeMillis())
@@ -113,12 +111,9 @@ class AddExpenseViewModel @Inject constructor(
                     description = expense.description ?: ""
                     categoryId = expense.categoryId
                     accountId = expense.accountId
-                    toAccountId = expense.toAccountId ?: 2L
                     transactionType = expense.type
-                    if (expense.isInstallment) paymentType = "INSTALLMENT"
-                    else if (expense.isRecurring) paymentType = "RECURRING"
-                    else paymentType = "ONE_TIME"
-
+                    isInstallment = expense.isInstallment
+                    isRecurring = expense.isRecurring
                     recurrenceInterval = expense.recurrenceInterval ?: "MONTHLY"
                     selectedDate = expense.date
                     selectedTags = expense.tags
@@ -207,7 +202,6 @@ class AddExpenseViewModel @Inject constructor(
                 amount = amountInCents,
                 categoryId = categoryId,
                 accountId = accountId,
-                toAccountId = if (transactionType == "TRANSFER") toAccountId else null,
                 type = transactionType,
                 isInstallment = isInstallment,
                 isRecurring = isRecurring,

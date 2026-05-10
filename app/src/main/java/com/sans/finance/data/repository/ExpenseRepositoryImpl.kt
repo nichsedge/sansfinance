@@ -128,8 +128,15 @@ class ExpenseRepositoryImpl(
         syncTags(expenseId, expense.tags)
         
         // Update account balance
-        val delta = if (expense.type == "INCOME") expense.amount else -expense.amount
-        updateAccountBalance(expense.accountId, delta)
+        if (expense.type == "TRANSFER") {
+            updateAccountBalance(expense.accountId, -expense.amount)
+            if (expense.toAccountId != null) {
+                updateAccountBalance(expense.toAccountId, expense.amount)
+            }
+        } else {
+            val delta = if (expense.type == "INCOME") expense.amount else -expense.amount
+            updateAccountBalance(expense.accountId, delta)
+        }
         
         return expenseId
     }
@@ -142,12 +149,26 @@ class ExpenseRepositoryImpl(
         // Update account balance
         if (oldExpense != null) {
             // Reverse old amount
-            val oldDelta = if (oldExpense.type == "INCOME") -oldExpense.finalPrice else oldExpense.finalPrice
-            updateAccountBalance(oldExpense.accountId, oldDelta)
+            if (oldExpense.type == "TRANSFER") {
+                updateAccountBalance(oldExpense.accountId, oldExpense.finalPrice)
+                if (oldExpense.toAccountId != null) {
+                    updateAccountBalance(oldExpense.toAccountId, -oldExpense.finalPrice)
+                }
+            } else {
+                val oldDelta = if (oldExpense.type == "INCOME") -oldExpense.finalPrice else oldExpense.finalPrice
+                updateAccountBalance(oldExpense.accountId, oldDelta)
+            }
             
             // Apply new amount
-            val newDelta = if (expense.type == "INCOME") expense.amount else -expense.amount
-            updateAccountBalance(expense.accountId, newDelta)
+            if (expense.type == "TRANSFER") {
+                updateAccountBalance(expense.accountId, -expense.amount)
+                if (expense.toAccountId != null) {
+                    updateAccountBalance(expense.toAccountId, expense.amount)
+                }
+            } else {
+                val newDelta = if (expense.type == "INCOME") expense.amount else -expense.amount
+                updateAccountBalance(expense.accountId, newDelta)
+            }
         }
     }
 
@@ -177,8 +198,15 @@ class ExpenseRepositoryImpl(
         dao.deleteExpense(expense.toEntity())
         
         // Update account balance (reverse the transaction)
-        val delta = if (expense.type == "INCOME") -expense.amount else expense.amount
-        updateAccountBalance(expense.accountId, delta)
+        if (expense.type == "TRANSFER") {
+            updateAccountBalance(expense.accountId, expense.amount)
+            if (expense.toAccountId != null) {
+                updateAccountBalance(expense.toAccountId, -expense.amount)
+            }
+        } else {
+            val delta = if (expense.type == "INCOME") -expense.amount else expense.amount
+            updateAccountBalance(expense.accountId, delta)
+        }
     }
 
     override fun getTotalSpentSince(since: Long): Flow<Long?> {
@@ -299,6 +327,7 @@ class ExpenseRepositoryImpl(
             recurrenceInterval = expense.recurrenceInterval,
             nextDueDate = expense.nextDueDate,
             accountId = expense.accountId,
+            toAccountId = expense.toAccountId,
             type = expense.type,
             description = expense.description,
             tags = tags.map { it.name },
@@ -322,6 +351,7 @@ class ExpenseRepositoryImpl(
             recurrenceInterval = recurrenceInterval,
             nextDueDate = nextDueDate,
             accountId = accountId,
+            toAccountId = toAccountId,
             type = type,
             description = description,
             platform = tags.firstOrNull(), // Keep for legacy if needed, or null

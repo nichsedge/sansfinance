@@ -1,0 +1,23 @@
+--- app/src/main/java/com/sans/finance/data/local/AppDatabase.kt
++++ app/src/main/java/com/sans/finance/data/local/AppDatabase.kt
+@@ -34,7 +34,7 @@
+         GoalEntity::class,
+         BudgetEntity::class
+     ],
+-    version = 13,
++    version = 14,
+     exportSchema = false
+ )
+ abstract class AppDatabase : RoomDatabase() {
+@@ -165,6 +165,12 @@
+                 db.execSQL("ALTER TABLE expenses RENAME COLUMN merchant TO description")
+             }
+         }
++
++        val MIGRATION_13_14 = object : androidx.room.migration.Migration(13, 14) {
++            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
++                db.execSQL("ALTER TABLE expenses ADD COLUMN to_account_id INTEGER")
++            }
++        }
+     }
+ }

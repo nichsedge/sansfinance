@@ -81,7 +81,6 @@ fun AddExpenseScreen(
     var noteExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var descriptionExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var accountExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
-    var toAccountExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var recurrenceExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     val currencySymbol = remember {
         try { java.util.Currency.getInstance("IDR").getSymbol(java.util.Locale.getDefault()) } catch (e: Exception) { "Rp" }
@@ -123,11 +122,11 @@ fun AddExpenseScreen(
                         shape = SegmentedButtonDefaults.itemShape(index = index, count = types.size),
                         onClick = { viewModel.transactionType = type },
                         selected = viewModel.transactionType == type,
-                        label = { 
+                        label = {
                             Text(
                                 type.lowercase().replaceFirstChar { it.uppercase() },
                                 fontWeight = if (viewModel.transactionType == type) FontWeight.Bold else FontWeight.Normal
-                            ) 
+                            )
                         }
                     )
                 }
@@ -144,7 +143,7 @@ fun AddExpenseScreen(
                     value = selectedAccount?.name ?: "Unknown Account",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text(if (viewModel.transactionType == "TRANSFER") "From Account" else "Account") },
+                    label = { Text("Account") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                     shape = MaterialTheme.shapes.medium
@@ -409,26 +408,25 @@ fun AddExpenseScreen(
                 }
             }
 
-            val paymentTypes = listOf("ONE_TIME", "RECURRING", "INSTALLMENT")
-            val paymentLabels = listOf(
-                stringResource(R.string.one_time),
-                stringResource(R.string.recurring_expenses),
-                stringResource(R.string.installment)
-            )
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.fillMaxWidth()
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                onClick = { viewModel.isRecurring = !viewModel.isRecurring }
             ) {
-                paymentTypes.forEachIndexed { index, type ->
-                    SegmentedButton(
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = paymentTypes.size),
-                        onClick = { viewModel.paymentType = type },
-                        selected = viewModel.paymentType == type,
-                        label = {
-                            Text(
-                                paymentLabels[index],
-                                fontWeight = if (viewModel.paymentType == type) FontWeight.Bold else FontWeight.Normal
-                            )
-                        }
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = viewModel.isRecurring,
+                        onCheckedChange = { viewModel.isRecurring = it }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.recurring_expenses),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
@@ -465,6 +463,29 @@ fun AddExpenseScreen(
                 }
             }
 
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                onClick = { viewModel.isInstallment = !viewModel.isInstallment }
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = viewModel.isInstallment,
+                        onCheckedChange = { viewModel.isInstallment = it }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.is_installment),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
             if (viewModel.isInstallment) {
                 OutlinedTextField(
                     value = viewModel.durationMonths,
@@ -490,9 +511,9 @@ fun AddExpenseScreen(
 
             val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
             Button(
-                onClick = { 
+                onClick = {
                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    viewModel.onSaveClick(onBack) 
+                    viewModel.onSaveClick(onBack)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -502,8 +523,8 @@ fun AddExpenseScreen(
                 Text(
                     text = (if (viewModel.isEditMode) stringResource(R.string.update_transaction) else stringResource(
                         R.string.confirm_transaction
-                    )).uppercase(), 
-                    fontWeight = FontWeight.Black, 
+                    )).uppercase(),
+                    fontWeight = FontWeight.Black,
                     fontSize = 16.sp,
                     letterSpacing = 1.sp
                 )
