@@ -133,7 +133,7 @@ fun AccountScreen(
                                 expanded = expanded,
                                 onDismissRequest = { expanded = false }
                             ) {
-                                listOf("Cash", "Bank", "Credit Card", "Investment").forEach { accountType ->
+                                listOf("Cash", "Bank", "Credit Card", "Loan", "Investment").forEach { accountType ->
                                     DropdownMenuItem(
                                         text = { Text(accountType) },
                                         onClick = {

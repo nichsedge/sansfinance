@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 data class AccountEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val type: String, // "Cash", "Bank", "Credit Card", "Investment"
+    val type: String, // "Cash", "Bank", "Credit Card", "Loan", "Investment"
     val balance: Long,
     val currency: String = "IDR",
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis(),
