@@ -137,7 +137,7 @@ fun SettingsScreen(
 
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsContent(
     paddingValues: PaddingValues,
@@ -167,9 +167,9 @@ fun SettingsContent(
         item {
             SettingsSectionTitle(stringResource(R.string.data_management))
             Card(
+                onClick = { exportBackup(context) },
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { exportBackup(context) },
+                    .fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
             ) {
                 Row(
@@ -220,9 +220,9 @@ fun SettingsContent(
         item {
             SettingsSectionTitle(stringResource(R.string.language))
             Card(
+                onClick = onLanguageToggle,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onLanguageToggle() },
+                    .fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Row(
