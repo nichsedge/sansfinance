@@ -1,5 +1,6 @@
 package com.sans.finance.presentation.expense_list
 
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -169,25 +170,19 @@ fun ExpenseListScreen(
                 )
             }
 
-            SummaryCard(
-                periodTotal = state.totalFilteredAmount,
-                budget = state.monthlyBudget
-            )
-
-            Text(
-                stringResource(R.string.recent_transactions).uppercase(),
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.secondary,
-                letterSpacing = 1.5.sp
-            )
-
-            DateRangeFilterBar(
+            FilterTabs(
                 activeFilter = state.activeDateFilter,
                 onFilterSelected = { filter ->
                     viewModel.updateDateRange(filter)
                 }
             )
+            SummaryCard(
+                income = state.totalFilteredIncome,
+                expense = state.totalFilteredExpense,
+                total = state.totalFilteredAmount
+            )
+
+
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -196,19 +191,70 @@ fun ExpenseListScreen(
             ) {
                 state.groupedExpenses.forEach { (date, expenses) ->
                     item(key = "header-$date") {
+                        val cal = com.sans.finance.core.util.CalendarUtils.getInstance().apply { timeInMillis = date }
+                        val day = cal.get(java.util.Calendar.DAY_OF_MONTH).toString().padStart(2, '0')
+                        val dayOfWeek = java.text.SimpleDateFormat("EEE", java.util.Locale.US).format(cal.time)
+                        val monthYear = java.text.SimpleDateFormat("MM.yyyy", java.util.Locale.US).format(cal.time)
+
+                        val dayIncome = expenses.filter { it.type == "INCOME" }.sumOf { if (it.isInstallment && it.monthlyPayment > 0) it.monthlyPayment else it.amount }
+                        val dayExpense = expenses.filter { it.type != "INCOME" }.sumOf { if (it.isInstallment && it.monthlyPayment > 0) it.monthlyPayment else it.amount }
+
                         Surface(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp),
-                            color = Color.Transparent
+                                .fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         ) {
-                            Text(
-                                date.uppercase(),
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.secondary,
-                                letterSpacing = 1.5.sp
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = day,
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.size(8.dp))
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.secondary,
+                                        shape = MaterialTheme.shapes.small
+                                    ) {
+                                        Text(
+                                            text = dayOfWeek,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSecondary,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.size(8.dp))
+                                    Text(
+                                        text = monthYear,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (dayIncome > 0) {
+                                        Text(
+                                            text = com.sans.finance.core.util.CurrencyFormatter.formatAmount(dayIncome),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = Color(0xFF4CAF50)
+                                        )
+                                        Spacer(modifier = Modifier.size(8.dp))
+                                    }
+                                    if (dayExpense > 0) {
+                                        Text(
+                                            text = com.sans.finance.core.util.CurrencyFormatter.formatAmount(dayExpense),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = Color(0xFFE53935)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -220,6 +266,7 @@ fun ExpenseListScreen(
                         ExpenseItem(
                             expense = expense,
                             category = state.categories.find { it.id == expense.categoryId },
+                            account = state.accounts.find { it.id == expense.accountId },
                             onClick = { onExpenseClick(expense.id) },
                             onLongClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -527,102 +574,77 @@ fun AdvancedFilterSheet(
 }
 
 @Composable
-fun SummaryCard(periodTotal: Long, budget: Long = 0L) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = MaterialTheme.shapes.large,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            androidx.compose.ui.graphics.Brush.linearGradient(
-                listOf(
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f)
-                )
-            )
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+fun SummaryCard(
+    income: Long,
+    expense: Long,
+    total: Long
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp
     ) {
-        Column(
-            modifier = Modifier.padding(24.dp)
-        ) {
-            Text(
-                stringResource(R.string.total_filtered).uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.secondary,
-                letterSpacing = 1.5.sp
-            )
-            Text(
-                com.sans.finance.core.util.CurrencyFormatter.formatAmount(periodTotal),
-                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Black),
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            if (budget > 0L) {
-                Spacer(modifier = Modifier.height(24.dp))
-                val progress = (periodTotal.toFloat() / budget.toFloat()).coerceIn(0f, 1f)
-                val isOverBudget = periodTotal > budget
-                val progressColor =
-                    if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
-
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            "Monthly Budget Progress".uppercase(),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.secondary,
-                            letterSpacing = 1.2.sp
-                        )
-                        Text(
-                            "${(progress * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = progressColor,
-                            fontWeight = FontWeight.Black
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp),
-                        color = progressColor,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp, horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        "${
-                            com.sans.finance.core.util.CurrencyFormatter.formatAmount(
-                                periodTotal
-                            )
-                        } of ${
-                            com.sans.finance.core.util.CurrencyFormatter.formatAmount(
-                                budget
-                            )
-                        }",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.align(Alignment.End)
+                        "Income",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(income),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color(0xFF4CAF50)
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "Expenses",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(expense),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color(0xFFE53935)
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        "Total",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(total),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
+            androidx.compose.material3.Divider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                thickness = 1.dp
+            )
         }
     }
 }
+
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ExpenseItem(
     expense: Expense,
     category: com.sans.finance.data.local.entity.CategoryEntity?,
+    account: com.sans.finance.data.local.entity.AccountEntity? = null,
     showNextDueDate: Boolean = false,
     onClick: () -> Unit,
     onLongClick: () -> Unit
@@ -637,94 +659,67 @@ fun ExpenseItem(
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
-        shape = MaterialTheme.shapes.medium,
         color = if (expense.isInstallmentPayment) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp
+        tonalElevation = 0.dp
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Surface(
-                modifier = Modifier.size(48.dp),
-                shape = androidx.compose.foundation.shape.CircleShape,
-                color = if (expense.isInstallmentPayment) MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+        Column {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Row(
+                    modifier = Modifier.weight(0.35f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     CategoryIcon(
                         icon = icon,
-                        fontSize = 20.sp
+                        fontSize = 16.sp
+                    )
+                    Text(
+                        category?.name ?: stringResource(R.string.uncategorized),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
+
+                Column(modifier = Modifier.weight(0.65f)) {
+                    Text(
+                        expense.note.ifBlank { expense.description ?: "" },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (expense.isInstallmentPayment) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                    Text(
+                        account?.name ?: "Unknown",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    val displayAmount =
+                        if (expense.isInstallment && expense.monthlyPayment > 0) expense.monthlyPayment else expense.amount
+                    val amountColor = if (expense.type == "INCOME") Color(0xFF4CAF50) else Color(0xFFE53935)
+                    Text(
+                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(displayAmount),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = amountColor
                     )
                 }
             }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    expense.note,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    color = if (expense.isInstallmentPayment) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface
-                )
-                val descriptionDisplay = when {
-                    !expense.description.isNullOrBlank() -> "${expense.description} • "
-                    expense.tags.isNotEmpty() -> "${expense.tags.joinToString(", ")} • "
-                    else -> ""
-                }
-
-                Text(
-                    "$descriptionDisplay${category?.name ?: stringResource(R.string.uncategorized)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (expense.isInstallmentPayment) {
-                    Text(
-                        "Monthly Installment",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                        fontWeight = FontWeight.Bold
-                    )
-                } else if (expense.isRecurring) {
-                    val intervalText = expense.recurrenceInterval?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Monthly"
-                    val nextDueText = if (showNextDueDate && expense.nextDueDate != null) {
-                        val formatter = com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter()
-                        " (Next: ${formatter.format(java.util.Date(expense.nextDueDate))})"
-                    } else ""
-                    Text(
-                        "🔁 $intervalText$nextDueText",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        fontWeight = FontWeight.Bold
-                    )
-                } else if (expense.isInstallment && expense.monthlyPayment > 0) {
-                    val totalPaid =
-                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(expense.totalPaid)
-                    val totalAmount =
-                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(expense.amount)
-                    Text(
-                        "Paid: $totalPaid / $totalAmount",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
-                val displayAmount =
-                    if (expense.isInstallment && expense.monthlyPayment > 0) expense.monthlyPayment else expense.amount
-                val amountColor = if (expense.type == "INCOME") Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
-                val prefix = if (expense.type == "INCOME") "+" else "-"
-                Text(
-                    "$prefix ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(displayAmount)}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Black,
-                    color = amountColor
-                )
-            }
+            androidx.compose.material3.Divider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                thickness = 1.dp
+            )
         }
     }
 }
@@ -760,6 +755,50 @@ fun DateRangeFilterBar(
             selected = activeFilter == DateRangeFilter.ALL_TIME,
             onClick = { onFilterSelected(DateRangeFilter.ALL_TIME) },
             label = { Text(stringResource(R.string.filter_all)) }
+        )
+    }
+}
+
+
+@Composable
+fun FilterTabs(
+    activeFilter: DateRangeFilter,
+    onFilterSelected: (DateRangeFilter) -> Unit
+) {
+    val tabIndex = when (activeFilter) {
+        DateRangeFilter.SEVEN_DAYS -> 0
+        DateRangeFilter.THIRTY_DAYS -> 1
+        DateRangeFilter.THIS_MONTH -> 2
+        DateRangeFilter.ALL_TIME -> 3
+        else -> 0
+    }
+
+    androidx.compose.material3.ScrollableTabRow(
+        selectedTabIndex = tabIndex,
+        edgePadding = 0.dp,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        divider = { androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp) }
+    ) {
+        androidx.compose.material3.Tab(
+            selected = tabIndex == 0,
+            onClick = { onFilterSelected(DateRangeFilter.SEVEN_DAYS) },
+            text = { Text("Daily (7d)", style = MaterialTheme.typography.labelLarge, fontWeight = if(tabIndex == 0) FontWeight.Bold else FontWeight.Normal) }
+        )
+        androidx.compose.material3.Tab(
+            selected = tabIndex == 1,
+            onClick = { onFilterSelected(DateRangeFilter.THIRTY_DAYS) },
+            text = { Text("Calendar (30d)", style = MaterialTheme.typography.labelLarge, fontWeight = if(tabIndex == 1) FontWeight.Bold else FontWeight.Normal) }
+        )
+        androidx.compose.material3.Tab(
+            selected = tabIndex == 2,
+            onClick = { onFilterSelected(DateRangeFilter.THIS_MONTH) },
+            text = { Text("Monthly", style = MaterialTheme.typography.labelLarge, fontWeight = if(tabIndex == 2) FontWeight.Bold else FontWeight.Normal) }
+        )
+        androidx.compose.material3.Tab(
+            selected = tabIndex == 3,
+            onClick = { onFilterSelected(DateRangeFilter.ALL_TIME) },
+            text = { Text("Total", style = MaterialTheme.typography.labelLarge, fontWeight = if(tabIndex == 3) FontWeight.Bold else FontWeight.Normal) }
         )
     }
 }
