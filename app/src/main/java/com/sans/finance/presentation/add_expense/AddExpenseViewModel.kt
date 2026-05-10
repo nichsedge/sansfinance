@@ -77,6 +77,8 @@ class AddExpenseViewModel @Inject constructor(
     var accountId by mutableLongStateOf(1L)
     // transactionType moved up
     var isInstallment by mutableStateOf(false)
+    var isRecurring by mutableStateOf(false)
+    var recurrenceInterval by mutableStateOf("MONTHLY")
     var durationMonths by mutableStateOf("")
     var selectedDate by mutableLongStateOf(System.currentTimeMillis())
     var selectedTags by mutableStateOf(listOf<String>())
@@ -111,6 +113,8 @@ class AddExpenseViewModel @Inject constructor(
                     accountId = expense.accountId
                     transactionType = expense.type
                     isInstallment = expense.isInstallment
+                    isRecurring = expense.isRecurring
+                    recurrenceInterval = expense.recurrenceInterval ?: "MONTHLY"
                     selectedDate = expense.date
                     selectedTags = expense.tags
 
@@ -178,6 +182,18 @@ class AddExpenseViewModel @Inject constructor(
     fun onSaveClick(onSuccess: () -> Unit) {
         val amountInCents = amount.toSafeLongCents() ?: 0L
 
+        val nextDueDateVal = if (isRecurring) {
+            val calendar = java.util.Calendar.getInstance()
+            calendar.timeInMillis = selectedDate
+            when (recurrenceInterval) {
+                "DAILY" -> calendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
+                "WEEKLY" -> calendar.add(java.util.Calendar.WEEK_OF_YEAR, 1)
+                "MONTHLY" -> calendar.add(java.util.Calendar.MONTH, 1)
+                "YEARLY" -> calendar.add(java.util.Calendar.YEAR, 1)
+            }
+            calendar.timeInMillis
+        } else null
+
         viewModelScope.launch {
             val expense = Expense(
                 id = editExpenseId ?: 0,
@@ -188,6 +204,9 @@ class AddExpenseViewModel @Inject constructor(
                 accountId = accountId,
                 type = transactionType,
                 isInstallment = isInstallment,
+                isRecurring = isRecurring,
+                recurrenceInterval = if (isRecurring) recurrenceInterval else null,
+                nextDueDate = nextDueDateVal,
                 merchant = merchant.ifBlank { null },
                 tags = selectedTags,
                 quantity = 1

@@ -108,6 +108,7 @@ fun RecurringExpensesScreen(
                         ExpenseItem(
                             expense = expense,
                             category = category,
+                            showNextDueDate = true,
                             onClick = { onExpenseClick(expense.id) },
                             onLongClick = {}
                         )

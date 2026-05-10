@@ -79,6 +79,7 @@ fun AddExpenseScreen(
     var merchantExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var typeExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var accountExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var recurrenceExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     val currencySymbol = remember {
         try { java.util.Currency.getInstance("IDR").getSymbol(java.util.Locale.getDefault()) } catch (e: Exception) { "Rp" }
     }
@@ -380,6 +381,61 @@ fun AddExpenseScreen(
                                 merchantExpanded = false
                             }
                         )
+                    }
+                }
+            }
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                onClick = { viewModel.isRecurring = !viewModel.isRecurring }
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = viewModel.isRecurring,
+                        onCheckedChange = { viewModel.isRecurring = it }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.recurring_expenses),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            if (viewModel.isRecurring) {
+                @OptIn(ExperimentalMaterial3Api::class)
+                ExposedDropdownMenuBox(
+                    expanded = recurrenceExpanded,
+                    onExpandedChange = { recurrenceExpanded = !recurrenceExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = viewModel.recurrenceInterval,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Recurrence Interval") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = recurrenceExpanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                        shape = MaterialTheme.shapes.medium
+                    )
+                    ExposedDropdownMenu(
+                        expanded = recurrenceExpanded,
+                        onDismissRequest = { recurrenceExpanded = false }
+                    ) {
+                        listOf("DAILY", "WEEKLY", "MONTHLY", "YEARLY").forEach { type ->
+                            DropdownMenuItem(
+                                text = { Text(type) },
+                                onClick = {
+                                    viewModel.recurrenceInterval = type
+                                    recurrenceExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
             }

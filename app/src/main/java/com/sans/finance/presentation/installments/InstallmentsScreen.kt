@@ -17,11 +17,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -150,6 +152,8 @@ fun ExpandableInstallment(
     val items by viewModel.getItemsForInstallment(installment.id)
         .collectAsState(initial = emptyList())
     val dateFormatter = DateFormatterUtils.getStandardFormatter()
+    val monthYearFormatter = remember { java.text.SimpleDateFormat("MMM yyyy", Locale.getDefault()) }
+    val now = System.currentTimeMillis()
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -192,6 +196,25 @@ fun ExpandableInstallment(
                 }
             }
 
+            val paidCount = items.count { it.status == "Paid" }
+            val progress = if (installment.durationMonths > 0) paidCount.toFloat() / installment.durationMonths else 0f
+
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.weight(1f).height(6.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    "$paidCount/${installment.durationMonths} Paid",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             if (expanded) {
                 Column(
                     modifier = Modifier.padding(top = 16.dp)
@@ -207,12 +230,25 @@ fun ExpandableInstallment(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val isOverdue = monthlyItem.status == "Pending" && monthlyItem.dueDate < now
                             Column {
-                                Text(
-                                    "Month ${monthlyItem.monthNumber}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        "${monthYearFormatter.format(Date(monthlyItem.dueDate))} · Month ${monthlyItem.monthNumber}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    if (isOverdue) {
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Icon(
+                                            Icons.Default.Warning,
+                                            contentDescription = "Overdue",
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.height(14.dp).width(14.dp)
+                                        )
+                                    }
+                                }
                                 Text(
                                     dateFormatter.format(Date(monthlyItem.dueDate)),
                                     style = MaterialTheme.typography.bodySmall,
@@ -222,11 +258,11 @@ fun ExpandableInstallment(
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    if (monthlyItem.status == "Paid") stringResource(R.string.paid) else stringResource(
+                                    if (monthlyItem.status == "Paid") stringResource(R.string.paid) else if (isOverdue) "Overdue" else stringResource(
                                         R.string.pending
                                     ),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = if (monthlyItem.status == "Paid") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                    color = if (monthlyItem.status == "Paid") MaterialTheme.colorScheme.primary else if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
                                     fontWeight = FontWeight.Black
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))

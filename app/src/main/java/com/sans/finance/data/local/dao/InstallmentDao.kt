@@ -53,6 +53,9 @@ interface InstallmentDao {
     @Query("SELECT COUNT(*) FROM installment_items WHERE installment_id = :installmentId AND status = 'Pending'")
     suspend fun getPendingItemsCount(installmentId: Long): Int
 
+    @Query("SELECT MIN(due_date) FROM installment_items WHERE installment_id = :installmentId AND status = 'Pending'")
+    suspend fun getNextDueDateForInstallment(installmentId: Long): Long?
+
     @Query("SELECT SUM(amount) FROM installment_items WHERE status = 'Paid' AND due_date >= :since AND due_date < :until")
     fun getTotalPaidAmountBetween(since: Long, until: Long): Flow<Long?>
 

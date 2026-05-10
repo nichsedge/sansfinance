@@ -623,6 +623,7 @@ fun SummaryCard(periodTotal: Long, budget: Long = 0L) {
 fun ExpenseItem(
     expense: Expense,
     category: com.sans.finance.data.local.entity.CategoryEntity?,
+    showNextDueDate: Boolean = false,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -684,6 +685,18 @@ fun ExpenseItem(
                         "Monthly Installment",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.Bold
+                    )
+                } else if (expense.isRecurring) {
+                    val intervalText = expense.recurrenceInterval?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Monthly"
+                    val nextDueText = if (showNextDueDate && expense.nextDueDate != null) {
+                        val formatter = com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter()
+                        " (Next: ${formatter.format(java.util.Date(expense.nextDueDate))})"
+                    } else ""
+                    Text(
+                        "🔁 $intervalText$nextDueText",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary,
                         fontWeight = FontWeight.Bold
                     )
                 } else if (expense.isInstallment && expense.monthlyPayment > 0) {

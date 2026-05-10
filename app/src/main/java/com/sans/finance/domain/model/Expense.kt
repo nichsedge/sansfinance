@@ -8,6 +8,8 @@ data class Expense(
     val categoryId: Long,
     val isRecurring: Boolean = false,
     val isInstallment: Boolean = false,
+    val recurrenceInterval: String? = null,
+    val nextDueDate: Long? = null,
     val isInstallmentPayment: Boolean = false,
     val merchant: String? = null,
     val accountId: Long = 1,
