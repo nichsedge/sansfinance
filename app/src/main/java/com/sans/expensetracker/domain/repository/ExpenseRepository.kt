@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 interface ExpenseRepository {
     fun getAllExpenses(): Flow<List<Expense>>
     fun getExpensesBetween(since: Long, until: Long): Flow<List<Expense>>
+    fun getRecurringExpenses(): Flow<List<Expense>>
     fun getFilteredExpenses(
         query: String? = null,
         categoryIds: List<Long> = emptyList(),

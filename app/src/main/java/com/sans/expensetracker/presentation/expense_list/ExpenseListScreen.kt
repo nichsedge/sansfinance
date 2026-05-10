@@ -23,10 +23,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.QueryStats
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -87,7 +86,6 @@ fun ExpenseListScreen(
 
     onInstallmentsClick: () -> Unit,
     onStatsClick: () -> Unit,
-    onSettingsClick: () -> Unit,
     onExpenseClick: (Long) -> Unit,
     viewModel: ExpenseListViewModel = hiltViewModel()
 ) {
@@ -116,10 +114,7 @@ fun ExpenseListScreen(
                         Icon(Icons.Default.QueryStats, contentDescription = "Statistics")
                     }
                     IconButton(onClick = onInstallmentsClick) {
-                        Icon(Icons.Default.Payments, contentDescription = "Active Installments")
-                    }
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = "Active Installments")
                     }
                 }
             )
@@ -708,11 +703,13 @@ fun ExpenseItem(
             Column(horizontalAlignment = Alignment.End) {
                 val displayAmount =
                     if (expense.isInstallment && expense.monthlyPayment > 0) expense.monthlyPayment else expense.amount
+                val amountColor = if (expense.type == "INCOME") Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
+                val prefix = if (expense.type == "INCOME") "+" else "-"
                 Text(
-                    com.sans.expensetracker.core.util.CurrencyFormatter.formatAmount(displayAmount),
+                    "$prefix ${com.sans.expensetracker.core.util.CurrencyFormatter.formatAmount(displayAmount)}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = amountColor
                 )
             }
         }

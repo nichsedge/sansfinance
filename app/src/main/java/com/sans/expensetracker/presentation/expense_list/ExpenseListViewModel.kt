@@ -139,7 +139,9 @@ class ExpenseListViewModel @Inject constructor(
                 val grouped = groupExpensesByDate(expenses, dailyMap)
                 // Filtered item totals: normal items + installment payments (already in the list)
                 // We only exclude 'parent' installment plans to avoid double counting with their sub-payments
-                val periodTotal = expenses.filter { !it.isInstallment || it.isInstallmentPayment }.sumOf { it.amount }
+                val periodTotal = expenses.filter { !it.isInstallment || it.isInstallmentPayment }.sumOf { 
+                    if (it.type == "INCOME") it.amount else -it.amount 
+                }
                 _state.update {
                     it.copy(
                         expenses = expenses,

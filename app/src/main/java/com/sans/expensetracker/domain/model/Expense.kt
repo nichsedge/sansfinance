@@ -10,6 +10,8 @@ data class Expense(
     val isInstallment: Boolean = false,
     val isInstallmentPayment: Boolean = false,
     val merchant: String? = null,
+    val accountId: Long = 1,
+    val type: String = "EXPENSE",
     val tags: List<String> = emptyList(),
     val quantity: Int = 1,
     // Installment specific fields

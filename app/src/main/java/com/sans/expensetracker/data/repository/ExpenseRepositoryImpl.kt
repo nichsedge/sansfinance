@@ -10,7 +10,8 @@ class ExpenseRepositoryImpl(
     private val dao: com.sans.expensetracker.data.local.dao.ExpenseDao,
     private val tagDao: com.sans.expensetracker.data.local.dao.TagDao,
     private val categoryDao: com.sans.expensetracker.data.local.dao.CategoryDao,
-    private val installmentDao: com.sans.expensetracker.data.local.dao.InstallmentDao
+    private val installmentDao: com.sans.expensetracker.data.local.dao.InstallmentDao,
+    private val accountDao: com.sans.expensetracker.data.local.dao.AccountDao
 ) : ExpenseRepository {
 
     companion object {
@@ -36,6 +37,12 @@ class ExpenseRepositoryImpl(
             val expenses = expenseEntities.map { it.toDomain() }
             val installmentPayments = installmentRows.map { it.toDomain() }
             (expenses + installmentPayments).sortedByDescending { it.date }
+        }
+    }
+
+    override fun getRecurringExpenses(): Flow<List<Expense>> {
+        return dao.getRecurringExpenses().map { entities ->
+            entities.map { it.toDomain() }
         }
     }
 
@@ -119,12 +126,38 @@ class ExpenseRepositoryImpl(
     override suspend fun insertExpense(expense: Expense): Long {
         val expenseId = dao.insertExpense(expense.toEntity())
         syncTags(expenseId, expense.tags)
+        
+        // Update account balance
+        val delta = if (expense.type == "INCOME") expense.amount else -expense.amount
+        updateAccountBalance(expense.accountId, delta)
+        
         return expenseId
     }
 
     override suspend fun updateExpense(expense: Expense) {
+        val oldExpense = dao.getExpenseById(expense.id)?.expense
         dao.updateExpense(expense.toEntity())
         syncTags(expense.id, expense.tags)
+
+        // Update account balance
+        if (oldExpense != null) {
+            // Reverse old amount
+            val oldDelta = if (oldExpense.type == "INCOME") -oldExpense.finalPrice else oldExpense.finalPrice
+            updateAccountBalance(oldExpense.accountId, oldDelta)
+            
+            // Apply new amount
+            val newDelta = if (expense.type == "INCOME") expense.amount else -expense.amount
+            updateAccountBalance(expense.accountId, newDelta)
+        }
+    }
+
+    private suspend fun updateAccountBalance(accountId: Long, amountDelta: Long) {
+        accountDao.getAccountById(accountId)?.let { account ->
+            accountDao.updateAccount(account.copy(
+                balance = account.balance + amountDelta,
+                updatedAt = System.currentTimeMillis()
+            ))
+        }
     }
 
     private suspend fun syncTags(expenseId: Long, tagNames: List<String>) {
@@ -142,6 +175,10 @@ class ExpenseRepositoryImpl(
 
     override suspend fun deleteExpense(expense: Expense) {
         dao.deleteExpense(expense.toEntity())
+        
+        // Update account balance (reverse the transaction)
+        val delta = if (expense.type == "INCOME") -expense.amount else expense.amount
+        updateAccountBalance(expense.accountId, delta)
     }
 
     override fun getTotalSpentSince(since: Long): Flow<Long?> {
@@ -223,6 +260,8 @@ class ExpenseRepositoryImpl(
             categoryId = expense.categoryId,
             isRecurring = expense.isRecurring,
             isInstallment = expense.isInstallment,
+            accountId = expense.accountId,
+            type = expense.type,
             merchant = expense.merchant,
             tags = tags.map { it.name },
             quantity = expense.quantity,
@@ -242,6 +281,8 @@ class ExpenseRepositoryImpl(
             categoryId = categoryId,
             isRecurring = isRecurring,
             isInstallment = isInstallment,
+            accountId = accountId,
+            type = type,
             merchant = merchant,
             platform = tags.firstOrNull(), // Keep for legacy if needed, or null
             quantity = quantity,

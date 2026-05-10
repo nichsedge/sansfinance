@@ -7,12 +7,16 @@ import com.sans.expensetracker.data.local.dao.CategoryDao
 import com.sans.expensetracker.data.local.dao.ExpenseDao
 import com.sans.expensetracker.data.local.dao.InstallmentDao
 import com.sans.expensetracker.data.local.dao.TagDao
+import com.sans.expensetracker.data.local.entity.AccountEntity
 import com.sans.expensetracker.data.local.entity.CategoryEntity
 import com.sans.expensetracker.data.local.entity.ExpenseEntity
 import com.sans.expensetracker.data.local.entity.ExpenseTagCrossRef
 import com.sans.expensetracker.data.local.entity.InstallmentEntity
 import com.sans.expensetracker.data.local.entity.InstallmentItemEntity
 import com.sans.expensetracker.data.local.entity.TagEntity
+import com.sans.expensetracker.data.local.entity.NetWorthSnapshotEntity
+import com.sans.expensetracker.data.local.entity.GoalEntity
+import com.sans.expensetracker.data.local.entity.BudgetEntity
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 
@@ -23,9 +27,13 @@ import kotlinx.coroutines.launch
         InstallmentItemEntity::class,
         CategoryEntity::class,
         TagEntity::class,
-        ExpenseTagCrossRef::class
+        ExpenseTagCrossRef::class,
+        AccountEntity::class,
+        NetWorthSnapshotEntity::class,
+        GoalEntity::class,
+        BudgetEntity::class
     ],
-    version = 7,
+    version = 11,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -33,6 +41,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val categoryDao: CategoryDao
     abstract val installmentDao: InstallmentDao
     abstract val tagDao: TagDao
+    abstract val accountDao: com.sans.expensetracker.data.local.dao.AccountDao
+    abstract val goalDao: com.sans.expensetracker.data.local.dao.GoalDao
+    abstract val budgetDao: com.sans.expensetracker.data.local.dao.BudgetDao
 
     fun checkpoint() {
         val cursor =
@@ -57,13 +68,24 @@ abstract class AppDatabase : RoomDatabase() {
                 val installmentDao = installmentDaoProvider.get()
 
                 // Always ensure basic categories exist
-                if (categoryDao.getCount() == 0) {
-                    categoryDao.insertCategory(CategoryEntity(name = "Food", icon = "🍔", orderIndex = 0))
-                    categoryDao.insertCategory(CategoryEntity(name = "Health", icon = "💊", orderIndex = 1))
-                    categoryDao.insertCategory(CategoryEntity(name = "Shopping", icon = "🛍️", orderIndex = 2))
-                    categoryDao.insertCategory(CategoryEntity(name = "Transport", icon = "🚗", orderIndex = 3))
-                    categoryDao.insertCategory(CategoryEntity(name = "Subscriptions", icon = "🌐", orderIndex = 4))
-                    categoryDao.insertCategory(CategoryEntity(name = "Others", icon = "📁", orderIndex = 5))
+                val allCats = categoryDao.getAllCategoriesSync()
+                if (allCats.isEmpty()) {
+                    // Expense Categories
+                    categoryDao.insertCategory(CategoryEntity(name = "Food", icon = "🍔", orderIndex = 0, type = "EXPENSE"))
+                    categoryDao.insertCategory(CategoryEntity(name = "Health", icon = "💊", orderIndex = 1, type = "EXPENSE"))
+                    categoryDao.insertCategory(CategoryEntity(name = "Shopping", icon = "🛍️", orderIndex = 2, type = "EXPENSE"))
+                    categoryDao.insertCategory(CategoryEntity(name = "Transport", icon = "🚗", orderIndex = 3, type = "EXPENSE"))
+                    categoryDao.insertCategory(CategoryEntity(name = "Subscriptions", icon = "🌐", orderIndex = 4, type = "EXPENSE"))
+                    categoryDao.insertCategory(CategoryEntity(name = "Others", icon = "📁", orderIndex = 5, type = "EXPENSE"))
+                }
+
+                // Check for Income categories specifically (useful for existing users)
+                val incomeCats = allCats.filter { it.type == "INCOME" }
+                if (incomeCats.isEmpty()) {
+                    categoryDao.insertCategory(CategoryEntity(name = "Salary", icon = "💰", orderIndex = 6, type = "INCOME"))
+                    categoryDao.insertCategory(CategoryEntity(name = "Business", icon = "📈", orderIndex = 7, type = "INCOME"))
+                    categoryDao.insertCategory(CategoryEntity(name = "Bonus", icon = "🎁", orderIndex = 8, type = "INCOME"))
+                    categoryDao.insertCategory(CategoryEntity(name = "Investments", icon = "🏦", orderIndex = 9, type = "INCOME"))
                 }
 
                 // Inject Seed Data from CSV ONLY if EVERYTHING is empty
@@ -130,6 +152,50 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE categories ADD COLUMN orderIndex INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE tags ADD COLUMN orderIndex INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_7_8 = object : androidx.room.migration.Migration(7, 8) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // Create accounts table
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `accounts` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, `balance` INTEGER NOT NULL, `currency` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL)"
+                )
+                // Insert default account
+                db.execSQL(
+                    "INSERT INTO `accounts` (`id`, `name`, `type`, `balance`, `currency`, `created_at`, `updated_at`) VALUES (1, 'Cash', 'Cash', 0, 'IDR', ${System.currentTimeMillis()}, ${System.currentTimeMillis()})"
+                )
+
+                // Add columns to expenses
+                db.execSQL("ALTER TABLE expenses ADD COLUMN account_id INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE expenses ADD COLUMN type TEXT NOT NULL DEFAULT 'EXPENSE'")
+
+                // Add columns to categories
+                db.execSQL("ALTER TABLE categories ADD COLUMN type TEXT NOT NULL DEFAULT 'EXPENSE'")
+            }
+        }
+
+        val MIGRATION_8_9 = object : androidx.room.migration.Migration(8, 9) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `net_worth_snapshots` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `date` INTEGER NOT NULL, `totalAssets` INTEGER NOT NULL, `totalLiabilities` INTEGER NOT NULL, `netWorth` INTEGER NOT NULL)"
+                )
+            }
+        }
+
+        val MIGRATION_9_10 = object : androidx.room.migration.Migration(9, 10) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `goals` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `targetAmount` INTEGER NOT NULL, `currentAmount` INTEGER NOT NULL, `currency` TEXT NOT NULL, `deadline` INTEGER, `accountId` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)"
+                )
+            }
+        }
+
+        val MIGRATION_10_11 = object : androidx.room.migration.Migration(10, 11) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `budgets` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `amount` INTEGER NOT NULL, `categoryId` INTEGER, `accountId` INTEGER, `period` TEXT NOT NULL, `createdAt` INTEGER NOT NULL)"
+                )
             }
         }
     }

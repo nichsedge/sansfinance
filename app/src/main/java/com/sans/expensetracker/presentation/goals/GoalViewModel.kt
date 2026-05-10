@@ -1,0 +1,47 @@
+package com.sans.expensetracker.presentation.goals
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.sans.expensetracker.data.local.entity.GoalEntity
+import com.sans.expensetracker.domain.repository.GoalRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class GoalViewModel @Inject constructor(
+    private val goalRepository: GoalRepository
+) : ViewModel() {
+
+    val goals = goalRepository.getAllGoals().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    fun addGoal(name: String, targetAmount: Long, deadline: Long? = null) {
+        viewModelScope.launch {
+            goalRepository.insertGoal(
+                GoalEntity(
+                    name = name,
+                    targetAmount = targetAmount,
+                    deadline = deadline
+                )
+            )
+        }
+    }
+
+    fun updateProgress(goal: GoalEntity, amount: Long) {
+        viewModelScope.launch {
+            goalRepository.updateGoal(goal.copy(currentAmount = goal.currentAmount + amount))
+        }
+    }
+
+    fun deleteGoal(goal: GoalEntity) {
+        viewModelScope.launch {
+            goalRepository.deleteGoal(goal)
+        }
+    }
+}

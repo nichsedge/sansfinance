@@ -13,6 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import com.sans.expensetracker.presentation.add_expense.AddExpenseScreen
 import com.sans.expensetracker.presentation.expense_list.ExpenseListScreen
 import com.sans.expensetracker.presentation.navigation.Screen
+import com.sans.expensetracker.presentation.main.MainScreen
 
 import com.sans.expensetracker.presentation.settings.SettingsScreen
 import com.sans.expensetracker.ui.theme.ExpenseTrackerTheme
@@ -31,9 +32,11 @@ class MainActivity : ComponentActivity() {
             ExpenseTrackerTheme {
                 AppNavigation(onLanguageToggle = {
                     val current = localeManager.getLocale()
-                    val next = if (current == "en") "id" else "en"
+                    val next = if (current.startsWith("en")) "id" else "en"
                     localeManager.setLocale(next)
-                    recreate()
+                    // android.app.LocaleManager.applicationLocales already triggers
+                    // a system-level activity recreation automatically — no need to
+                    // call recreate() manually (doing so causes a double-recreation crash).
                 })
             }
         }
@@ -45,12 +48,18 @@ fun AppNavigation(onLanguageToggle: () -> Unit) {
     val navController = rememberNavController()
     NavHost(
         navController = navController,
-        startDestination = Screen.ExpenseList,
+        startDestination = Screen.Main,
         enterTransition = { EnterTransition.None },
         exitTransition = { ExitTransition.None },
         popEnterTransition = { EnterTransition.None },
         popExitTransition = { ExitTransition.None }
     ) {
+        composable<Screen.Main> {
+            MainScreen(
+                rootNavController = navController,
+                onLanguageToggle = onLanguageToggle
+            )
+        }
         composable<Screen.ExpenseList> {
             ExpenseListScreen(
                 onAddExpenseClick = {
@@ -62,9 +71,6 @@ fun AppNavigation(onLanguageToggle: () -> Unit) {
                 },
                 onStatsClick = {
                     navController.navigate(Screen.Stats)
-                },
-                onSettingsClick = {
-                    navController.navigate(Screen.Settings)
                 },
                 onExpenseClick = { id ->
                     navController.navigate(Screen.EditExpense(id))
@@ -92,16 +98,14 @@ fun AppNavigation(onLanguageToggle: () -> Unit) {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onLanguageToggle = onLanguageToggle,
-                onNavigateToRecurring = { navController.navigate(Screen.RecurringExpenses) }
+                onNavigateToBudgets = { navController.navigate(Screen.Budgets) }
             )
         }
-        composable<Screen.RecurringExpenses> {
-            com.sans.expensetracker.presentation.recurring.RecurringExpensesScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onExpenseClick = { id ->
-                    navController.navigate(Screen.EditExpense(id))
-                }
-            )
+        composable<Screen.Accounts> {
+            com.sans.expensetracker.presentation.accounts.AccountScreen()
+        }
+        composable<Screen.Budgets> {
+            com.sans.expensetracker.presentation.budgeting.BudgetScreen()
         }
     }
 }

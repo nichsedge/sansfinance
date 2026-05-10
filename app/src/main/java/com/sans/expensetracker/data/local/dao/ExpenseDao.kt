@@ -24,6 +24,10 @@ interface ExpenseDao {
     ): Flow<List<com.sans.expensetracker.data.local.entity.ExpenseWithTags>>
 
     @Transaction
+    @Query("SELECT * FROM expenses WHERE is_recurring = 1 ORDER BY date DESC")
+    fun getRecurringExpenses(): Flow<List<com.sans.expensetracker.data.local.entity.ExpenseWithTags>>
+
+    @Transaction
     @Query(
         """
         SELECT DISTINCT e.* FROM expenses e

@@ -5,6 +5,12 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed class Screen {
     @Serializable
+    object Main : Screen()
+
+    @Serializable
+    object Dashboard : Screen()
+
+    @Serializable
     object ExpenseList : Screen()
 
     @Serializable
@@ -27,6 +33,15 @@ sealed class Screen {
 
     @Serializable
     object RecurringExpenses : Screen()
+
+    @Serializable
+    object Accounts : Screen()
+
+    @Serializable
+    object Goals : Screen()
+
+    @Serializable
+    object Budgets : Screen()
 
 //    @Serializable
 //    object ScanReceipt : Screen()

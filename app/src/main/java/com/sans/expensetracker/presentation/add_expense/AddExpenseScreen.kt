@@ -28,6 +28,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -68,6 +69,7 @@ fun AddExpenseScreen(
     viewModel: AddExpenseViewModel = hiltViewModel()
 ) {
     val categories by viewModel.categories.collectAsState()
+    val accounts by viewModel.accounts.collectAsState()
     val datePickerState =
         rememberDatePickerState(initialSelectedDateMillis = viewModel.selectedDate)
     var showDatePicker by remember { androidx.compose.runtime.mutableStateOf(false) }
@@ -75,6 +77,11 @@ fun AddExpenseScreen(
     val focusManager = LocalFocusManager.current
     var itemNameExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var merchantExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var typeExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var accountExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
+    val currencySymbol = remember {
+        try { java.util.Currency.getInstance("IDR").getSymbol(java.util.Locale.getDefault()) } catch (e: Exception) { "Rp" }
+    }
 
     Scaffold(
         topBar = {
@@ -102,6 +109,69 @@ fun AddExpenseScreen(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            // Transaction Type Selector
+            @OptIn(ExperimentalMaterial3Api::class)
+            ExposedDropdownMenuBox(
+                expanded = typeExpanded,
+                onExpandedChange = { typeExpanded = !typeExpanded }
+            ) {
+                OutlinedTextField(
+                    value = viewModel.transactionType,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Transaction Type") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                    shape = MaterialTheme.shapes.medium
+                )
+                ExposedDropdownMenu(
+                    expanded = typeExpanded,
+                    onDismissRequest = { typeExpanded = false }
+                ) {
+                    listOf("EXPENSE", "INCOME", "TRANSFER").forEach { type ->
+                        DropdownMenuItem(
+                            text = { Text(type) },
+                            onClick = {
+                                viewModel.transactionType = type
+                                typeExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Account Selector
+            @OptIn(ExperimentalMaterial3Api::class)
+            ExposedDropdownMenuBox(
+                expanded = accountExpanded,
+                onExpandedChange = { accountExpanded = !accountExpanded }
+            ) {
+                val selectedAccount = accounts.find { it.id == viewModel.accountId }
+                OutlinedTextField(
+                    value = selectedAccount?.name ?: "Unknown Account",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Account") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                    shape = MaterialTheme.shapes.medium
+                )
+                ExposedDropdownMenu(
+                    expanded = accountExpanded,
+                    onDismissRequest = { accountExpanded = false }
+                ) {
+                    accounts.forEach { account ->
+                        DropdownMenuItem(
+                            text = { Text(account.name) },
+                            onClick = {
+                                viewModel.accountId = account.id
+                                accountExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
             // Amount Input with large text
             OutlinedTextField(
                 value = viewModel.amount,
@@ -118,7 +188,7 @@ fun AddExpenseScreen(
                 keyboardActions = KeyboardActions(
                     onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
                 ),
-                prefix = { Text("Rp ", fontWeight = FontWeight.Bold) },
+                prefix = { Text("$currencySymbol ", fontWeight = FontWeight.Bold) },
                 shape = MaterialTheme.shapes.medium
             )
 

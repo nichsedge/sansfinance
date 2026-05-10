@@ -31,7 +31,7 @@ object AppModule {
             AppDatabase::class.java,
             "expense_tracker_db"
         )
-            .addMigrations(AppDatabase.MIGRATION_5_6, AppDatabase.MIGRATION_6_7)
+            .addMigrations(AppDatabase.MIGRATION_5_6, AppDatabase.MIGRATION_6_7, AppDatabase.MIGRATION_7_8, AppDatabase.MIGRATION_8_9, AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11)
             .addCallback(callback)
             .build()
     }
@@ -67,12 +67,40 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideAccountDao(db: AppDatabase): com.sans.expensetracker.data.local.dao.AccountDao = db.accountDao
+
+    @Provides
+    @Singleton
+    fun provideAccountRepository(dao: com.sans.expensetracker.data.local.dao.AccountDao): com.sans.expensetracker.domain.repository.AccountRepository =
+        com.sans.expensetracker.data.repository.AccountRepositoryImpl(dao)
+
+    @Provides
+    @Singleton
+    fun provideGoalDao(db: AppDatabase): com.sans.expensetracker.data.local.dao.GoalDao = db.goalDao
+
+    @Provides
+    @Singleton
+    fun provideGoalRepository(dao: com.sans.expensetracker.data.local.dao.GoalDao): com.sans.expensetracker.domain.repository.GoalRepository =
+        com.sans.expensetracker.data.repository.GoalRepositoryImpl(dao)
+
+    @Provides
+    @Singleton
+    fun provideBudgetDao(db: AppDatabase): com.sans.expensetracker.data.local.dao.BudgetDao = db.budgetDao
+
+    @Provides
+    @Singleton
+    fun provideBudgetRepository(dao: com.sans.expensetracker.data.local.dao.BudgetDao): com.sans.expensetracker.domain.repository.BudgetRepository =
+        com.sans.expensetracker.data.repository.BudgetRepositoryImpl(dao)
+
+    @Provides
+    @Singleton
     fun provideExpenseRepository(
         dao: ExpenseDao,
         tagDao: com.sans.expensetracker.data.local.dao.TagDao,
         categoryDao: com.sans.expensetracker.data.local.dao.CategoryDao,
-        installmentDao: com.sans.expensetracker.data.local.dao.InstallmentDao
-    ): ExpenseRepository = ExpenseRepositoryImpl(dao, tagDao, categoryDao, installmentDao)
+        installmentDao: com.sans.expensetracker.data.local.dao.InstallmentDao,
+        accountDao: com.sans.expensetracker.data.local.dao.AccountDao
+    ): ExpenseRepository = ExpenseRepositoryImpl(dao, tagDao, categoryDao, installmentDao, accountDao)
 
     @Provides
     @Singleton

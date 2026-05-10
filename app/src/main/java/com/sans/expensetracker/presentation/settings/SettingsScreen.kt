@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.SmartToy
@@ -78,7 +77,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 fun SettingsScreen(
     onBack: () -> Unit,
     onLanguageToggle: () -> Unit,
-    onNavigateToRecurring: () -> Unit,
+    onNavigateToBudgets: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val categories by viewModel.categories.collectAsState()
@@ -97,7 +96,6 @@ fun SettingsScreen(
     var tagToEdit by remember { mutableStateOf<TagEntity?>(null) }
     var categoryToDelete by remember { mutableStateOf<CategoryEntity?>(null) }
     var tagToDelete by remember { mutableStateOf<TagEntity?>(null) }
-    var showBudgetDialog by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
 
@@ -139,8 +137,7 @@ fun SettingsScreen(
             onTagEdit = { tagToEdit = it },
             onTagDelete = { tagToDelete = it },
             onAddCategory = { showAddCategoryDialog = true },
-            onRecurring = onNavigateToRecurring,
-            onBudget = { showBudgetDialog = true },
+            onBudget = onNavigateToBudgets,
             exportBackup = { viewModel.exportFullBackup(it) },
             onLanguageToggle = onLanguageToggle,
             currentLanguage = currentLanguage,
@@ -231,41 +228,7 @@ fun SettingsScreen(
         )
     }
 
-    if (showBudgetDialog) {
-        var budgetInput by remember {
-            mutableStateOf(if (currentBudget > 0L) (currentBudget / 100).toString() else "")
-        }
 
-        AlertDialog(
-            onDismissRequest = { showBudgetDialog = false },
-            title = { Text("Set Monthly Budget") },
-            text = {
-                OutlinedTextField(
-                    value = budgetInput,
-                    onValueChange = { budgetInput = it.filter { char -> char.isDigit() } },
-                    label = { Text("Amount") },
-                    singleLine = true,
-                    visualTransformation = com.sans.expensetracker.core.util.ThousandsSeparatorVisualTransformation(),
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                Button(onClick = {
-                    val newBudget = budgetInput.toLongOrNull()?.times(100) ?: 0L
-                    viewModel.updateMonthlyBudget(newBudget)
-                    showBudgetDialog = false
-                }) {
-                    Text("Save")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showBudgetDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -281,7 +244,6 @@ fun SettingsContent(
     onTagEdit: (TagEntity) -> Unit,
     onTagDelete: (TagEntity) -> Unit,
     onAddCategory: () -> Unit,
-    onRecurring: () -> Unit,
     onBudget: () -> Unit,
     exportBackup: (android.content.Context) -> Unit,
     onLanguageToggle: () -> Unit,
@@ -385,34 +347,6 @@ fun SettingsContent(
         item {
             Spacer(Modifier.height(16.dp))
             SettingsSectionTitle("Features")
-            Surface(
-                onClick = onRecurring,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 1.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Refresh,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(16.dp))
-                    Text(
-                        stringResource(R.string.recurring_expenses),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
             Surface(
                 onClick = onBudget,
                 modifier = Modifier

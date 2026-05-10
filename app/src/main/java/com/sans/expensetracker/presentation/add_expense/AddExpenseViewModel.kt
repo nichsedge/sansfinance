@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.FlowPreview
 
 @OptIn(FlowPreview::class)
@@ -41,6 +42,7 @@ class AddExpenseViewModel @Inject constructor(
     private val getMerchantSuggestionsUseCase: GetMerchantSuggestionsUseCase,
     private val installmentRepository: com.sans.expensetracker.domain.repository.InstallmentRepository,
     private val expenseRepository: com.sans.expensetracker.domain.repository.ExpenseRepository,
+    private val accountRepository: com.sans.expensetracker.domain.repository.AccountRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -52,7 +54,17 @@ class AddExpenseViewModel @Inject constructor(
 
     val isEditMode get() = editExpenseId != null
 
-    val categories = getCategoriesUseCase().stateIn(
+    val allCategories = getCategoriesUseCase().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    var transactionType by mutableStateOf("EXPENSE") // "EXPENSE", "INCOME", "TRANSFER"
+
+    val categories = combine(allCategories, snapshotFlow { transactionType }) { cats, type ->
+        cats.filter { it.type == type || type == "TRANSFER" }
+    }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
@@ -62,6 +74,8 @@ class AddExpenseViewModel @Inject constructor(
     var itemName by mutableStateOf("")
     var merchant by mutableStateOf("")
     var categoryId by mutableLongStateOf(1L)
+    var accountId by mutableLongStateOf(1L)
+    // transactionType moved up
     var isInstallment by mutableStateOf(false)
     var durationMonths by mutableStateOf("")
     var selectedDate by mutableLongStateOf(System.currentTimeMillis())
@@ -80,6 +94,12 @@ class AddExpenseViewModel @Inject constructor(
         initialValue = emptyList()
     )
 
+    val accounts = accountRepository.getAllAccounts().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
     init {
         editExpenseId?.let { id ->
             viewModelScope.launch {
@@ -88,6 +108,8 @@ class AddExpenseViewModel @Inject constructor(
                     itemName = expense.itemName
                     merchant = expense.merchant ?: ""
                     categoryId = expense.categoryId
+                    accountId = expense.accountId
+                    transactionType = expense.type
                     isInstallment = expense.isInstallment
                     selectedDate = expense.date
                     selectedTags = expense.tags
@@ -124,6 +146,17 @@ class AddExpenseViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
+        snapshotFlow { transactionType }
+            .distinctUntilChanged()
+            .onEach { type ->
+                // When type changes, try to pick the first category of that type
+                val currentCats = allCategories.value
+                val firstMatch = currentCats.firstOrNull { it.type == type }
+                if (firstMatch != null) {
+                    categoryId = firstMatch.id
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     fun toggleTag(tagName: String) {
@@ -152,6 +185,8 @@ class AddExpenseViewModel @Inject constructor(
                 itemName = itemName.ifBlank { "Uncategorized Item" },
                 amount = amountInCents,
                 categoryId = categoryId,
+                accountId = accountId,
+                type = transactionType,
                 isInstallment = isInstallment,
                 merchant = merchant.ifBlank { null },
                 tags = selectedTags,
