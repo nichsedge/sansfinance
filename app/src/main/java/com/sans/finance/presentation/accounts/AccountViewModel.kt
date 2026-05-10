@@ -34,6 +34,19 @@ class AccountViewModel @Inject constructor(
         }
     }
 
+    fun updateAccount(account: AccountEntity, newName: String, newType: String, newBalance: Long) {
+        viewModelScope.launch {
+            accountRepository.updateAccount(
+                account.copy(
+                    name = newName,
+                    type = newType,
+                    balance = newBalance,
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+        }
+    }
+
     fun deleteAccount(id: Long) {
         viewModelScope.launch {
             accountRepository.deleteAccountById(id)

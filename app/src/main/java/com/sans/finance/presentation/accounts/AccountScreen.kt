@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -50,6 +51,7 @@ fun AccountScreen(
 ) {
     val accounts by viewModel.accounts.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+    var accountToEdit by remember { mutableStateOf<com.sans.finance.data.local.entity.AccountEntity?>(null) }
 
     Scaffold(
         topBar = {
@@ -89,6 +91,9 @@ fun AccountScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
+                            IconButton(onClick = { accountToEdit = account }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit")
+                            }
                             if (account.id != 1L) { // Don't allow deleting default Cash account
                                 IconButton(onClick = { viewModel.deleteAccount(account.id) }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete")
@@ -100,15 +105,21 @@ fun AccountScreen(
             }
         }
 
-        if (showAddDialog) {
-            var name by remember { mutableStateOf("") }
-            var type by remember { mutableStateOf("Bank") }
-            var balance by remember { mutableStateOf("") }
+        if (showAddDialog || accountToEdit != null) {
+            val isEditing = accountToEdit != null
+            var name by remember(accountToEdit) { mutableStateOf(accountToEdit?.name ?: "") }
+            var type by remember(accountToEdit) { mutableStateOf(accountToEdit?.type ?: "Bank") }
+            var balance by remember(accountToEdit) {
+                mutableStateOf(accountToEdit?.balance?.let { (it / 100).toString() } ?: "")
+            }
             var expanded by remember { mutableStateOf(false) }
 
             AlertDialog(
-                onDismissRequest = { showAddDialog = false },
-                title = { Text("Add New Account") },
+                onDismissRequest = {
+                    showAddDialog = false
+                    accountToEdit = null
+                },
+                title = { Text(if (isEditing) "Edit Account" else "Add New Account") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
@@ -158,14 +169,22 @@ fun AccountScreen(
                 confirmButton = {
                     Button(onClick = {
                         val parsedBalance = balance.toLongOrNull()?.times(100) ?: 0L
-                        viewModel.addAccount(name, type, parsedBalance)
+                        if (isEditing) {
+                            viewModel.updateAccount(accountToEdit!!, name, type, parsedBalance)
+                        } else {
+                            viewModel.addAccount(name, type, parsedBalance)
+                        }
                         showAddDialog = false
+                        accountToEdit = null
                     }) {
-                        Text("Add")
+                        Text(if (isEditing) "Save" else "Add")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showAddDialog = false }) {
+                    TextButton(onClick = {
+                        showAddDialog = false
+                        accountToEdit = null
+                    }) {
                         Text("Cancel")
                     }
                 }
