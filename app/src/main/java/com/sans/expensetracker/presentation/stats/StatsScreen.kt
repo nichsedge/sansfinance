@@ -67,6 +67,23 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
+import kotlin.math.cos
+import kotlin.math.sin
+
+val pieChartColors = listOf(
+    Color(0xFFFF6B6B), // Red/Salmon
+    Color(0xFFFF9248), // Orange
+    Color(0xFFFFB347), // Yellow/Orange
+    Color(0xFFFFD166), // Yellow
+    Color(0xFFB5E48C), // Light Green
+    Color(0xFF86D97F), // Green
+    Color(0xFF52B69A), // Teal/Cyan
+    Color(0xFF48CAE4), // Light Blue
+    Color(0xFF9D4EDD), // Purple
+    Color(0xFFC77DFF), // Light Purple
+    Color(0xFFFF9F1C),
+    Color(0xFF2EC4B6)
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -435,41 +452,46 @@ fun CategoryBreakdown(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
-            categories.sortedByDescending { it.totalAmount }.forEach { category ->
+            if (categories.isNotEmpty() && totalInCategories > 0) {
+                PieChartWithLabels(
+                    categories = categories,
+                    totalAmount = totalInCategories
+                )
+            }
+
+            categories.sortedByDescending { it.totalAmount }.forEachIndexed { index, category ->
                 val percent =
-                    if (totalInCategories > 0) category.totalAmount.toFloat() / totalInCategories else 0f
+                    if (totalInCategories > 0) (category.totalAmount.toFloat() / totalInCategories * 100) else 0f
+                val color = pieChartColors[index % pieChartColors.size]
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(12.dp),
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(color),
                         contentAlignment = Alignment.Center
                     ) {
-                        CategoryIcon(category.categoryIcon, fontSize = 24.sp)
-                    }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(category.categoryName, fontWeight = FontWeight.Bold)
-                        LinearProgressIndicator(
-                            progress = { percent },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(4.dp)
-                                .clip(CircleShape),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        Text(
+                            text = String.format(Locale.US, "%.0f%%", percent),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
                         )
                     }
 
                     Spacer(modifier = Modifier.width(16.dp))
+
+                    Text(
+                        text = category.categoryName,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
 
                     Text(
                         CurrencyFormatter.formatAmount(category.totalAmount),
@@ -529,5 +551,108 @@ fun SectionTitle(title: String, icon: ImageVector? = null) {
             color = MaterialTheme.colorScheme.secondary,
             letterSpacing = 1.5.sp
         )
+    }
+}
+@Composable
+fun PieChartWithLabels(
+    categories: List<com.sans.expensetracker.data.local.entity.CategorySpent>,
+    totalAmount: Long
+) {
+    if (categories.isEmpty() || totalAmount == 0L) return
+
+    val textMeasurer = rememberTextMeasurer()
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+            .padding(16.dp)
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val canvasWidth = size.width
+            val canvasHeight = size.height
+            val radius = Math.min(canvasWidth, canvasHeight) / 3f
+            val center = Offset(canvasWidth / 2, canvasHeight / 2)
+
+            var startAngle = -90f
+
+            categories.sortedByDescending { it.totalAmount }.forEachIndexed { index, category ->
+                val sweepAngle = (category.totalAmount.toFloat() / totalAmount) * 360f
+                val color = pieChartColors[index % pieChartColors.size]
+
+                // Draw pie slice
+                drawArc(
+                    color = color,
+                    startAngle = startAngle,
+                    sweepAngle = sweepAngle,
+                    useCenter = true,
+                    topLeft = Offset(center.x - radius, center.y - radius),
+                    size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
+                )
+
+                // Calculate label position
+                val angleInRadians = (startAngle + sweepAngle / 2) * (Math.PI / 180f)
+                val lineStart = Offset(
+                    x = center.x + (radius * 0.9f) * cos(angleInRadians).toFloat(),
+                    y = center.y + (radius * 0.9f) * sin(angleInRadians).toFloat()
+                )
+                val lineEnd = Offset(
+                    x = center.x + (radius * 1.2f) * cos(angleInRadians).toFloat(),
+                    y = center.y + (radius * 1.2f) * sin(angleInRadians).toFloat()
+                )
+                val isRightSide = cos(angleInRadians) > 0
+                val textEnd = Offset(
+                    x = lineEnd.x + (if (isRightSide) 20f else -20f),
+                    y = lineEnd.y
+                )
+
+                // Draw connecting line
+                val path = Path().apply {
+                    moveTo(lineStart.x, lineStart.y)
+                    lineTo(lineEnd.x, lineEnd.y)
+                    lineTo(textEnd.x, textEnd.y)
+                }
+                drawPath(
+                    path = path,
+                    color = color,
+                    style = Stroke(width = 2f)
+                )
+
+                // Draw text
+                val percentage = (category.totalAmount.toFloat() / totalAmount) * 100
+                val percentageText = String.format(Locale.US, "%.1f %%", percentage)
+
+                val nameLayoutResult = textMeasurer.measure(
+                    text = category.categoryName,
+                    style = TextStyle(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        color = onSurfaceColor
+                    )
+                )
+                val percentLayoutResult = textMeasurer.measure(
+                    text = percentageText,
+                    style = TextStyle(
+                        fontSize = 12.sp,
+                        color = onSurfaceColor
+                    )
+                )
+
+                val textX = if (isRightSide) textEnd.x + 4f else textEnd.x - Math.max(nameLayoutResult.size.width, percentLayoutResult.size.width) - 4f
+                val textY = textEnd.y - nameLayoutResult.size.height
+
+                drawText(
+                    textLayoutResult = nameLayoutResult,
+                    topLeft = Offset(textX, textY)
+                )
+                drawText(
+                    textLayoutResult = percentLayoutResult,
+                    topLeft = Offset(textX, textY + nameLayoutResult.size.height)
+                )
+
+                startAngle += sweepAngle
+            }
+        }
     }
 }
