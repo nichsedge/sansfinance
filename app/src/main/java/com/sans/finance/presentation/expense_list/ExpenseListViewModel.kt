@@ -35,14 +35,17 @@ enum class DateRangeFilter {
 
 data class ExpenseListState(
     val expenses: List<Expense> = emptyList(),
-    val groupedExpenses: Map<String, List<Expense>> = emptyMap(),
+    val groupedExpenses: Map<Long, List<Expense>> = emptyMap(),
     val thisMonthSpent: Long = 0L,
     val totalFilteredAmount: Long = 0L,
+    val totalFilteredIncome: Long = 0L,
+    val totalFilteredExpense: Long = 0L,
     val startDate: Long = 0L,
     val endDate: Long = Long.MAX_VALUE,
     val activeDateFilter: DateRangeFilter = DateRangeFilter.THIS_MONTH,
     val isLoading: Boolean = true,
     val error: String? = null,
+    val accounts: List<com.sans.finance.data.local.entity.AccountEntity> = emptyList(),
     val categories: List<com.sans.finance.data.local.entity.CategoryEntity> = emptyList(),
     val availableTags: List<String> = emptyList(),
     val selectedTags: Set<String> = emptySet(),
@@ -58,6 +61,7 @@ data class ExpenseListState(
 class ExpenseListViewModel @Inject constructor(
     private val getExpensesUseCase: GetExpensesUseCase,
     private val repository: com.sans.finance.domain.repository.ExpenseRepository,
+    private val accountRepository: com.sans.finance.domain.repository.AccountRepository,
     private val installmentRepository: com.sans.finance.domain.repository.InstallmentRepository,
     private val getCategoriesUseCase: com.sans.finance.domain.usecase.GetCategoriesUseCase,
     private val budgetPreferences: BudgetPreferences
@@ -75,6 +79,7 @@ class ExpenseListViewModel @Inject constructor(
         loadExpenses()
         loadHistoricalStats()
         loadCategories()
+        loadAccounts()
         loadTags()
         loadBudget()
     }
@@ -91,6 +96,15 @@ class ExpenseListViewModel @Inject constructor(
         repository.getAllTags()
             .onEach { tags ->
                 _state.update { it.copy(availableTags = tags) }
+            }
+            .launchIn(viewModelScope)
+    }
+
+
+    private fun loadAccounts() {
+        accountRepository.getAllAccounts()
+            .onEach { accounts ->
+                _state.update { it.copy(accounts = accounts) }
             }
             .launchIn(viewModelScope)
     }
@@ -139,14 +153,17 @@ class ExpenseListViewModel @Inject constructor(
                 val grouped = groupExpensesByDate(expenses, dailyMap)
                 // Filtered item totals: normal items + installment payments (already in the list)
                 // We only exclude 'parent' installment plans to avoid double counting with their sub-payments
-                val periodTotal = expenses.filter { !it.isInstallment || it.isInstallmentPayment }.sumOf { 
-                    if (it.type == "INCOME") it.amount else -it.amount 
-                }
+                val validExpenses = expenses.filter { !it.isInstallment || it.isInstallmentPayment }
+                val income = validExpenses.filter { it.type == "INCOME" }.sumOf { it.amount }
+                val expense = validExpenses.filter { it.type != "INCOME" }.sumOf { it.amount }
+                val periodTotal = income - expense
                 _state.update {
                     it.copy(
                         expenses = expenses,
                         groupedExpenses = grouped,
                         totalFilteredAmount = periodTotal,
+                        totalFilteredIncome = income,
+                        totalFilteredExpense = expense,
                         dailySpending = dailyMap,
                         isLoading = false
                     )
@@ -216,30 +233,17 @@ class ExpenseListViewModel @Inject constructor(
     private fun groupExpensesByDate(
         expenses: List<Expense>,
         dailySpendingMap: Map<Long, Long> = emptyMap()
-    ): Map<String, List<Expense>> {
+    ): Map<Long, List<Expense>> {
         val calendar = CalendarUtils.getInstance()
 
         return expenses.groupBy { expense ->
-            dateFormat.format(java.util.Date(expense.date))
-        }.mapKeys { (dateStr, items) ->
-            if (items.isNotEmpty()) {
-                val itemDate = items[0].date
-                calendar.timeInMillis = itemDate
-                calendar.set(Calendar.HOUR_OF_DAY, 0)
-                calendar.set(Calendar.MINUTE, 0)
-                calendar.set(Calendar.SECOND, 0)
-                calendar.set(Calendar.MILLISECOND, 0)
-                val dayStart = calendar.timeInMillis
-
-                val dayTotal = dailySpendingMap[dayStart]
-                    ?: items.sumOf { if (it.isInstallment) it.monthlyPayment else it.amount }
-                val totalStr =
-                    com.sans.finance.core.util.CurrencyFormatter.formatAmount(dayTotal)
-                "$dateStr • Total: $totalStr"
-            } else {
-                dateStr
-            }
-        }
+            calendar.timeInMillis = expense.date
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            calendar.timeInMillis
+        }.toSortedMap(compareByDescending { it })
     }
 
     fun updateCustomDateRange(start: Long, end: Long) {
