@@ -1,0 +1,58 @@
+--- app/src/main/java/com/sans/finance/presentation/add_expense/AddExpenseScreen.kt
++++ app/src/main/java/com/sans/finance/presentation/add_expense/AddExpenseScreen.kt
+@@ -62,6 +62,7 @@
+     var noteExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
+     var descriptionExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
+     var accountExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
++    var toAccountExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
+     var recurrenceExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
+     val currencySymbol = remember {
+         try { java.util.Currency.getInstance("IDR").getSymbol(java.util.Locale.getDefault()) } catch (e: Exception) { "Rp" }
+@@ -115,7 +116,7 @@
+                     value = selectedAccount?.name ?: "Unknown Account",
+                     onValueChange = {},
+                     readOnly = true,
+-                    label = { Text("Account") },
++                    label = { Text(if (viewModel.transactionType == "TRANSFER") "From Account" else "Account") },
+                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded) },
+                     modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                     shape = MaterialTheme.shapes.medium
+@@ -134,6 +135,33 @@
+                     }
+                 }
+             }
++
++            if (viewModel.transactionType == "TRANSFER") {
++                ExposedDropdownMenuBox(
++                    expanded = toAccountExpanded,
++                    onExpandedChange = { toAccountExpanded = !toAccountExpanded }
++                ) {
++                    val selectedToAccount = accounts.find { it.id == viewModel.toAccountId }
++                    OutlinedTextField(
++                        value = selectedToAccount?.name ?: "Unknown Account",
++                        onValueChange = {},
++                        readOnly = true,
++                        label = { Text("To Account") },
++                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = toAccountExpanded) },
++                        modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
++                        shape = MaterialTheme.shapes.medium
++                    )
++                    ExposedDropdownMenu(
++                        expanded = toAccountExpanded,
++                        onDismissRequest = { toAccountExpanded = false }
++                    ) {
++                        accounts.forEach { account ->
++                            DropdownMenuItem(
++                                text = { Text(account.name) },
++                                onClick = {
++                                    viewModel.toAccountId = account.id
++                                    toAccountExpanded = false
++                                }
++                            )
++                        }
++                    }
++                }
++            }
+
+             // Amount Input with large text
+             OutlinedTextField(

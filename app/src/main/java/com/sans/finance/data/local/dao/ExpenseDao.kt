@@ -86,13 +86,13 @@ interface ExpenseDao {
     @Query("SELECT DISTINCT description FROM expenses WHERE description LIKE '%' || :query || '%' AND description IS NOT NULL AND description != '' ORDER BY description ASC LIMIT 5")
     suspend fun getDescriptionSuggestions(query: String): List<String>
 
-    @Query("SELECT SUM(final_price) FROM expenses WHERE date >= :since AND is_installment = 0")
+    @Query("SELECT SUM(final_price) FROM expenses WHERE type = 'EXPENSE' AND date >= :since AND is_installment = 0")
     fun getTotalSpentSince(since: Long): Flow<Long?>
 
-    @Query("SELECT SUM(final_price) FROM expenses WHERE is_installment = 0 AND date >= :since AND date < :until")
+    @Query("SELECT SUM(final_price) FROM expenses WHERE type = 'EXPENSE' AND is_installment = 0 AND date >= :since AND date < :until")
     fun getTotalSpentBetween(since: Long, until: Long): Flow<Long?>
 
-    @Query("SELECT SUM(final_price) FROM expenses WHERE is_installment = 0")
+    @Query("SELECT SUM(final_price) FROM expenses WHERE type = 'EXPENSE' AND is_installment = 0")
     fun getAllTimeSpent(): Flow<Long?>
 
     @Query(
@@ -102,7 +102,7 @@ interface ExpenseDao {
             SELECT c.id as categoryId, c.name as categoryName, c.icon as categoryIcon, SUM(e.final_price) as amount
             FROM expenses e
             JOIN categories c ON e.category_id = c.id
-            WHERE e.date >= :since AND e.date < :until AND e.is_installment = 0
+            WHERE e.date >= :since AND e.date < :until AND e.type = 'EXPENSE' AND e.is_installment = 0
             GROUP BY c.id
             UNION ALL
             SELECT c.id as categoryId, c.name as categoryName, c.icon as categoryIcon, SUM(ii.amount) as amount
@@ -168,7 +168,7 @@ interface ExpenseDao {
         FROM (
             SELECT (date / 86400000) * 86400000 as day, SUM(final_price) as amount
             FROM expenses
-            WHERE date >= :since AND date < :until AND is_installment = 0
+            WHERE date >= :since AND date < :until AND type = 'EXPENSE' AND is_installment = 0
             GROUP BY day
             UNION ALL
             SELECT (due_date / 86400000) * 86400000 as day, SUM(amount) as amount

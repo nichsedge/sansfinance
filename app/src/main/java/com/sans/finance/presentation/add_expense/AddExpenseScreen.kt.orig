@@ -81,7 +81,6 @@ fun AddExpenseScreen(
     var noteExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var descriptionExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var accountExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
-    var toAccountExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var recurrenceExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     val currencySymbol = remember {
         try { java.util.Currency.getInstance("IDR").getSymbol(java.util.Locale.getDefault()) } catch (e: Exception) { "Rp" }
@@ -123,11 +122,11 @@ fun AddExpenseScreen(
                         shape = SegmentedButtonDefaults.itemShape(index = index, count = types.size),
                         onClick = { viewModel.transactionType = type },
                         selected = viewModel.transactionType == type,
-                        label = { 
+                        label = {
                             Text(
                                 type.lowercase().replaceFirstChar { it.uppercase() },
                                 fontWeight = if (viewModel.transactionType == type) FontWeight.Bold else FontWeight.Normal
-                            ) 
+                            )
                         }
                     )
                 }
@@ -144,7 +143,7 @@ fun AddExpenseScreen(
                     value = selectedAccount?.name ?: "Unknown Account",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text(if (viewModel.transactionType == "TRANSFER") "From Account" else "Account") },
+                    label = { Text("Account") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                     shape = MaterialTheme.shapes.medium
@@ -512,9 +511,9 @@ fun AddExpenseScreen(
 
             val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
             Button(
-                onClick = { 
+                onClick = {
                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    viewModel.onSaveClick(onBack) 
+                    viewModel.onSaveClick(onBack)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -524,8 +523,8 @@ fun AddExpenseScreen(
                 Text(
                     text = (if (viewModel.isEditMode) stringResource(R.string.update_transaction) else stringResource(
                         R.string.confirm_transaction
-                    )).uppercase(), 
-                    fontWeight = FontWeight.Black, 
+                    )).uppercase(),
+                    fontWeight = FontWeight.Black,
                     fontSize = 16.sp,
                     letterSpacing = 1.sp
                 )

@@ -7,7 +7,7 @@ import java.text.DecimalFormat
 
 object CurrencyFormatter {
     private fun getFormatter(currencyCode: String = "IDR"): NumberFormat {
-        val formatter = NumberFormat.getCurrencyInstance(Locale.getDefault())
+        val formatter = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("id-ID"))
         try {
             val currency = java.util.Currency.getInstance(currencyCode)
             formatter.currency = currency

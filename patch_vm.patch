@@ -1,0 +1,26 @@
+--- app/src/main/java/com/sans/finance/presentation/add_expense/AddExpenseViewModel.kt
++++ app/src/main/java/com/sans/finance/presentation/add_expense/AddExpenseViewModel.kt
+@@ -75,6 +75,7 @@
+     var description by mutableStateOf("")
+     var categoryId by mutableLongStateOf(1L)
+     var accountId by mutableLongStateOf(1L)
++    var toAccountId by mutableLongStateOf(2L)
+     // transactionType moved up
+     var isInstallment by mutableStateOf(false)
+     var isRecurring by mutableStateOf(false)
+@@ -107,6 +108,7 @@
+                     description = expense.description ?: ""
+                     categoryId = expense.categoryId
+                     accountId = expense.accountId
++                    toAccountId = expense.toAccountId ?: 2L
+                     transactionType = expense.type
+                     isInstallment = expense.isInstallment
+                     isRecurring = expense.isRecurring
+@@ -204,6 +206,7 @@
+                 amount = amountInCents,
+                 categoryId = categoryId,
+                 accountId = accountId,
++                toAccountId = if (transactionType == "TRANSFER") toAccountId else null,
+                 type = transactionType,
+                 isInstallment = isInstallment,
+                 isRecurring = isRecurring,
