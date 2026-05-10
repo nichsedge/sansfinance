@@ -40,6 +40,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -77,7 +80,6 @@ fun AddExpenseScreen(
     val focusManager = LocalFocusManager.current
     var noteExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var descriptionExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
-    var typeExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var accountExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var recurrenceExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     val currencySymbol = remember {
@@ -110,34 +112,23 @@ fun AddExpenseScreen(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Transaction Type Selector
-            @OptIn(ExperimentalMaterial3Api::class)
-            ExposedDropdownMenuBox(
-                expanded = typeExpanded,
-                onExpandedChange = { typeExpanded = !typeExpanded }
+            // Transaction Type Selector (Segmented Buttons / Tabs)
+            val types = listOf("EXPENSE", "INCOME", "TRANSFER")
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier.fillMaxWidth()
             ) {
-                OutlinedTextField(
-                    value = viewModel.transactionType,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Transaction Type") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                    shape = MaterialTheme.shapes.medium
-                )
-                ExposedDropdownMenu(
-                    expanded = typeExpanded,
-                    onDismissRequest = { typeExpanded = false }
-                ) {
-                    listOf("EXPENSE", "INCOME", "TRANSFER").forEach { type ->
-                        DropdownMenuItem(
-                            text = { Text(type) },
-                            onClick = {
-                                viewModel.transactionType = type
-                                typeExpanded = false
-                            }
-                        )
-                    }
+                types.forEachIndexed { index, type ->
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = types.size),
+                        onClick = { viewModel.transactionType = type },
+                        selected = viewModel.transactionType == type,
+                        label = { 
+                            Text(
+                                type.lowercase().replaceFirstChar { it.uppercase() },
+                                fontWeight = if (viewModel.transactionType == type) FontWeight.Bold else FontWeight.Normal
+                            ) 
+                        }
+                    )
                 }
             }
 
