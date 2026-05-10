@@ -84,7 +84,7 @@ fun InstallmentsScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
+                shape = MaterialTheme.shapes.large
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Text(
@@ -153,7 +153,7 @@ fun ExpandableInstallment(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceVariant,
         onClick = { expanded = !expanded }
     ) {

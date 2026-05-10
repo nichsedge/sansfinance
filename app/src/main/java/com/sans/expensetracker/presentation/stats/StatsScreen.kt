@@ -173,14 +173,14 @@ fun HeaderPart(
 
         if (lastMonthAmount > 0) {
             Surface(
-                color = if (diff > 0) MaterialTheme.colorScheme.errorContainer else Color(0xFFC8E6C9),
+                color = if (diff > 0) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
                 shape = CircleShape
             ) {
                 Text(
                     text = "${if (diff > 0) "+" else ""}$percent% from last month",
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (diff > 0) MaterialTheme.colorScheme.error else Color(0xFF2E7D32),
+                    color = if (diff > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -232,7 +232,7 @@ fun SpendingTrendChart(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
                 alpha = 0.3f
@@ -412,7 +412,7 @@ fun CategoryBreakdown(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
@@ -472,7 +472,7 @@ fun StatsSimpleCard(
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = color),
-        shape = RoundedCornerShape(24.dp)
+        shape = MaterialTheme.shapes.large
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(

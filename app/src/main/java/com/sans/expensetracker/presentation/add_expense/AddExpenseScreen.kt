@@ -119,7 +119,7 @@ fun AddExpenseScreen(
                     onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
                 ),
                 prefix = { Text("Rp ", fontWeight = FontWeight.Bold) },
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                shape = MaterialTheme.shapes.medium
             )
 
             // Date Picker Field
@@ -134,7 +134,7 @@ fun AddExpenseScreen(
                         Icon(Icons.Default.DateRange, contentDescription = "Select Date")
                     }
                 },
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                shape = MaterialTheme.shapes.medium
             )
 
             if (showDatePicker) {
@@ -160,6 +160,47 @@ fun AddExpenseScreen(
                 }
             }
 
+            @OptIn(ExperimentalMaterial3Api::class)
+            ExposedDropdownMenuBox(
+                expanded = itemNameExpanded && viewModel.itemNameSuggestions.isNotEmpty(),
+                onExpandedChange = { itemNameExpanded = !itemNameExpanded }
+            ) {
+                OutlinedTextField(
+                    value = viewModel.itemName,
+                    onValueChange = {
+                        viewModel.itemName = it
+                        itemNameExpanded = true
+                    },
+                    label = { Text(stringResource(R.string.what_did_you_buy)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
+                    ),
+                    shape = MaterialTheme.shapes.medium
+                )
+
+                ExposedDropdownMenu(
+                    expanded = itemNameExpanded && viewModel.itemNameSuggestions.isNotEmpty(),
+                    onDismissRequest = { itemNameExpanded = false }
+                ) {
+                    viewModel.itemNameSuggestions.forEach { suggestion ->
+                        DropdownMenuItem(
+                            text = { Text(suggestion) },
+                            onClick = {
+                                viewModel.itemName = suggestion
+                                itemNameExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
             Text(
                 stringResource(R.string.category),
                 style = MaterialTheme.typography.titleMedium,
@@ -180,7 +221,7 @@ fun AddExpenseScreen(
                                 Text(category.name)
                             }
                         },
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        shape = MaterialTheme.shapes.small
                     )
                 }
             }
@@ -200,7 +241,7 @@ fun AddExpenseScreen(
                         selected = viewModel.selectedTags.contains(tagName),
                         onClick = { viewModel.toggleTag(tagName) },
                         label = { Text(tagName) },
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        shape = MaterialTheme.shapes.small
                     )
                 }
             }
@@ -225,47 +266,9 @@ fun AddExpenseScreen(
                         focusManager.clearFocus()
                     }
                 ),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                shape = MaterialTheme.shapes.medium
             )
 
-            @OptIn(ExperimentalMaterial3Api::class)
-            ExposedDropdownMenuBox(
-                expanded = itemNameExpanded && viewModel.itemNameSuggestions.isNotEmpty(),
-                onExpandedChange = { itemNameExpanded = !itemNameExpanded }
-            ) {
-                OutlinedTextField(
-                    value = viewModel.itemName,
-                    onValueChange = {
-                        viewModel.itemName = it
-                        itemNameExpanded = true
-                    },
-                    label = { Text(stringResource(R.string.what_did_you_buy)) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        imeAction = ImeAction.Next
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
-                    ),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-                )
-
-                ExposedDropdownMenu(
-                    expanded = itemNameExpanded && viewModel.itemNameSuggestions.isNotEmpty(),
-                    onDismissRequest = { itemNameExpanded = false }
-                ) {
-                    viewModel.itemNameSuggestions.forEach { suggestion ->
-                        DropdownMenuItem(
-                            text = { Text(suggestion) },
-                            onClick = {
-                                viewModel.itemName = suggestion
-                                itemNameExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
 
             @OptIn(ExperimentalMaterial3Api::class)
             ExposedDropdownMenuBox(
@@ -291,7 +294,7 @@ fun AddExpenseScreen(
                             if (!viewModel.isInstallment) viewModel.onSaveClick(onBack)
                         }
                     ),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                    shape = MaterialTheme.shapes.medium
                 )
 
                 ExposedDropdownMenu(
@@ -312,7 +315,7 @@ fun AddExpenseScreen(
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 onClick = { viewModel.isInstallment = !viewModel.isInstallment }
             ) {
@@ -350,7 +353,7 @@ fun AddExpenseScreen(
                             viewModel.onSaveClick(onBack)
                         }
                     ),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                    shape = MaterialTheme.shapes.medium
                 )
             }
 
@@ -361,7 +364,7 @@ fun AddExpenseScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                shape = MaterialTheme.shapes.small
             ) {
                 Text(
                     if (viewModel.isEditMode) stringResource(R.string.update_transaction) else stringResource(

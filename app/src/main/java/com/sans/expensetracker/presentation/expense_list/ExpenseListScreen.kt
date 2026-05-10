@@ -172,7 +172,7 @@ fun ExpenseListScreen(
                         }
                     },
                     singleLine = true,
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.small,
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surface,
@@ -494,7 +494,7 @@ fun AdvancedFilterSheet(
             Button(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth(),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                shape = MaterialTheme.shapes.small
             ) {
                 Text(stringResource(R.string.apply_filters))
             }
@@ -546,7 +546,7 @@ fun SummaryCard(periodTotal: Long, budget: Long = 0L) {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
         ),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.large,
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
@@ -637,7 +637,7 @@ fun ExpenseItem(
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.medium,
         color = if (expense.isInstallmentPayment) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface,
         tonalElevation = 1.dp
     ) {
