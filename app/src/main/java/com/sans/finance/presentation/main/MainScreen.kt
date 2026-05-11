@@ -3,14 +3,20 @@ package com.sans.finance.presentation.main
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
@@ -18,14 +24,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.sans.finance.presentation.accounts.AccountScreen
 import com.sans.finance.presentation.dashboard.DashboardScreen
 import com.sans.finance.presentation.expense_list.ExpenseListScreen
-import com.sans.finance.presentation.accounts.AccountScreen
-import com.sans.finance.presentation.goals.GoalScreen
-import com.sans.finance.presentation.settings.SettingsScreen
 import com.sans.finance.presentation.navigation.Screen
-import androidx.compose.material.icons.filled.Flag
-import androidx.compose.ui.unit.dp
+import com.sans.finance.presentation.settings.SettingsScreen
 
 @Composable
 fun MainScreen(
@@ -33,7 +36,7 @@ fun MainScreen(
     onLanguageToggle: () -> Unit
 ) {
     val navController = rememberNavController()
-    
+
     Scaffold(
         bottomBar = {
             BottomNavigationBar(navController)
@@ -116,7 +119,7 @@ fun BottomNavigationBar(navController: NavHostController) {
         items.forEach { (screen, label, icon) ->
             NavigationBarItem(
                 icon = { Icon(icon, contentDescription = label) },
-                label = { 
+                label = {
                     Text(
                         label,
                         maxLines = 1,

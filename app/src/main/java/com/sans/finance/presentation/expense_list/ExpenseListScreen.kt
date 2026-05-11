@@ -20,29 +20,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.QueryStats
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -54,8 +49,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberDateRangePickerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -77,7 +72,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.R
 import com.sans.finance.domain.model.Expense
-import com.sans.finance.presentation.expense_list.DateRangeFilter
 import com.sans.finance.presentation.components.CategoryIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -115,7 +109,10 @@ fun ExpenseListScreen(
                         Icon(Icons.Default.QueryStats, contentDescription = "Statistics")
                     }
                     IconButton(onClick = onInstallmentsClick) {
-                        Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = "Active Installments")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ReceiptLong,
+                            contentDescription = "Active Installments"
+                        )
                     }
                 }
             )
@@ -191,13 +188,19 @@ fun ExpenseListScreen(
             ) {
                 state.groupedExpenses.forEach { (date, expenses) ->
                     item(key = "header-$date") {
-                        val cal = com.sans.finance.core.util.CalendarUtils.getInstance().apply { timeInMillis = date }
-                        val day = cal.get(java.util.Calendar.DAY_OF_MONTH).toString().padStart(2, '0')
-                        val dayOfWeek = java.text.SimpleDateFormat("EEE", java.util.Locale.US).format(cal.time)
-                        val monthYear = java.text.SimpleDateFormat("MM.yyyy", java.util.Locale.US).format(cal.time)
+                        val cal = com.sans.finance.core.util.CalendarUtils.getInstance()
+                            .apply { timeInMillis = date }
+                        val day =
+                            cal.get(java.util.Calendar.DAY_OF_MONTH).toString().padStart(2, '0')
+                        val dayOfWeek =
+                            java.text.SimpleDateFormat("EEE", java.util.Locale.US).format(cal.time)
+                        val monthYear = java.text.SimpleDateFormat("MM.yyyy", java.util.Locale.US)
+                            .format(cal.time)
 
-                        val dayIncome = expenses.filter { it.type == "INCOME" }.sumOf { if (it.isInstallment && it.monthlyPayment > 0) it.monthlyPayment else it.amount }
-                        val dayExpense = expenses.filter { it.type != "INCOME" }.sumOf { if (it.isInstallment && it.monthlyPayment > 0) it.monthlyPayment else it.amount }
+                        val dayIncome = expenses.filter { it.type == "INCOME" }
+                            .sumOf { if (it.isInstallment && it.monthlyPayment > 0) it.monthlyPayment else it.amount }
+                        val dayExpense = expenses.filter { it.type != "INCOME" }
+                            .sumOf { if (it.isInstallment && it.monthlyPayment > 0) it.monthlyPayment else it.amount }
 
                         Surface(
                             modifier = Modifier
@@ -227,7 +230,10 @@ fun ExpenseListScreen(
                                             text = dayOfWeek,
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSecondary,
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                            modifier = Modifier.padding(
+                                                horizontal = 4.dp,
+                                                vertical = 2.dp
+                                            )
                                         )
                                     }
                                     Spacer(modifier = Modifier.size(8.dp))
@@ -240,7 +246,9 @@ fun ExpenseListScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     if (dayIncome > 0) {
                                         Text(
-                                            text = com.sans.finance.core.util.CurrencyFormatter.formatAmount(dayIncome),
+                                            text = com.sans.finance.core.util.CurrencyFormatter.formatAmount(
+                                                dayIncome
+                                            ),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = Color(0xFF4CAF50)
                                         )
@@ -248,7 +256,9 @@ fun ExpenseListScreen(
                                     }
                                     if (dayExpense > 0) {
                                         Text(
-                                            text = com.sans.finance.core.util.CurrencyFormatter.formatAmount(dayExpense),
+                                            text = com.sans.finance.core.util.CurrencyFormatter.formatAmount(
+                                                dayExpense
+                                            ),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = Color(0xFFE53935)
                                         )
@@ -394,8 +404,12 @@ fun AdvancedFilterSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val dateText = if (state.activeDateFilter == DateRangeFilter.CUSTOM) {
-                    val startStr = com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter().format(java.util.Date(state.startDate))
-                    val endStr = com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter().format(java.util.Date(state.endDate - 1))
+                    val startStr =
+                        com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter()
+                            .format(java.util.Date(state.startDate))
+                    val endStr =
+                        com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter()
+                            .format(java.util.Date(state.endDate - 1))
                     "$startStr - $endStr"
                 } else {
                     "Select Date Range"
@@ -638,7 +652,6 @@ fun SummaryCard(
 }
 
 
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ExpenseItem(
@@ -659,7 +672,9 @@ fun ExpenseItem(
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
-        color = if (expense.isInstallmentPayment) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface,
+        color = if (expense.isInstallmentPayment) MaterialTheme.colorScheme.surfaceVariant.copy(
+            alpha = 0.5f
+        ) else MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp
     ) {
         Column {
@@ -692,7 +707,9 @@ fun ExpenseItem(
                     Text(
                         expense.note.ifBlank { expense.description ?: "" },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (expense.isInstallmentPayment) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface,
+                        color = if (expense.isInstallmentPayment) MaterialTheme.colorScheme.onSurface.copy(
+                            alpha = 0.7f
+                        ) else MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
@@ -708,7 +725,8 @@ fun ExpenseItem(
                 Column(horizontalAlignment = Alignment.End) {
                     val displayAmount =
                         if (expense.isInstallment && expense.monthlyPayment > 0) expense.monthlyPayment else expense.amount
-                    val amountColor = if (expense.type == "INCOME") Color(0xFF4CAF50) else Color(0xFFE53935)
+                    val amountColor =
+                        if (expense.type == "INCOME") Color(0xFF4CAF50) else Color(0xFFE53935)
                     Text(
                         com.sans.finance.core.util.CurrencyFormatter.formatAmount(displayAmount),
                         style = MaterialTheme.typography.bodyMedium,
@@ -778,27 +796,56 @@ fun FilterTabs(
         edgePadding = 0.dp,
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        divider = { androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp) }
+        divider = {
+            androidx.compose.material3.HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                thickness = 1.dp
+            )
+        }
     ) {
         androidx.compose.material3.Tab(
             selected = tabIndex == 0,
             onClick = { onFilterSelected(DateRangeFilter.SEVEN_DAYS) },
-            text = { Text("Daily (7d)", style = MaterialTheme.typography.labelLarge, fontWeight = if(tabIndex == 0) FontWeight.Bold else FontWeight.Normal) }
+            text = {
+                Text(
+                    "Daily (7d)",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (tabIndex == 0) FontWeight.Bold else FontWeight.Normal
+                )
+            }
         )
         androidx.compose.material3.Tab(
             selected = tabIndex == 1,
             onClick = { onFilterSelected(DateRangeFilter.THIRTY_DAYS) },
-            text = { Text("Calendar (30d)", style = MaterialTheme.typography.labelLarge, fontWeight = if(tabIndex == 1) FontWeight.Bold else FontWeight.Normal) }
+            text = {
+                Text(
+                    "Calendar (30d)",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (tabIndex == 1) FontWeight.Bold else FontWeight.Normal
+                )
+            }
         )
         androidx.compose.material3.Tab(
             selected = tabIndex == 2,
             onClick = { onFilterSelected(DateRangeFilter.THIS_MONTH) },
-            text = { Text("Monthly", style = MaterialTheme.typography.labelLarge, fontWeight = if(tabIndex == 2) FontWeight.Bold else FontWeight.Normal) }
+            text = {
+                Text(
+                    "Monthly",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (tabIndex == 2) FontWeight.Bold else FontWeight.Normal
+                )
+            }
         )
         androidx.compose.material3.Tab(
             selected = tabIndex == 3,
             onClick = { onFilterSelected(DateRangeFilter.ALL_TIME) },
-            text = { Text("Total", style = MaterialTheme.typography.labelLarge, fontWeight = if(tabIndex == 3) FontWeight.Bold else FontWeight.Normal) }
+            text = {
+                Text(
+                    "Total",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (tabIndex == 3) FontWeight.Bold else FontWeight.Normal
+                )
+            }
         )
     }
 }

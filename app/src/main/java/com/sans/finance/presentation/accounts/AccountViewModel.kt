@@ -11,10 +11,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import com.sans.finance.core.util.CalendarUtils
-import java.util.Calendar
-import java.text.SimpleDateFormat
-import java.util.Locale
 import javax.inject.Inject
 
 data class AccountScreenState(
@@ -36,8 +32,10 @@ class AccountViewModel @Inject constructor(
         accountRepository.getAllAccounts(),
         expenseRepository.getExpensesBetween(0, Long.MAX_VALUE)
     ) { accountsList, expensesList ->
-        val assets = accountsList.filter { it.type != "Credit Card" && it.type != "Loan" }.sumOf { it.balance }
-        val liabilities = accountsList.filter { it.type == "Credit Card" || it.type == "Loan" }.sumOf { it.balance }
+        val assets = accountsList.filter { it.type != "Credit Card" && it.type != "Loan" }
+            .sumOf { it.balance }
+        val liabilities = accountsList.filter { it.type == "Credit Card" || it.type == "Loan" }
+            .sumOf { it.balance }
         val total = assets - liabilities
 
         val grouped = accountsList.groupBy { it.type }

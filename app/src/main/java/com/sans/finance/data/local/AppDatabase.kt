@@ -8,15 +8,15 @@ import com.sans.finance.data.local.dao.ExpenseDao
 import com.sans.finance.data.local.dao.InstallmentDao
 import com.sans.finance.data.local.dao.TagDao
 import com.sans.finance.data.local.entity.AccountEntity
+import com.sans.finance.data.local.entity.BudgetEntity
 import com.sans.finance.data.local.entity.CategoryEntity
 import com.sans.finance.data.local.entity.ExpenseEntity
 import com.sans.finance.data.local.entity.ExpenseTagCrossRef
+import com.sans.finance.data.local.entity.GoalEntity
 import com.sans.finance.data.local.entity.InstallmentEntity
 import com.sans.finance.data.local.entity.InstallmentItemEntity
-import com.sans.finance.data.local.entity.TagEntity
 import com.sans.finance.data.local.entity.NetWorthSnapshotEntity
-import com.sans.finance.data.local.entity.GoalEntity
-import com.sans.finance.data.local.entity.BudgetEntity
+import com.sans.finance.data.local.entity.TagEntity
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 
@@ -71,21 +71,91 @@ abstract class AppDatabase : RoomDatabase() {
                 val allCats = categoryDao.getAllCategoriesSync()
                 if (allCats.isEmpty()) {
                     // Expense Categories
-                    categoryDao.insertCategory(CategoryEntity(name = "Food", icon = "🍔", orderIndex = 0, type = "EXPENSE"))
-                    categoryDao.insertCategory(CategoryEntity(name = "Health", icon = "💊", orderIndex = 1, type = "EXPENSE"))
-                    categoryDao.insertCategory(CategoryEntity(name = "Shopping", icon = "🛍️", orderIndex = 2, type = "EXPENSE"))
-                    categoryDao.insertCategory(CategoryEntity(name = "Transport", icon = "🚗", orderIndex = 3, type = "EXPENSE"))
-                    categoryDao.insertCategory(CategoryEntity(name = "Subscriptions", icon = "🌐", orderIndex = 4, type = "EXPENSE"))
-                    categoryDao.insertCategory(CategoryEntity(name = "Others", icon = "📁", orderIndex = 5, type = "EXPENSE"))
+                    categoryDao.insertCategory(
+                        CategoryEntity(
+                            name = "Food",
+                            icon = "🍔",
+                            orderIndex = 0,
+                            type = "EXPENSE"
+                        )
+                    )
+                    categoryDao.insertCategory(
+                        CategoryEntity(
+                            name = "Health",
+                            icon = "💊",
+                            orderIndex = 1,
+                            type = "EXPENSE"
+                        )
+                    )
+                    categoryDao.insertCategory(
+                        CategoryEntity(
+                            name = "Shopping",
+                            icon = "🛍️",
+                            orderIndex = 2,
+                            type = "EXPENSE"
+                        )
+                    )
+                    categoryDao.insertCategory(
+                        CategoryEntity(
+                            name = "Transport",
+                            icon = "🚗",
+                            orderIndex = 3,
+                            type = "EXPENSE"
+                        )
+                    )
+                    categoryDao.insertCategory(
+                        CategoryEntity(
+                            name = "Subscriptions",
+                            icon = "🌐",
+                            orderIndex = 4,
+                            type = "EXPENSE"
+                        )
+                    )
+                    categoryDao.insertCategory(
+                        CategoryEntity(
+                            name = "Others",
+                            icon = "📁",
+                            orderIndex = 5,
+                            type = "EXPENSE"
+                        )
+                    )
                 }
 
                 // Check for Income categories specifically (useful for existing users)
                 val incomeCats = allCats.filter { it.type == "INCOME" }
                 if (incomeCats.isEmpty()) {
-                    categoryDao.insertCategory(CategoryEntity(name = "Salary", icon = "💰", orderIndex = 6, type = "INCOME"))
-                    categoryDao.insertCategory(CategoryEntity(name = "Business", icon = "📈", orderIndex = 7, type = "INCOME"))
-                    categoryDao.insertCategory(CategoryEntity(name = "Bonus", icon = "🎁", orderIndex = 8, type = "INCOME"))
-                    categoryDao.insertCategory(CategoryEntity(name = "Investments", icon = "🏦", orderIndex = 9, type = "INCOME"))
+                    categoryDao.insertCategory(
+                        CategoryEntity(
+                            name = "Salary",
+                            icon = "💰",
+                            orderIndex = 6,
+                            type = "INCOME"
+                        )
+                    )
+                    categoryDao.insertCategory(
+                        CategoryEntity(
+                            name = "Business",
+                            icon = "📈",
+                            orderIndex = 7,
+                            type = "INCOME"
+                        )
+                    )
+                    categoryDao.insertCategory(
+                        CategoryEntity(
+                            name = "Bonus",
+                            icon = "🎁",
+                            orderIndex = 8,
+                            type = "INCOME"
+                        )
+                    )
+                    categoryDao.insertCategory(
+                        CategoryEntity(
+                            name = "Investments",
+                            icon = "🏦",
+                            orderIndex = 9,
+                            type = "INCOME"
+                        )
+                    )
                 }
 
                 // Inject Seed Data from CSV ONLY if EVERYTHING is empty

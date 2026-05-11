@@ -12,10 +12,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.sans.finance.presentation.add_expense.AddExpenseScreen
 import com.sans.finance.presentation.expense_list.ExpenseListScreen
-import com.sans.finance.presentation.navigation.Screen
-import com.sans.finance.presentation.main.MainScreen
 import com.sans.finance.presentation.goals.GoalScreen
-
+import com.sans.finance.presentation.main.MainScreen
+import com.sans.finance.presentation.navigation.Screen
 import com.sans.finance.presentation.settings.SettingsScreen
 import com.sans.finance.ui.theme.SansFinanceTheme
 import dagger.hilt.android.AndroidEntryPoint

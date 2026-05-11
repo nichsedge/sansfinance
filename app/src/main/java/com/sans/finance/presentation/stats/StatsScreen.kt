@@ -1,6 +1,8 @@
 package com.sans.finance.presentation.stats
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -22,29 +23,28 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Insights
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDateRangePickerState
-import androidx.compose.material3.DateRangePicker
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.rememberDateRangePickerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -54,33 +54,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.R
 import com.sans.finance.core.util.CurrencyFormatter
 import com.sans.finance.core.util.DateFormatterUtils
-import com.sans.finance.core.util.CalendarUtils
 import com.sans.finance.data.local.entity.CategorySpent
 import com.sans.finance.data.local.entity.DaySpent
 import com.sans.finance.domain.model.Expense
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.text.SimpleDateFormat
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.rememberTextMeasurer
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -113,7 +110,10 @@ fun StatsScreen(
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(R.string.statistics), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = if (state.selectedCategory != null) { { viewModel.onCategorySelected(null) } } else onBack) {
+                    IconButton(
+                        onClick = if (state.selectedCategory != null) {
+                            { viewModel.onCategorySelected(null) }
+                        } else onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -140,7 +140,10 @@ fun StatsScreen(
                     state = state,
                     onPrevious = viewModel::onPreviousPeriod,
                     onNext = viewModel::onNextPeriod,
-                    onDateClick = { if (state.selectedPeriodType == StatsPeriodType.CUSTOM) showDatePicker = true }
+                    onDateClick = {
+                        if (state.selectedPeriodType == StatsPeriodType.CUSTOM) showDatePicker =
+                            true
+                    }
                 )
 
                 // Income / Expense Overview Cards
@@ -167,7 +170,12 @@ fun StatsScreen(
                 }
 
                 if (state.isLoading) {
-                    Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         CircularProgressIndicator()
                     }
                 } else {
@@ -248,7 +256,10 @@ fun DateNavigator(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onPrevious, enabled = state.selectedPeriodType != StatsPeriodType.CUSTOM) {
+        IconButton(
+            onClick = onPrevious,
+            enabled = state.selectedPeriodType != StatsPeriodType.CUSTOM
+        ) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous")
         }
 
@@ -263,7 +274,11 @@ fun DateNavigator(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (state.selectedPeriodType == StatsPeriodType.CUSTOM) {
-                    Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Default.CalendarToday,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
                 Text(
@@ -292,14 +307,17 @@ fun getPeriodText(state: StatsState): String {
             val df = SimpleDateFormat("dd MMM", Locale.getDefault())
             "${df.format(start.time)} - ${df.format(end.time)}"
         }
+
         StatsPeriodType.MONTHLY -> {
             val df = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
             df.format(cal.time)
         }
+
         StatsPeriodType.ANNUALLY -> {
             val df = SimpleDateFormat("yyyy", Locale.getDefault())
             df.format(cal.time)
         }
+
         StatsPeriodType.CUSTOM -> {
             if (state.customStartDate != null && state.customEndDate != null) {
                 val df = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
@@ -364,7 +382,7 @@ fun CategoryBreakdown(
                     categories = categories,
                     totalAmount = totalInCategories
                 )
-                
+
                 categories.sortedByDescending { it.totalAmount }.forEachIndexed { index, category ->
                     val percent =
                         if (totalInCategories > 0) (category.totalAmount.toFloat() / totalInCategories * 100) else 0f
@@ -408,7 +426,9 @@ fun CategoryBreakdown(
                 }
             } else {
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(stringResource(R.string.no_data_available))
@@ -460,7 +480,11 @@ fun CategoryDetailView(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                    alpha = 0.3f
+                )
+            )
         ) {
             Column(
                 modifier = Modifier.padding(8.dp),
@@ -564,12 +588,17 @@ fun TrendChart(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
         )
     ) {
-        Box(modifier = Modifier
-            .padding(16.dp)
-            .fillMaxWidth()
-            .height(220.dp)) {
+        Box(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+                .height(220.dp)
+        ) {
             if (trendData.isEmpty()) {
-                Text(stringResource(R.string.no_data_available), modifier = Modifier.align(Alignment.Center))
+                Text(
+                    stringResource(R.string.no_data_available),
+                    modifier = Modifier.align(Alignment.Center)
+                )
             } else {
                 val sortedSpending = remember(trendData) { trendData.sortedBy { it.day } }
 
@@ -589,7 +618,8 @@ fun TrendChart(
                     val textLayoutResults = sortedSpending.map {
                         textMeasurer.measure(dateFormat.format(Date(it.day)), style = labelStyle)
                     }
-                    val bottomPadding = textLayoutResults.maxOfOrNull { it.size.height }?.toFloat() ?: 40f
+                    val bottomPadding =
+                        textLayoutResults.maxOfOrNull { it.size.height }?.toFloat() ?: 40f
                     val yAxisLabels = 5
                     val yAxisLabelWidth = textMeasurer.measure(
                         CurrencyFormatter.formatAmountCompact(maxAmount), style = labelStyle
@@ -609,9 +639,23 @@ fun TrendChart(
                         val y = chartBottom - (fraction * chartHeight)
                         val value = minAmount + (amountRange * fraction).toLong()
 
-                        drawLine(color = gridColor, start = Offset(chartLeft, y), end = Offset(chartRight, y), strokeWidth = 1f)
-                        val textLayoutResult = textMeasurer.measure(CurrencyFormatter.formatAmountCompact(value), style = labelStyle)
-                        drawText(textLayoutResult = textLayoutResult, topLeft = Offset(chartLeft - textLayoutResult.size.width - 8f, y - textLayoutResult.size.height / 2f))
+                        drawLine(
+                            color = gridColor,
+                            start = Offset(chartLeft, y),
+                            end = Offset(chartRight, y),
+                            strokeWidth = 1f
+                        )
+                        val textLayoutResult = textMeasurer.measure(
+                            CurrencyFormatter.formatAmountCompact(value),
+                            style = labelStyle
+                        )
+                        drawText(
+                            textLayoutResult = textLayoutResult,
+                            topLeft = Offset(
+                                chartLeft - textLayoutResult.size.width - 8f,
+                                y - textLayoutResult.size.height / 2f
+                            )
+                        )
                     }
 
                     // Curve
@@ -633,7 +677,14 @@ fun TrendChart(
                             val p2 = points[i + 1]
                             val controlPoint1 = Offset(p1.x + (p2.x - p1.x) / 2f, p1.y)
                             val controlPoint2 = Offset(p1.x + (p2.x - p1.x) / 2f, p2.y)
-                            path.cubicTo(controlPoint1.x, controlPoint1.y, controlPoint2.x, controlPoint2.y, p2.x, p2.y)
+                            path.cubicTo(
+                                controlPoint1.x,
+                                controlPoint1.y,
+                                controlPoint2.x,
+                                controlPoint2.y,
+                                p2.x,
+                                p2.y
+                            )
                         }
 
                         val fillPath = Path().apply {
@@ -642,17 +693,34 @@ fun TrendChart(
                             lineTo(points.first().x, chartBottom)
                             close()
                         }
-                        drawPath(path = fillPath, brush = Brush.verticalGradient(colors = listOf(primaryColor.copy(alpha = 0.3f), Color.Transparent), startY = chartTop, endY = chartBottom))
+                        drawPath(
+                            path = fillPath,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    primaryColor.copy(alpha = 0.3f),
+                                    Color.Transparent
+                                ), startY = chartTop, endY = chartBottom
+                            )
+                        )
                         drawPath(path = path, color = primaryColor, style = Stroke(width = 6f))
 
                         // X-axis labels
                         val labelsToDraw = Math.min(sortedSpending.size, 5)
                         if (labelsToDraw > 0) {
-                            val step = Math.max(1, (sortedSpending.size - 1) / (labelsToDraw - 1).coerceAtLeast(1))
+                            val step = Math.max(
+                                1,
+                                (sortedSpending.size - 1) / (labelsToDraw - 1).coerceAtLeast(1)
+                            )
                             for (i in sortedSpending.indices step step) {
                                 val x = chartLeft + i * stepX
                                 val textLayoutResult = textLayoutResults[i]
-                                drawText(textLayoutResult = textLayoutResult, topLeft = Offset(x - textLayoutResult.size.width / 2f, chartBottom + 8f))
+                                drawText(
+                                    textLayoutResult = textLayoutResult,
+                                    topLeft = Offset(
+                                        x - textLayoutResult.size.width / 2f,
+                                        chartBottom + 8f
+                                    )
+                                )
                             }
                         }
                     }
@@ -686,85 +754,89 @@ fun PieChartWithLabels(
 
             var startAngle = -90f
 
-            categories.sortedByDescending { it.totalAmount }.take(12).forEachIndexed { index, category ->
-                val sweepAngle = (category.totalAmount.toFloat() / totalAmount) * 360f
-                val color = pieChartColors[index % pieChartColors.size]
+            categories.sortedByDescending { it.totalAmount }.take(12)
+                .forEachIndexed { index, category ->
+                    val sweepAngle = (category.totalAmount.toFloat() / totalAmount) * 360f
+                    val color = pieChartColors[index % pieChartColors.size]
 
-                // Draw pie slice
-                drawArc(
-                    color = color,
-                    startAngle = startAngle,
-                    sweepAngle = sweepAngle,
-                    useCenter = true,
-                    topLeft = Offset(center.x - radius, center.y - radius),
-                    size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
-                )
-
-                // Only draw labels for slices > 3% to avoid clutter
-                if (sweepAngle > 10f) {
-                    // Calculate label position
-                    val angleInRadians = (startAngle + sweepAngle / 2) * (Math.PI / 180f)
-                    val lineStart = Offset(
-                        x = center.x + (radius * 0.9f) * cos(angleInRadians).toFloat(),
-                        y = center.y + (radius * 0.9f) * sin(angleInRadians).toFloat()
-                    )
-                    val lineEnd = Offset(
-                        x = center.x + (radius * 1.2f) * cos(angleInRadians).toFloat(),
-                        y = center.y + (radius * 1.2f) * sin(angleInRadians).toFloat()
-                    )
-                    val isRightSide = cos(angleInRadians) > 0
-                    val textEnd = Offset(
-                        x = lineEnd.x + (if (isRightSide) 20f else -20f),
-                        y = lineEnd.y
-                    )
-
-                    // Draw connecting line
-                    val path = Path().apply {
-                        moveTo(lineStart.x, lineStart.y)
-                        lineTo(lineEnd.x, lineEnd.y)
-                        lineTo(textEnd.x, textEnd.y)
-                    }
-                    drawPath(
-                        path = path,
+                    // Draw pie slice
+                    drawArc(
                         color = color,
-                        style = Stroke(width = 2f)
+                        startAngle = startAngle,
+                        sweepAngle = sweepAngle,
+                        useCenter = true,
+                        topLeft = Offset(center.x - radius, center.y - radius),
+                        size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
                     )
 
-                    // Draw text
-                    val percentage = (category.totalAmount.toFloat() / totalAmount) * 100
-                    val percentageText = String.format(Locale.US, "%.1f %%", percentage)
-
-                    val nameLayoutResult = textMeasurer.measure(
-                        text = category.categoryName,
-                        style = TextStyle(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                            color = onSurfaceColor
+                    // Only draw labels for slices > 3% to avoid clutter
+                    if (sweepAngle > 10f) {
+                        // Calculate label position
+                        val angleInRadians = (startAngle + sweepAngle / 2) * (Math.PI / 180f)
+                        val lineStart = Offset(
+                            x = center.x + (radius * 0.9f) * cos(angleInRadians).toFloat(),
+                            y = center.y + (radius * 0.9f) * sin(angleInRadians).toFloat()
                         )
-                    )
-                    val percentLayoutResult = textMeasurer.measure(
-                        text = percentageText,
-                        style = TextStyle(
-                            fontSize = 12.sp,
-                            color = onSurfaceColor
+                        val lineEnd = Offset(
+                            x = center.x + (radius * 1.2f) * cos(angleInRadians).toFloat(),
+                            y = center.y + (radius * 1.2f) * sin(angleInRadians).toFloat()
                         )
-                    )
+                        val isRightSide = cos(angleInRadians) > 0
+                        val textEnd = Offset(
+                            x = lineEnd.x + (if (isRightSide) 20f else -20f),
+                            y = lineEnd.y
+                        )
 
-                    val textX = if (isRightSide) textEnd.x + 4f else textEnd.x - Math.max(nameLayoutResult.size.width, percentLayoutResult.size.width) - 4f
-                    val textY = textEnd.y - nameLayoutResult.size.height
+                        // Draw connecting line
+                        val path = Path().apply {
+                            moveTo(lineStart.x, lineStart.y)
+                            lineTo(lineEnd.x, lineEnd.y)
+                            lineTo(textEnd.x, textEnd.y)
+                        }
+                        drawPath(
+                            path = path,
+                            color = color,
+                            style = Stroke(width = 2f)
+                        )
 
-                    drawText(
-                        textLayoutResult = nameLayoutResult,
-                        topLeft = Offset(textX, textY)
-                    )
-                    drawText(
-                        textLayoutResult = percentLayoutResult,
-                        topLeft = Offset(textX, textY + nameLayoutResult.size.height)
-                    )
+                        // Draw text
+                        val percentage = (category.totalAmount.toFloat() / totalAmount) * 100
+                        val percentageText = String.format(Locale.US, "%.1f %%", percentage)
+
+                        val nameLayoutResult = textMeasurer.measure(
+                            text = category.categoryName,
+                            style = TextStyle(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = onSurfaceColor
+                            )
+                        )
+                        val percentLayoutResult = textMeasurer.measure(
+                            text = percentageText,
+                            style = TextStyle(
+                                fontSize = 12.sp,
+                                color = onSurfaceColor
+                            )
+                        )
+
+                        val textX = if (isRightSide) textEnd.x + 4f else textEnd.x - Math.max(
+                            nameLayoutResult.size.width,
+                            percentLayoutResult.size.width
+                        ) - 4f
+                        val textY = textEnd.y - nameLayoutResult.size.height
+
+                        drawText(
+                            textLayoutResult = nameLayoutResult,
+                            topLeft = Offset(textX, textY)
+                        )
+                        drawText(
+                            textLayoutResult = percentLayoutResult,
+                            topLeft = Offset(textX, textY + nameLayoutResult.size.height)
+                        )
+                    }
+
+                    startAngle += sweepAngle
                 }
-
-                startAngle += sweepAngle
-            }
         }
     }
 }
@@ -776,7 +848,7 @@ fun CustomDateRangePickerDialog(
     onRangeSelected: (Long, Long) -> Unit
 ) {
     val dateRangePickerState = rememberDateRangePickerState()
-    
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -809,11 +881,16 @@ fun CustomDateRangePickerDialog(
                     Text(stringResource(R.string.ok))
                 }
             }
-            
+
             DateRangePicker(
                 state = dateRangePickerState,
                 modifier = Modifier.weight(1f),
-                title = { Text(stringResource(R.string.select_date_range), modifier = Modifier.padding(16.dp)) }
+                title = {
+                    Text(
+                        stringResource(R.string.select_date_range),
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
             )
         }
     }

@@ -4,11 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.core.util.CalendarUtils
 import com.sans.finance.data.local.entity.BudgetEntity
-import com.sans.finance.data.local.entity.CategoryEntity
 import com.sans.finance.domain.repository.BudgetRepository
 import com.sans.finance.domain.repository.ExpenseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
@@ -43,7 +46,7 @@ class BudgetViewModel @Inject constructor(
         calendar.set(Calendar.SECOND, 0)
         calendar.set(Calendar.MILLISECOND, 0)
         val start = calendar.timeInMillis
-        
+
         calendar.add(Calendar.MONTH, 1)
         val end = calendar.timeInMillis
 
@@ -51,14 +54,16 @@ class BudgetViewModel @Inject constructor(
             val spentFlow = if (budget.categoryId != null) {
                 expenseRepository.getSpendingByCategoryBetween(start, end)
                     .map { categorySpents ->
-                        categorySpents.find { it.categoryId == budget.categoryId }?.totalAmount ?: 0L
+                        categorySpents.find { it.categoryId == budget.categoryId }?.totalAmount
+                            ?: 0L
                     }
             } else {
                 expenseRepository.getTotalSpentBetween(start, end).map { it ?: 0L }
             }
-            
-            val spent = spentFlow.first() // This might be problematic in a combine block if it's not a cold flow that emits quickly
-            
+
+            val spent =
+                spentFlow.first() // This might be problematic in a combine block if it's not a cold flow that emits quickly
+
             BudgetStatus(
                 budget = budget,
                 spent = spent,

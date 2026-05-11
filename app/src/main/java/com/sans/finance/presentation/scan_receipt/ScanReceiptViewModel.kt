@@ -24,7 +24,6 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
@@ -163,6 +162,7 @@ class ScanReceiptViewModel @Inject constructor(
             is ScanReceiptEvent.ModelSelected -> {
                 _state.update { it.copy(modelUri = event.uri, cachedModelPath = null) }
             }
+
             is ScanReceiptEvent.CacheModelFile -> {
                 viewModelScope.launch(Dispatchers.IO) {
                     val fileName = getFileName(event.context, event.uri)
@@ -172,6 +172,7 @@ class ScanReceiptViewModel @Inject constructor(
                     initEngineAsync(path)
                 }
             }
+
             is ScanReceiptEvent.ImageSelected -> {
                 inferenceJob?.cancel()
                 _state.update {
@@ -194,6 +195,7 @@ class ScanReceiptViewModel @Inject constructor(
                     processInference(imagePath)
                 }
             }
+
             is ScanReceiptEvent.ToggleTransactionAcceptance -> {
                 _state.update { s ->
                     s.copy(suggestedTransactions = s.suggestedTransactions.map {
@@ -201,11 +203,13 @@ class ScanReceiptViewModel @Inject constructor(
                     })
                 }
             }
+
             is ScanReceiptEvent.SaveAcceptedTransactions -> {
                 _state.update { it.copy(isSaving = true) }
                 viewModelScope.launch {
                     val accepted = _state.value.suggestedTransactions.filter { it.isAccepted }
-                    val categories = expenseRepository.getAllCategories().firstOrNull() ?: emptyList()
+                    val categories =
+                        expenseRepository.getAllCategories().firstOrNull() ?: emptyList()
                     val defaultCategoryId = categories.firstOrNull()?.id ?: 1L
 
                     val categoryMap = categories.associateBy { it.name.lowercase(Locale.US) }
@@ -237,6 +241,7 @@ class ScanReceiptViewModel @Inject constructor(
                     _state.update { it.copy(isSaving = false, isSaved = true) }
                 }
             }
+
             is ScanReceiptEvent.EditTransactionTitle -> {
                 _state.update { s ->
                     s.copy(suggestedTransactions = s.suggestedTransactions.map {
@@ -244,6 +249,7 @@ class ScanReceiptViewModel @Inject constructor(
                     })
                 }
             }
+
             is ScanReceiptEvent.EditTransactionAmount -> {
                 _state.update { s ->
                     s.copy(suggestedTransactions = s.suggestedTransactions.map {
@@ -251,6 +257,7 @@ class ScanReceiptViewModel @Inject constructor(
                     })
                 }
             }
+
             is ScanReceiptEvent.EditTransactionCategory -> {
                 _state.update { s ->
                     s.copy(suggestedTransactions = s.suggestedTransactions.map {
@@ -258,6 +265,7 @@ class ScanReceiptViewModel @Inject constructor(
                     })
                 }
             }
+
             is ScanReceiptEvent.EditTransactionDate -> {
                 _state.update { s ->
                     s.copy(suggestedTransactions = s.suggestedTransactions.map {
@@ -265,6 +273,7 @@ class ScanReceiptViewModel @Inject constructor(
                     })
                 }
             }
+
             is ScanReceiptEvent.CancelInference -> {
                 inferenceJob?.cancel()
                 inferenceJob = null
@@ -276,6 +285,7 @@ class ScanReceiptViewModel @Inject constructor(
                     )
                 }
             }
+
             is ScanReceiptEvent.DeleteTransaction -> {
                 _state.update { s ->
                     val remaining = s.suggestedTransactions.filter { it.id != event.id }
@@ -285,6 +295,7 @@ class ScanReceiptViewModel @Inject constructor(
                     )
                 }
             }
+
             is ScanReceiptEvent.ResetForNewScan -> {
                 _state.update {
                     it.copy(
@@ -362,14 +373,24 @@ class ScanReceiptViewModel @Inject constructor(
         try {
             val modelPath = _state.value.cachedModelPath ?: run {
                 withContext(Dispatchers.Main) {
-                    _state.update { it.copy(isProcessing = false, errorMessage = "No model loaded. Please select a model file.") }
+                    _state.update {
+                        it.copy(
+                            isProcessing = false,
+                            errorMessage = "No model loaded. Please select a model file."
+                        )
+                    }
                 }
                 return
             }
 
             if (imagePath.isEmpty() || !File(imagePath).exists()) {
                 withContext(Dispatchers.Main) {
-                    _state.update { it.copy(isProcessing = false, errorMessage = "Image file not found. Please select the receipt image again.") }
+                    _state.update {
+                        it.copy(
+                            isProcessing = false,
+                            errorMessage = "Image file not found. Please select the receipt image again."
+                        )
+                    }
                 }
                 return
             }
@@ -403,7 +424,8 @@ class ScanReceiptViewModel @Inject constructor(
             }
 
             try {
-                val categoriesList = expenseRepository.getAllCategories().firstOrNull() ?: emptyList()
+                val categoriesList =
+                    expenseRepository.getAllCategories().firstOrNull() ?: emptyList()
                 val categoryNames = categoriesList.joinToString(", ") { it.name }
                 val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 
@@ -513,14 +535,24 @@ class ScanReceiptViewModel @Inject constructor(
         } catch (e: TimeoutCancellationException) {
             Log.w("ScanReceiptViewModel", "Inference timed out after 120s")
             withContext(Dispatchers.Main) {
-                _state.update { it.copy(isProcessing = false, errorMessage = "Receipt analysis timed out. Please try again.") }
+                _state.update {
+                    it.copy(
+                        isProcessing = false,
+                        errorMessage = "Receipt analysis timed out. Please try again."
+                    )
+                }
             }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) return
             Log.e("ScanReceiptViewModel", "Error during inference", e)
             val msg = e.localizedMessage ?: e.javaClass.simpleName
             withContext(Dispatchers.Main) {
-                _state.update { it.copy(isProcessing = false, errorMessage = "Error during inference: $msg") }
+                _state.update {
+                    it.copy(
+                        isProcessing = false,
+                        errorMessage = "Error during inference: $msg"
+                    )
+                }
             }
         }
     }

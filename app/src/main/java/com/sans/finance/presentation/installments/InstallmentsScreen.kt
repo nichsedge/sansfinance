@@ -23,13 +23,13 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -46,8 +46,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.R
-import com.sans.finance.domain.model.Installment
 import com.sans.finance.core.util.DateFormatterUtils
+import com.sans.finance.domain.model.Installment
 import java.util.Date
 import java.util.Locale
 
@@ -123,7 +123,8 @@ fun InstallmentsScreen(
                 )
             }
 
-            val currentList = if (state.selectedTab == 0) state.activeInstallments else state.historyInstallments
+            val currentList =
+                if (state.selectedTab == 0) state.activeInstallments else state.historyInstallments
 
             if (currentList.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -152,7 +153,8 @@ fun ExpandableInstallment(
     val items by viewModel.getItemsForInstallment(installment.id)
         .collectAsState(initial = emptyList())
     val dateFormatter = DateFormatterUtils.getStandardFormatter()
-    val monthYearFormatter = remember { java.text.SimpleDateFormat("MMM yyyy", Locale.getDefault()) }
+    val monthYearFormatter =
+        remember { java.text.SimpleDateFormat("MMM yyyy", Locale.getDefault()) }
     val now = System.currentTimeMillis()
 
     Surface(
@@ -197,13 +199,20 @@ fun ExpandableInstallment(
             }
 
             val paidCount = items.count { it.status == "Paid" }
-            val progress = if (installment.durationMonths > 0) paidCount.toFloat() / installment.durationMonths else 0f
+            val progress =
+                if (installment.durationMonths > 0) paidCount.toFloat() / installment.durationMonths else 0f
 
             Spacer(modifier = Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 LinearProgressIndicator(
                     progress = { progress },
-                    modifier = Modifier.weight(1f).height(6.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(6.dp),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                 )
@@ -230,7 +239,8 @@ fun ExpandableInstallment(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            val isOverdue = monthlyItem.status == "Pending" && monthlyItem.dueDate < now
+                            val isOverdue =
+                                monthlyItem.status == "Pending" && monthlyItem.dueDate < now
                             Column {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
@@ -245,7 +255,9 @@ fun ExpandableInstallment(
                                             Icons.Default.Warning,
                                             contentDescription = "Overdue",
                                             tint = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.height(14.dp).width(14.dp)
+                                            modifier = Modifier
+                                                .height(14.dp)
+                                                .width(14.dp)
                                         )
                                     }
                                 }
@@ -262,7 +274,9 @@ fun ExpandableInstallment(
                                         R.string.pending
                                     ),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = if (monthlyItem.status == "Paid") MaterialTheme.colorScheme.primary else if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
+                                    color = if (monthlyItem.status == "Paid") MaterialTheme.colorScheme.primary else if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.error.copy(
+                                        alpha = 0.6f
+                                    ),
                                     fontWeight = FontWeight.Black
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))

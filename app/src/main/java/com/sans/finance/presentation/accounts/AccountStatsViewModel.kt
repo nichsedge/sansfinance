@@ -38,30 +38,35 @@ class AccountStatsViewModel @Inject constructor(
         accountRepository.getAllAccounts(),
         expenseRepository.getExpensesBetween(0, Long.MAX_VALUE)
     ) { date, accounts, transactions ->
-        val currentAssets = accounts.filter { it.type != "Credit Card" && it.type != "Loan" }.sumOf { it.balance }
-        val currentLiabilities = accounts.filter { it.type == "Credit Card" || it.type == "Loan" }.sumOf { it.balance }
+        val currentAssets =
+            accounts.filter { it.type != "Credit Card" && it.type != "Loan" }.sumOf { it.balance }
+        val currentLiabilities =
+            accounts.filter { it.type == "Credit Card" || it.type == "Loan" }.sumOf { it.balance }
         val currentTotal = currentAssets - currentLiabilities
 
         val netWorthHistory = mutableListOf<Pair<String, Long>>()
         val incomeExpenseHistory = mutableListOf<Triple<String, Long, Long>>()
-        
+
         val cal = date.clone() as Calendar
         val monthFormat = SimpleDateFormat("MMM", Locale.US)
 
         var runningNetWorth = currentTotal
-        
+
         // If the selected date is in the future relative to "now", we might need to adjust.
         // But for simplicity, let's assume we calculate backwards from the selected date's month end.
-        
+
         // Actually, let's calculate from CURRENT month backwards if selected date is current or past.
         // If selected date is in the past, we first need to "revert" from now to that date.
-        
+
         val now = CalendarUtils.getInstance()
-        val monthsToRevert = ((now.get(Calendar.YEAR) - date.get(Calendar.YEAR)) * 12) + (now.get(Calendar.MONTH) - date.get(Calendar.MONTH))
-        
+        val monthsToRevert =
+            ((now.get(Calendar.YEAR) - date.get(Calendar.YEAR)) * 12) + (now.get(Calendar.MONTH) - date.get(
+                Calendar.MONTH
+            ))
+
         var tempCal = now.clone() as Calendar
         var simulatedNetWorthAtSelectedDate = currentTotal
-        
+
         for (i in 0 until monthsToRevert) {
             tempCal.set(Calendar.DAY_OF_MONTH, 1)
             tempCal.set(Calendar.HOUR_OF_DAY, 0)
@@ -72,10 +77,12 @@ class AccountStatsViewModel @Inject constructor(
             tempCal.set(Calendar.HOUR_OF_DAY, 23)
             tempCal.set(Calendar.MINUTE, 59)
             val end = tempCal.timeInMillis
-            
-            val txns = transactions.filter { it.date in start..end && (!it.isInstallment || it.isInstallmentPayment) }
-            val netFlow = txns.filter { it.type == "INCOME" }.sumOf { it.amount } - txns.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-            
+
+            val txns =
+                transactions.filter { it.date in start..end && (!it.isInstallment || it.isInstallmentPayment) }
+            val netFlow = txns.filter { it.type == "INCOME" }
+                .sumOf { it.amount } - txns.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+
             simulatedNetWorthAtSelectedDate -= netFlow
             tempCal.add(Calendar.MONTH, -1)
         }
@@ -86,16 +93,23 @@ class AccountStatsViewModel @Inject constructor(
         for (i in 0 until 6) {
             historyCal.set(Calendar.DAY_OF_MONTH, 1)
             val start = historyCal.timeInMillis
-            historyCal.set(Calendar.DAY_OF_MONTH, historyCal.getActualMaximum(Calendar.DAY_OF_MONTH))
+            historyCal.set(
+                Calendar.DAY_OF_MONTH,
+                historyCal.getActualMaximum(Calendar.DAY_OF_MONTH)
+            )
             val end = historyCal.timeInMillis
 
-            val txns = transactions.filter { it.date in start..end && (!it.isInstallment || it.isInstallmentPayment) }
+            val txns =
+                transactions.filter { it.date in start..end && (!it.isInstallment || it.isInstallmentPayment) }
             val income = txns.filter { it.type == "INCOME" }.sumOf { it.amount }
             val expense = txns.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-            
+
             netWorthHistory.add(0, Pair(monthFormat.format(historyCal.time), historyNetWorth))
-            incomeExpenseHistory.add(0, Triple(monthFormat.format(historyCal.time), income, expense))
-            
+            incomeExpenseHistory.add(
+                0,
+                Triple(monthFormat.format(historyCal.time), income, expense)
+            )
+
             val netFlow = income - expense
             historyNetWorth -= netFlow
             historyCal.add(Calendar.MONTH, -1)

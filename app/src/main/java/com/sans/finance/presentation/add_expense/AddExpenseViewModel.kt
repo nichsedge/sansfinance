@@ -6,20 +6,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.usecase.AddExpenseUseCase
-import androidx.compose.runtime.snapshotFlow
 import com.sans.finance.domain.usecase.GetExpenseByIdUseCase
 import com.sans.finance.domain.usecase.GetItemNameSuggestionsUseCase
 import com.sans.finance.domain.usecase.GetMerchantSuggestionsUseCase
 import com.sans.finance.domain.usecase.UpdateExpenseUseCase
 import com.sans.finance.presentation.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
@@ -27,8 +29,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.FlowPreview
 
 @OptIn(FlowPreview::class)
 @HiltViewModel
@@ -76,6 +76,7 @@ class AddExpenseViewModel @Inject constructor(
     var categoryId by mutableLongStateOf(1L)
     var accountId by mutableLongStateOf(1L)
     var toAccountId by mutableLongStateOf(2L)
+
     // transactionType moved up
     var paymentType by mutableStateOf("ONE_TIME") // "ONE_TIME", "RECURRING", "INSTALLMENT"
     val isInstallment get() = paymentType == "INSTALLMENT"

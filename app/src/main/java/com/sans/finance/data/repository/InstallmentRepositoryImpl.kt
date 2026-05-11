@@ -87,13 +87,16 @@ class InstallmentRepositoryImpl(
                 val newBalance = parent.totalAmount - totalPaid
                 val pendingCount = dao.getPendingItemsCount(installmentId)
                 val newStatus = if (pendingCount == 0) "Completed" else "Active"
-                val nextDueDate = dao.getNextDueDateForInstallment(installmentId) ?: parent.nextDueDate
-                
-                dao.updateInstallment(parent.copy(
-                    remainingBalance = newBalance, 
-                    status = newStatus,
-                    nextDueDate = nextDueDate
-                ))
+                val nextDueDate =
+                    dao.getNextDueDateForInstallment(installmentId) ?: parent.nextDueDate
+
+                dao.updateInstallment(
+                    parent.copy(
+                        remainingBalance = newBalance,
+                        status = newStatus,
+                        nextDueDate = nextDueDate
+                    )
+                )
             }
         }
     }

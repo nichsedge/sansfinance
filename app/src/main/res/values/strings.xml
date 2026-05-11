@@ -1,17 +1,13 @@
 <resources>
     <string name="app_name">Sans Finance</string>
-    <string name="this_month">THIS MONTH</string>
     <string name="one_time">One-time</string>
     <string name="installment">Installment</string>
-    <string name="total_filtered">TOTAL FOR PERIOD</string>
-    <string name="recent_transactions">Recent Transactions</string>
     <string name="add_expense">Record Expense</string>
     <string name="amount_spent">Amount Spent</string>
     <string name="category">Category</string>
     <string name="what_did_you_buy">Note</string>
     <string name="merchant_store">Description (Optional)</string>
 
-    <string name="is_installment">This is an Installment Plan</string>
     <string name="duration_months">Duration (Months)</string>
     <string name="confirm_transaction">Confirm Transaction</string>
     <string name="update_transaction">Update Transaction</string>
@@ -19,7 +15,6 @@
     <string name="active_installments">Active Installments</string>
     <string name="total_monthly_due">TOTAL MONTHLY DUE</string>
     <string name="total_remaining_balance">Total Remaining Balance</string>
-    <string name="your_plans">Your Plans</string>
     <string name="no_active_installments">No active installment plans</string>
     <string name="uncategorized">Uncategorized</string>
 
@@ -31,9 +26,6 @@
     <string name="delete">Delete</string>
     <string name="cancel">Cancel</string>
     <string name="statistics">Statistics</string>
-    <string name="this_year">This Year</string>
-    <string name="last_year">Last Year</string>
-    <string name="yearly_summary">Yearly Summarized</string>
     <string name="by_category">By Category</string>
     <string name="spending_trend">Spending Trend</string>
     <string name="filter_7d">7D</string>
@@ -42,7 +34,6 @@
     <string name="filter_all">All</string>
     <string name="settings">Settings</string>
     <string name="categories">Categories</string>
-    <string name="add_category">Add Category</string>
     <string name="tags">Tags</string>
     <string name="data_management">Data Management</string>
     <string name="full_backup">Full Database Backup</string>
@@ -53,22 +44,15 @@
     <string name="max_amount">Max Amount</string>
     <string name="clear_filters">Clear Filters</string>
     <string name="apply_filters">Apply Filters</string>
-    <string name="daily">Daily</string>
     <string name="weekly">Weekly</string>
     <string name="monthly">Monthly</string>
-    <string name="quarterly">Quarterly</string>
-    <string name="yearly">Yearly</string>
     <string name="recurring_expenses">Recurring Expenses</string>
     <string name="back">Back</string>
     <string name="income">Income</string>
     <string name="expenses">Expenses</string>
     <string name="annually">Annually</string>
     <string name="custom">Custom</string>
-    <string name="previous">Previous</string>
-    <string name="next">Next</string>
     <string name="select_date_range">Select Date Range</string>
-    <string name="total_income">Total Income</string>
-    <string name="total_expenses">Total Expenses</string>
     <string name="no_data_available">No data available for this period</string>
     <string name="transactions">Transactions</string>
 
@@ -94,7 +78,6 @@
     <string name="inference_error">Inference Error</string>
     <string name="retry">Retry</string>
     <string name="new_image">New Image</string>
-    <string name="merchant_label">Merchant: %1$s</string>
     <string name="date_label">Date: %1$s</string>
     <string name="edit_transaction_title">Item Name</string>
     <string name="amount_label">Amount</string>

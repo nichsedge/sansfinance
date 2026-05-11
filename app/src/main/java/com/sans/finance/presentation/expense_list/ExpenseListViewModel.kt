@@ -2,6 +2,8 @@ package com.sans.finance.presentation.expense_list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sans.finance.core.util.CalendarUtils
+import com.sans.finance.core.util.DateFormatterUtils
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.repository.BudgetRepository
 import com.sans.finance.domain.usecase.GetExpensesUseCase
@@ -13,16 +15,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import com.sans.finance.core.util.CalendarUtils
-import com.sans.finance.core.util.DateFormatterUtils
 import java.util.Calendar
-import java.util.Locale
 import javax.inject.Inject
 
 enum class DateRangeFilter {
@@ -349,9 +347,13 @@ class ExpenseListViewModel @Inject constructor(
         val endCal = calendar.clone() as Calendar
         endCal.add(Calendar.MONTH, 1)
 
-        val monthExpensesFlow = repository.getTotalSpentBetween(calendar.timeInMillis, endCal.timeInMillis)
+        val monthExpensesFlow =
+            repository.getTotalSpentBetween(calendar.timeInMillis, endCal.timeInMillis)
         val monthInstallmentsFlow =
-            installmentRepository.getTotalPaidAmountBetween(calendar.timeInMillis, endCal.timeInMillis)
+            installmentRepository.getTotalPaidAmountBetween(
+                calendar.timeInMillis,
+                endCal.timeInMillis
+            )
 
         monthExpensesFlow.combine(monthInstallmentsFlow) { exp, inst ->
             (exp ?: 0L) + (inst ?: 0L)

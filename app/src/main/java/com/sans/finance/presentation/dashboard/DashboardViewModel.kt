@@ -2,15 +2,15 @@ package com.sans.finance.presentation.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sans.finance.core.util.CalendarUtils
 import com.sans.finance.domain.repository.AccountRepository
+import com.sans.finance.domain.repository.BudgetRepository
 import com.sans.finance.domain.repository.ExpenseRepository
 import com.sans.finance.domain.repository.GoalRepository
-import com.sans.finance.domain.repository.BudgetRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import com.sans.finance.core.util.CalendarUtils
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -49,13 +49,15 @@ class DashboardViewModel @Inject constructor(
         goalRepository.getAllGoals(),
         budgetRepository.getAllBudgets()
     ) { accounts, transactions, recurring, goals, budgets ->
-        val assets = accounts.filter { it.type != "Credit Card" && it.type != "Loan" }.sumOf { it.balance }
-        val liabilities = accounts.filter { it.type == "Credit Card" || it.type == "Loan" }.sumOf { it.balance }
-        
-        val recurringNet = recurring.sumOf { 
+        val assets =
+            accounts.filter { it.type != "Credit Card" && it.type != "Loan" }.sumOf { it.balance }
+        val liabilities =
+            accounts.filter { it.type == "Credit Card" || it.type == "Loan" }.sumOf { it.balance }
+
+        val recurringNet = recurring.sumOf {
             if (it.type == "INCOME") it.amount else -it.amount
         }
-        
+
         val distribution = accounts.groupBy { it.type }
             .mapValues { entry -> entry.value.sumOf { it.balance } }
 
@@ -69,13 +71,17 @@ class DashboardViewModel @Inject constructor(
         val monthStart = cal.timeInMillis
         cal.add(Calendar.MONTH, 1)
         val nextMonthStart = cal.timeInMillis
-        
-        val monthlyTxns = transactions.filter { 
+
+        val monthlyTxns = transactions.filter {
             it.date >= monthStart && it.date < nextMonthStart && (!it.isInstallment || it.isInstallmentPayment)
         }
         val monthlyIncome = monthlyTxns.filter { it.type == "INCOME" }.sumOf { it.amount }
         val monthlyExpense = monthlyTxns.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-        val savingsRate = if (monthlyIncome > 0) ((monthlyIncome - monthlyExpense).toFloat() / monthlyIncome.toFloat()).coerceIn(0f, 1f) else 0f
+        val savingsRate =
+            if (monthlyIncome > 0) ((monthlyIncome - monthlyExpense).toFloat() / monthlyIncome.toFloat()).coerceIn(
+                0f,
+                1f
+            ) else 0f
 
         val suggestions = mutableListOf<String>()
         if (recurringNet < 0) suggestions.add("Your recurring expenses exceed your recurring income. Consider reviewing subscriptions.")
@@ -83,7 +89,7 @@ class DashboardViewModel @Inject constructor(
         if (assets > 0 && goals.isEmpty()) suggestions.add("You have healthy assets but no active goals. Why not set a new savings target?")
         if (monthlyIncome > 0 && savingsRate < 0.1f) suggestions.add("You're saving less than 10% of your income this month. Try to reduce discretionary spending.")
         if (monthlyExpense > monthlyIncome && monthlyIncome > 0) suggestions.add("⚠️ You're spending more than you earn this month. Review your expenses.")
-        
+
         DashboardState(
             netWorth = assets - liabilities,
             totalAssets = assets,

@@ -22,28 +22,22 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -61,10 +55,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.R
-import com.sans.finance.presentation.components.CategoryIcon
 import com.sans.finance.core.util.DateFormatterUtils
+import com.sans.finance.presentation.components.CategoryIcon
 import java.util.Date
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,7 +78,11 @@ fun AddExpenseScreen(
     var toAccountExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var recurrenceExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     val currencySymbol = remember {
-        try { java.util.Currency.getInstance("IDR").getSymbol(java.util.Locale.getDefault()) } catch (e: Exception) { "Rp" }
+        try {
+            java.util.Currency.getInstance("IDR").getSymbol(java.util.Locale.getDefault())
+        } catch (e: Exception) {
+            "Rp"
+        }
     }
 
     Scaffold(
@@ -125,11 +122,11 @@ fun AddExpenseScreen(
                     FilterChip(
                         selected = viewModel.transactionType == type,
                         onClick = { viewModel.transactionType = type },
-                        label = { 
+                        label = {
                             Text(
                                 type.lowercase().replaceFirstChar { it.uppercase() },
                                 fontWeight = if (viewModel.transactionType == type) FontWeight.Bold else FontWeight.Normal
-                            ) 
+                            )
                         },
                         shape = androidx.compose.foundation.shape.CircleShape
                     )
@@ -149,7 +146,9 @@ fun AddExpenseScreen(
                     readOnly = true,
                     label = { Text(if (viewModel.transactionType == "TRANSFER") "From Account" else "Account") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                     shape = MaterialTheme.shapes.medium
                 )
                 ExposedDropdownMenu(
@@ -180,7 +179,9 @@ fun AddExpenseScreen(
                         readOnly = true,
                         label = { Text("To Account") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = toAccountExpanded) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                         shape = MaterialTheme.shapes.medium
                     )
                     ExposedDropdownMenu(
@@ -325,7 +326,12 @@ fun AddExpenseScreen(
                 }
             }
 
-            Text("Tags".uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.5.sp)
+            Text(
+                "Tags".uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.secondary,
+                letterSpacing = 1.5.sp
+            )
 
             val allTags by viewModel.allTags.collectAsState()
 
@@ -381,7 +387,9 @@ fun AddExpenseScreen(
                         descriptionExpanded = true
                     },
                     label = { Text(stringResource(R.string.merchant_store)) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         imeAction = if (viewModel.isInstallment) ImeAction.Next else ImeAction.Done
@@ -450,7 +458,9 @@ fun AddExpenseScreen(
                         readOnly = true,
                         label = { Text("Recurrence Interval") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = recurrenceExpanded) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                         shape = MaterialTheme.shapes.medium
                     )
                     ExposedDropdownMenu(
@@ -495,9 +505,9 @@ fun AddExpenseScreen(
 
             val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
             Button(
-                onClick = { 
+                onClick = {
                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    viewModel.onSaveClick(onBack) 
+                    viewModel.onSaveClick(onBack)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -507,8 +517,8 @@ fun AddExpenseScreen(
                 Text(
                     text = (if (viewModel.isEditMode) stringResource(R.string.update_transaction) else stringResource(
                         R.string.confirm_transaction
-                    )).uppercase(), 
-                    fontWeight = FontWeight.Black, 
+                    )).uppercase(),
+                    fontWeight = FontWeight.Black,
                     fontSize = 16.sp,
                     letterSpacing = 1.sp
                 )

@@ -1,6 +1,6 @@
 package com.sans.finance.presentation.settings
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,28 +15,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import android.net.Uri
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -71,7 +64,6 @@ import com.sans.finance.R
 import com.sans.finance.data.local.entity.CategoryEntity
 import com.sans.finance.data.local.entity.TagEntity
 import com.sans.finance.presentation.components.CategoryIcon
-import androidx.compose.foundation.ExperimentalFoundationApi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -158,7 +150,7 @@ fun SettingsContent(
     isLoading: Boolean
 ) {
     val context = LocalContext.current
-    
+
     LazyColumn(
         state = listState,
         modifier = Modifier
@@ -252,7 +244,7 @@ fun SettingsContent(
         item {
             Spacer(Modifier.height(16.dp))
             SettingsSectionTitle("Features")
-            
+
             Surface(
                 onClick = onGoals,
                 modifier = Modifier
@@ -414,7 +406,7 @@ fun SettingsItem(
             )
             Spacer(Modifier.width(16.dp))
             Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-            
+
             if (onMoveUp != null) {
                 IconButton(onClick = onMoveUp) {
                     Icon(
@@ -425,7 +417,7 @@ fun SettingsItem(
                     )
                 }
             }
-            
+
             if (onMoveDown != null) {
                 IconButton(onClick = onMoveDown) {
                     Icon(

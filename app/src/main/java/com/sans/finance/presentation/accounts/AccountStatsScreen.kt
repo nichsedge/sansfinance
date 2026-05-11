@@ -1,15 +1,30 @@
 package com.sans.finance.presentation.accounts
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,7 +68,10 @@ fun AccountStatsScreen(
                         Text("Total Stats", fontWeight = FontWeight.Bold)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = viewModel::onPreviousMonth) {
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous")
+                                Icon(
+                                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                    contentDescription = "Previous"
+                                )
                             }
                             Text(
                                 monthYearFormat.format(state.selectedDate.time),
@@ -61,7 +79,10 @@ fun AccountStatsScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             IconButton(onClick = viewModel::onNextMonth) {
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next")
+                                Icon(
+                                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = "Next"
+                                )
                             }
                         }
                     }
@@ -75,7 +96,12 @@ fun AccountStatsScreen(
         }
     ) { paddingValues ->
         if (state.isLoading) {
-            Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
                 CircularProgressIndicator()
             }
         } else {
@@ -170,7 +196,10 @@ fun TotalStatsLineChart(history: List<Pair<String, Long>>) {
                 val layout = textMeasurer.measure(label, style = labelStyle)
                 drawText(
                     textLayoutResult = layout,
-                    topLeft = Offset(chartLeft - layout.size.width - 12f, y - layout.size.height / 2f)
+                    topLeft = Offset(
+                        chartLeft - layout.size.width - 12f,
+                        y - layout.size.height / 2f
+                    )
                 )
             }
 
@@ -221,7 +250,10 @@ fun TotalStatsLineChart(history: List<Pair<String, Long>>) {
                     )
                     drawText(
                         textLayoutResult = valueLayout,
-                        topLeft = Offset(x - valueLayout.size.width / 2f, chartBottom + 4f + monthLayout.size.height)
+                        topLeft = Offset(
+                            x - valueLayout.size.width / 2f,
+                            chartBottom + 4f + monthLayout.size.height
+                        )
                     )
                 }
             }
@@ -274,7 +306,10 @@ fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>) {
                 val layout = textMeasurer.measure(label, style = labelStyle)
                 drawText(
                     textLayoutResult = layout,
-                    topLeft = Offset(chartLeft - layout.size.width - 12f, y - layout.size.height / 2f)
+                    topLeft = Offset(
+                        chartLeft - layout.size.width - 12f,
+                        y - layout.size.height / 2f
+                    )
                 )
             }
 
@@ -286,12 +321,15 @@ fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>) {
 
                 history.forEachIndexed { index, data ->
                     val groupCenterX = chartLeft + index * barGroupWidth + barGroupWidth / 2f
-                    
+
                     // Income Bar (Blue)
                     val incomeHeight = (data.second / range) * chartHeight
                     drawRect(
                         color = incomeColor.copy(alpha = 0.7f),
-                        topLeft = Offset(groupCenterX - barWidth - spacing / 2f, chartBottom - incomeHeight),
+                        topLeft = Offset(
+                            groupCenterX - barWidth - spacing / 2f,
+                            chartBottom - incomeHeight
+                        ),
                         size = Size(barWidth, incomeHeight)
                     )
 
@@ -307,7 +345,10 @@ fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>) {
                     val monthLayout = textMeasurer.measure(data.first, style = labelStyle)
                     drawText(
                         textLayoutResult = monthLayout,
-                        topLeft = Offset(groupCenterX - monthLayout.size.width / 2f, chartBottom + 4f)
+                        topLeft = Offset(
+                            groupCenterX - monthLayout.size.width / 2f,
+                            chartBottom + 4f
+                        )
                     )
 
                     // Income Value Label (Blue)
@@ -317,7 +358,10 @@ fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>) {
                     )
                     drawText(
                         textLayoutResult = incomeLayout,
-                        topLeft = Offset(groupCenterX - incomeLayout.size.width / 2f, chartBottom + 4f + monthLayout.size.height)
+                        topLeft = Offset(
+                            groupCenterX - incomeLayout.size.width / 2f,
+                            chartBottom + 4f + monthLayout.size.height
+                        )
                     )
 
                     // Expense Value Label (Red)
@@ -327,7 +371,10 @@ fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>) {
                     )
                     drawText(
                         textLayoutResult = expenseLayout,
-                        topLeft = Offset(groupCenterX - expenseLayout.size.width / 2f, chartBottom + 4f + monthLayout.size.height + incomeLayout.size.height)
+                        topLeft = Offset(
+                            groupCenterX - expenseLayout.size.width / 2f,
+                            chartBottom + 4f + monthLayout.size.height + incomeLayout.size.height
+                        )
                     )
                 }
             }

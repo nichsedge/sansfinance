@@ -1,9 +1,9 @@
 package com.sans.finance.core.util
 
+import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.ceil
-import java.text.DecimalFormat
 
 object CurrencyFormatter {
     private fun getFormatter(currencyCode: String = "IDR"): NumberFormat {
@@ -41,7 +41,7 @@ object CurrencyFormatter {
         } catch (e: Exception) {
             "Rp"
         }
-        
+
         if (amount == 0L) return "${symbol}0"
 
         val isNegative = amount < 0

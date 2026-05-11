@@ -56,7 +56,7 @@ class ExpenseRepositoryImpl(
         tags: List<String>
     ): Flow<List<Expense>> {
         val searchQuery = if (query.isNullOrBlank()) null else query
-        
+
         val expensesFlow = dao.getFilteredExpenses(
             searchQuery,
             categoryIds,
@@ -77,14 +77,16 @@ class ExpenseRepositoryImpl(
             val expenses = expenseEntities.map { it.toDomain() }
             val installmentPayments = installmentRows.map { it.toDomain() }
                 .filter { payment ->
-                    val matchesQuery = searchQuery == null || payment.note.contains(searchQuery, ignoreCase = true)
-                    val matchesCategory = categoryIds.isEmpty() || categoryIds.contains(payment.categoryId)
+                    val matchesQuery =
+                        searchQuery == null || payment.note.contains(searchQuery, ignoreCase = true)
+                    val matchesCategory =
+                        categoryIds.isEmpty() || categoryIds.contains(payment.categoryId)
                     val matchesMinAmount = minAmount == null || payment.amount >= minAmount
                     val matchesMaxAmount = maxAmount == null || payment.amount <= maxAmount
                     val matchesTags = tags.isEmpty() || payment.tags.any { tags.contains(it) }
                     matchesQuery && matchesCategory && matchesMinAmount && matchesMaxAmount && matchesTags
                 }
-            
+
             (expenses + installmentPayments).sortedByDescending { it.date }
         }
     }
@@ -98,11 +100,12 @@ class ExpenseRepositoryImpl(
             installmentDao.getInstallmentItemById(installmentItemId)?.let { item ->
                 val installment = installmentDao.getInstallmentById(item.installmentId)
                 val parentExpense = installment?.let { dao.getExpenseById(it.expenseId) }
-                
+
                 Expense(
                     id = id,
                     date = item.dueDate,
-                    note = (parentExpense?.expense?.note ?: "Installment") + " (Installment ${item.monthNumber})",
+                    note = (parentExpense?.expense?.note
+                        ?: "Installment") + " (Installment ${item.monthNumber})",
                     amount = item.amount,
                     categoryId = parentExpense?.expense?.categoryId ?: 1L,
                     isInstallmentPayment = true,
@@ -126,7 +129,7 @@ class ExpenseRepositoryImpl(
     override suspend fun insertExpense(expense: Expense): Long {
         val expenseId = dao.insertExpense(expense.toEntity())
         syncTags(expenseId, expense.tags)
-        
+
         // Update account balance
         if (expense.type == "TRANSFER") {
             updateAccountBalance(expense.accountId, -expense.amount)
@@ -137,7 +140,7 @@ class ExpenseRepositoryImpl(
             val delta = if (expense.type == "INCOME") expense.amount else -expense.amount
             updateAccountBalance(expense.accountId, delta)
         }
-        
+
         return expenseId
     }
 
@@ -155,10 +158,11 @@ class ExpenseRepositoryImpl(
                     updateAccountBalance(oldExpense.toAccountId, -oldExpense.finalPrice)
                 }
             } else {
-                val oldDelta = if (oldExpense.type == "INCOME") -oldExpense.finalPrice else oldExpense.finalPrice
+                val oldDelta =
+                    if (oldExpense.type == "INCOME") -oldExpense.finalPrice else oldExpense.finalPrice
                 updateAccountBalance(oldExpense.accountId, oldDelta)
             }
-            
+
             // Apply new amount
             if (expense.type == "TRANSFER") {
                 updateAccountBalance(expense.accountId, -expense.amount)
@@ -174,10 +178,12 @@ class ExpenseRepositoryImpl(
 
     private suspend fun updateAccountBalance(accountId: Long, amountDelta: Long) {
         accountDao.getAccountById(accountId)?.let { account ->
-            accountDao.updateAccount(account.copy(
-                balance = account.balance + amountDelta,
-                updatedAt = System.currentTimeMillis()
-            ))
+            accountDao.updateAccount(
+                account.copy(
+                    balance = account.balance + amountDelta,
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
         }
     }
 
@@ -196,7 +202,7 @@ class ExpenseRepositoryImpl(
 
     override suspend fun deleteExpense(expense: Expense) {
         dao.deleteExpense(expense.toEntity())
-        
+
         // Update account balance (reverse the transaction)
         if (expense.type == "TRANSFER") {
             updateAccountBalance(expense.accountId, expense.amount)
@@ -369,7 +375,8 @@ class ExpenseRepositoryImpl(
             categoryId = categoryId,
             isInstallmentPayment = true,
             description = description,
-            tags = tagsList?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
+            tags = tagsList?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+                ?: emptyList()
         )
     }
 }

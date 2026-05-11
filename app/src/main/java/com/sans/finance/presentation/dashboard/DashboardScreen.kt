@@ -1,29 +1,49 @@
 package com.sans.finance.presentation.dashboard
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.core.util.CurrencyFormatter
 
@@ -170,9 +190,9 @@ fun NetWorthCard(
                 fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -201,6 +221,7 @@ fun BreakdownItem(label: String, amount: Long, color: Color) {
         )
     }
 }
+
 @Composable
 fun ForecastCard(projectedBalance: Long) {
     Card(
@@ -211,7 +232,9 @@ fun ForecastCard(projectedBalance: Long) {
         )
     ) {
         Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -241,7 +264,7 @@ fun ForecastCard(projectedBalance: Long) {
 @Composable
 fun WealthDistributionCard(distribution: Map<String, Long>) {
     val total = distribution.values.sumOf { kotlin.math.abs(it) }.coerceAtLeast(1L)
-    
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -256,38 +279,55 @@ fun WealthDistributionCard(distribution: Map<String, Long>) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // Simple Bar Chart
             Row(
-                modifier = Modifier.fillMaxWidth().height(16.dp).clip(MaterialTheme.shapes.small)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(16.dp)
+                    .clip(MaterialTheme.shapes.small)
             ) {
                 distribution.entries.forEachIndexed { index, entry ->
-                    val weight = (kotlin.math.abs(entry.value).toFloat() / total.toFloat()).coerceAtLeast(0.01f)
-                    val color = when(index % 4) {
+                    val weight =
+                        (kotlin.math.abs(entry.value).toFloat() / total.toFloat()).coerceAtLeast(
+                            0.01f
+                        )
+                    val color = when (index % 4) {
                         0 -> MaterialTheme.colorScheme.primary
                         1 -> MaterialTheme.colorScheme.secondary
                         2 -> MaterialTheme.colorScheme.tertiary
                         else -> MaterialTheme.colorScheme.error
                     }
-                    Box(modifier = Modifier.weight(weight).fillMaxHeight().background(color))
+                    Box(modifier = Modifier
+                        .weight(weight)
+                        .fillMaxHeight()
+                        .background(color))
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // Legend
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 distribution.entries.forEachIndexed { index, entry ->
-                    val color = when(index % 4) {
+                    val color = when (index % 4) {
                         0 -> MaterialTheme.colorScheme.primary
                         1 -> MaterialTheme.colorScheme.secondary
                         2 -> MaterialTheme.colorScheme.tertiary
                         else -> MaterialTheme.colorScheme.error
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(modifier = Modifier.size(12.dp).background(color, MaterialTheme.shapes.small))
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .background(color, MaterialTheme.shapes.small)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(entry.key, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                        Text(
+                            entry.key,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f)
+                        )
                         Text(
                             CurrencyFormatter.formatAmount(entry.value),
                             style = MaterialTheme.typography.bodySmall,
@@ -314,24 +354,42 @@ fun MonthlyCashFlowCard(income: Long, expense: Long, savingsRate: Float) {
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         )
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Text(
                 "This Month",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 // Income box
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .background(Color(0xFF1B5E20).copy(alpha = 0.12f), MaterialTheme.shapes.medium)
+                        .background(
+                            Color(0xFF1B5E20).copy(alpha = 0.12f),
+                            MaterialTheme.shapes.medium
+                        )
                         .padding(12.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.ArrowUpward, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(16.dp))
+                        Icon(
+                            Icons.Default.ArrowUpward,
+                            contentDescription = null,
+                            tint = Color(0xFF4CAF50),
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(Modifier.width(4.dp))
-                        Text("Income", style = MaterialTheme.typography.labelSmall, color = Color(0xFF4CAF50))
+                        Text(
+                            "Income",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF4CAF50)
+                        )
                     }
                     Text(
                         CurrencyFormatter.formatAmount(income),
@@ -344,13 +402,25 @@ fun MonthlyCashFlowCard(income: Long, expense: Long, savingsRate: Float) {
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .background(Color(0xFFB71C1C).copy(alpha = 0.12f), MaterialTheme.shapes.medium)
+                        .background(
+                            Color(0xFFB71C1C).copy(alpha = 0.12f),
+                            MaterialTheme.shapes.medium
+                        )
                         .padding(12.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.ArrowDownward, contentDescription = null, tint = Color(0xFFF44336), modifier = Modifier.size(16.dp))
+                        Icon(
+                            Icons.Default.ArrowDownward,
+                            contentDescription = null,
+                            tint = Color(0xFFF44336),
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(Modifier.width(4.dp))
-                        Text("Expense", style = MaterialTheme.typography.labelSmall, color = Color(0xFFF44336))
+                        Text(
+                            "Expense",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFFF44336)
+                        )
                     }
                     Text(
                         CurrencyFormatter.formatAmount(expense),
@@ -361,11 +431,17 @@ fun MonthlyCashFlowCard(income: Long, expense: Long, savingsRate: Float) {
                 }
             }
             if (income > 0) {
-                Text("Savings Rate: ${(savingsRate * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Savings Rate: ${(savingsRate * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 LinearProgressIndicator(
                     progress = { animatedSavings },
                     modifier = Modifier.fillMaxWidth(),
-                    color = if (savingsRate >= 0.2f) Color(0xFF4CAF50) else if (savingsRate >= 0.1f) Color(0xFFFFC107) else Color(0xFFF44336),
+                    color = if (savingsRate >= 0.2f) Color(0xFF4CAF50) else if (savingsRate >= 0.1f) Color(
+                        0xFFFFC107
+                    ) else Color(0xFFF44336),
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             }
@@ -421,14 +497,23 @@ fun DashboardGoalItem(goal: com.sans.finance.data.local.entity.GoalEntity) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Text(goal.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    goal.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
                 Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
             }
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
                 progress = { progress },
-                modifier = Modifier.fillMaxWidth().height(4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp),
                 strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
             )
         }
@@ -439,15 +524,25 @@ fun DashboardGoalItem(goal: com.sans.finance.data.local.entity.GoalEntity) {
 fun DashboardBillItem(bill: com.sans.finance.domain.model.Expense) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f))
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer.copy(
+                alpha = 0.2f
+            )
+        )
     ) {
         Row(
-            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(bill.note, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    bill.note,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
                 Text("Recurring Payment", style = MaterialTheme.typography.labelSmall)
             }
             Text(
@@ -470,13 +565,16 @@ fun GlobalBudgetCard(budget: Long, spent: Long) {
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = if (isOverBudget) 
+            containerColor = if (isOverBudget)
                 MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)
-                else MaterialTheme.colorScheme.surface
+            else MaterialTheme.colorScheme.surface
         ),
-        border = if (isOverBudget) 
-            androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
-            else null
+        border = if (isOverBudget)
+            androidx.compose.foundation.BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
+            )
+        else null
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -496,28 +594,43 @@ fun GlobalBudgetCard(budget: Long, spent: Long) {
                     fontWeight = FontWeight.Black
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             LinearProgressIndicator(
                 progress = { progress },
-                modifier = Modifier.fillMaxWidth().height(8.dp).clip(MaterialTheme.shapes.small),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(MaterialTheme.shapes.small),
                 color = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("Spent", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(CurrencyFormatter.formatAmount(spent), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Spent",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        CurrencyFormatter.formatAmount(spent),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(if (isOverBudget) "Overspent" else "Remaining", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        if (isOverBudget) "Overspent" else "Remaining",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Text(
                         CurrencyFormatter.formatAmount(if (isOverBudget) spent - budget else remaining),
                         style = MaterialTheme.typography.bodyMedium,

@@ -6,12 +6,21 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -23,8 +32,36 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -119,7 +156,10 @@ fun ScanReceiptScreen(
                 title = { Text(stringResource(R.string.scan_receipt)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back)
+                        )
                     }
                 }
             )
@@ -143,7 +183,13 @@ fun ScanReceiptScreen(
                             Icon(Icons.Default.Check, contentDescription = null)
                         }
                     },
-                    text = { Text(if (state.isSaving) stringResource(R.string.saving) else stringResource(R.string.save_selected)) }
+                    text = {
+                        Text(
+                            if (state.isSaving) stringResource(R.string.saving) else stringResource(
+                                R.string.save_selected
+                            )
+                        )
+                    }
                 )
             }
         }
@@ -177,7 +223,10 @@ fun ScanReceiptScreen(
 
                 item {
                     Text(
-                        stringResource(R.string.found_transactions, state.suggestedTransactions.size),
+                        stringResource(
+                            R.string.found_transactions,
+                            state.suggestedTransactions.size
+                        ),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
@@ -191,12 +240,46 @@ fun ScanReceiptScreen(
                     SuggestedTransactionCard(
                         transaction = tx,
                         availableCategories = state.availableCategories,
-                        onToggle = { viewModel.onEvent(ScanReceiptEvent.ToggleTransactionAcceptance(tx.id)) },
+                        onToggle = {
+                            viewModel.onEvent(
+                                ScanReceiptEvent.ToggleTransactionAcceptance(
+                                    tx.id
+                                )
+                            )
+                        },
                         onDelete = { viewModel.onEvent(ScanReceiptEvent.DeleteTransaction(tx.id)) },
-                        onEditTitle = { viewModel.onEvent(ScanReceiptEvent.EditTransactionTitle(tx.id, it)) },
-                        onEditAmount = { viewModel.onEvent(ScanReceiptEvent.EditTransactionAmount(tx.id, it)) },
-                        onEditCategory = { viewModel.onEvent(ScanReceiptEvent.EditTransactionCategory(tx.id, it)) },
-                        onEditDate = { viewModel.onEvent(ScanReceiptEvent.EditTransactionDate(tx.id, it)) }
+                        onEditTitle = {
+                            viewModel.onEvent(
+                                ScanReceiptEvent.EditTransactionTitle(
+                                    tx.id,
+                                    it
+                                )
+                            )
+                        },
+                        onEditAmount = {
+                            viewModel.onEvent(
+                                ScanReceiptEvent.EditTransactionAmount(
+                                    tx.id,
+                                    it
+                                )
+                            )
+                        },
+                        onEditCategory = {
+                            viewModel.onEvent(
+                                ScanReceiptEvent.EditTransactionCategory(
+                                    tx.id,
+                                    it
+                                )
+                            )
+                        },
+                        onEditDate = {
+                            viewModel.onEvent(
+                                ScanReceiptEvent.EditTransactionDate(
+                                    tx.id,
+                                    it
+                                )
+                            )
+                        }
                     )
                 }
 
@@ -243,7 +326,10 @@ fun ScanReceiptScreen(
 
                     // Caching model
                     state.modelUri != null && state.cachedModelPath == null -> {
-                        CircularProgressIndicator(modifier = Modifier.size(64.dp), strokeWidth = 6.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(64.dp),
+                            strokeWidth = 6.dp
+                        )
                         Spacer(Modifier.height(24.dp))
                         Text(
                             stringResource(R.string.caching_model),
@@ -276,7 +362,10 @@ fun ScanReceiptScreen(
                             Spacer(Modifier.height(16.dp))
                         }
 
-                        CircularProgressIndicator(modifier = Modifier.size(64.dp), strokeWidth = 6.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(64.dp),
+                            strokeWidth = 6.dp
+                        )
                         Spacer(Modifier.height(16.dp))
                         Text(
                             stringResource(R.string.analyzing_receipt),
@@ -390,7 +479,12 @@ fun ScanReceiptScreen(
                                     OutlinedButton(
                                         onClick = {
                                             state.imageUri?.let { uri ->
-                                                viewModel.onEvent(ScanReceiptEvent.ImageSelected(context, uri))
+                                                viewModel.onEvent(
+                                                    ScanReceiptEvent.ImageSelected(
+                                                        context,
+                                                        uri
+                                                    )
+                                                )
                                             }
                                         }
                                     ) {
@@ -503,7 +597,9 @@ fun SuggestedTransactionCard(
     ) {
         // ── Collapsed header ──────────────────────────────────────────────
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Checkbox(
@@ -606,9 +702,10 @@ fun SuggestedTransactionCard(
 
                 val displayDate = transaction.dateString
                     ?: SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showDatePicker = true }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true }
                 ) {
                     OutlinedTextField(
                         value = displayDate,

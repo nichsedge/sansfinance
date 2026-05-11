@@ -1,15 +1,11 @@
 <resources>
     <string name="app_name">Sans Finance</string>
-    <string name="this_month">BULAN INI</string>
-    <string name="total_filtered">TOTAL PERIODE INI</string>
-    <string name="recent_transactions">Transaksi Terakhir</string>
     <string name="add_expense">Catat Pengeluaran</string>
     <string name="amount_spent">Jumlah Pengeluaran</string>
     <string name="category">Kategori</string>
     <string name="what_did_you_buy">Catatan</string>
     <string name="merchant_store">Deskripsi (Opsional)</string>
 
-    <string name="is_installment">Ini adalah Cicilan</string>
     <string name="duration_months">Durasi (Bulan)</string>
     <string name="confirm_transaction">Konfirmasi Transaksi</string>
     <string name="update_transaction">Perbarui Transaksi</string>
@@ -17,7 +13,6 @@
     <string name="active_installments">Cicilan Aktif</string>
     <string name="total_monthly_due">TOTAL TAGIHAN BULANAN</string>
     <string name="total_remaining_balance">Total Sisa Tagihan</string>
-    <string name="your_plans">Rencana Anda</string>
     <string name="no_active_installments">Belum ada cicilan aktif</string>
     <string name="uncategorized">Tanpa Kategori</string>
 
@@ -30,14 +25,10 @@
     <string name="cancel">Batal</string>
     <string name="settings">Pengaturan</string>
     <string name="categories">Kategori</string>
-    <string name="add_category">Tambah Kategori</string>
     <string name="tags">Tag</string>
     <string name="data_management">Manajemen Data</string>
     <string name="full_backup">Cadangan Basis Data</string>
     <string name="statistics">Statistik</string>
-    <string name="this_year">Tahun Ini</string>
-    <string name="last_year">Tahun Lalu</string>
-    <string name="yearly_summary">Ringkasan Tahunan</string>
     <string name="by_category">Berdasarkan Kategori</string>
     <string name="spending_trend">Tren Pengeluaran</string>
     <string name="filter_7d">7H</string>
@@ -50,11 +41,8 @@
     <string name="max_amount">Jumlah Maks</string>
     <string name="clear_filters">Hapus Filter</string>
     <string name="apply_filters">Terapkan Filter</string>
-    <string name="daily">Harian</string>
     <string name="weekly">Mingguan</string>
     <string name="monthly">Bulanan</string>
-    <string name="quarterly">Kuartalan</string>
-    <string name="yearly">Tahunan</string>
     <string name="recurring_expenses">Pengeluaran Berulang</string>
     <string name="back">Kembali</string>
     <string name="backup_to_downloads">Snapshot disimpan ke folder Unduhan</string>
@@ -81,7 +69,6 @@
     <string name="inference_error">Kesalahan Inferensi</string>
     <string name="retry">Coba Lagi</string>
     <string name="new_image">Gambar Baru</string>
-    <string name="merchant_label">Toko: %1$s</string>
     <string name="date_label">Tanggal: %1$s</string>
     <string name="edit_transaction_title">Nama Item</string>
     <string name="amount_label">Jumlah</string>

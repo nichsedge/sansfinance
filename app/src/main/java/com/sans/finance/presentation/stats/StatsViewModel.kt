@@ -2,23 +2,22 @@ package com.sans.finance.presentation.stats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sans.finance.domain.repository.ExpenseRepository
-import com.sans.finance.domain.model.Expense
+import com.sans.finance.core.util.CalendarUtils
+import com.sans.finance.data.local.entity.CategorySpent
 import com.sans.finance.data.local.entity.DaySpent
+import com.sans.finance.domain.model.Expense
+import com.sans.finance.domain.repository.ExpenseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.update
-import com.sans.finance.core.util.CalendarUtils
-import com.sans.finance.data.local.entity.CategorySpent
-import java.util.Calendar
-import javax.inject.Inject
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.update
+import java.util.Calendar
+import javax.inject.Inject
 
 enum class StatsPeriodType {
     WEEKLY, MONTHLY, ANNUALLY, CUSTOM
@@ -101,13 +100,20 @@ class StatsViewModel @Inject constructor(
     }
 
     fun onCustomDateRangeSelected(start: Long, end: Long) {
-        _state.update { it.copy(selectedPeriodType = StatsPeriodType.CUSTOM, customStartDate = start, customEndDate = end, selectedCategory = null) }
+        _state.update {
+            it.copy(
+                selectedPeriodType = StatsPeriodType.CUSTOM,
+                customStartDate = start,
+                customEndDate = end,
+                selectedCategory = null
+            )
+        }
         loadData()
     }
 
     private fun loadData() {
         dataJob?.cancel()
-        
+
         val currentState = _state.value
         val (since, until) = getRange(currentState)
         val type = currentState.selectedTransactionType.name
@@ -116,12 +122,20 @@ class StatsViewModel @Inject constructor(
 
         val breakdownFlow = expenseRepository.getBreakdownByCategoryBetween(since, until, type)
         val incomeTotalFlow = expenseRepository.getTotalAmountByTypeBetween(since, until, "INCOME")
-        val expenseTotalFlow = expenseRepository.getTotalAmountByTypeBetween(since, until, "EXPENSE")
-        
+        val expenseTotalFlow =
+            expenseRepository.getTotalAmountByTypeBetween(since, until, "EXPENSE")
+
         val categoryDetailsFlow = if (currentState.selectedCategory != null) {
             combine(
-                expenseRepository.getFilteredExpenses(categoryIds = listOf(currentState.selectedCategory.categoryId), since = since, until = until),
-                expenseRepository.getMonthlyBreakdownByCategory(currentState.selectedCategory.categoryId, type)
+                expenseRepository.getFilteredExpenses(
+                    categoryIds = listOf(currentState.selectedCategory.categoryId),
+                    since = since,
+                    until = until
+                ),
+                expenseRepository.getMonthlyBreakdownByCategory(
+                    currentState.selectedCategory.categoryId,
+                    type
+                )
             ) { txs, trend ->
                 Pair(txs.filter { it.type == type }, trend)
             }
@@ -129,8 +143,13 @@ class StatsViewModel @Inject constructor(
             flowOf(Pair(emptyList<Expense>(), emptyList<DaySpent>()))
         }
 
-        dataJob = combine(breakdownFlow, incomeTotalFlow, expenseTotalFlow, categoryDetailsFlow) { breakdown, income, expense, details ->
-            _state.update { 
+        dataJob = combine(
+            breakdownFlow,
+            incomeTotalFlow,
+            expenseTotalFlow,
+            categoryDetailsFlow
+        ) { breakdown, income, expense, details ->
+            _state.update {
                 it.copy(
                     breakdown = breakdown,
                     totalIncomeForPeriod = income ?: 0L,
@@ -157,6 +176,7 @@ class StatsViewModel @Inject constructor(
                 val until = cal.timeInMillis
                 Pair(since, until)
             }
+
             StatsPeriodType.MONTHLY -> {
                 cal.set(Calendar.DAY_OF_MONTH, 1)
                 cal.set(Calendar.HOUR_OF_DAY, 0)
@@ -168,6 +188,7 @@ class StatsViewModel @Inject constructor(
                 val until = cal.timeInMillis
                 Pair(since, until)
             }
+
             StatsPeriodType.ANNUALLY -> {
                 cal.set(Calendar.DAY_OF_YEAR, 1)
                 cal.set(Calendar.HOUR_OF_DAY, 0)
@@ -179,6 +200,7 @@ class StatsViewModel @Inject constructor(
                 val until = cal.timeInMillis
                 Pair(since, until)
             }
+
             StatsPeriodType.CUSTOM -> {
                 Pair(state.customStartDate ?: 0L, state.customEndDate ?: Long.MAX_VALUE)
             }

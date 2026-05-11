@@ -5,17 +5,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.data.local.AppDatabase
-import com.sans.finance.data.local.entity.CategoryEntity
-import com.sans.finance.data.local.entity.TagEntity
-import com.sans.finance.domain.repository.BudgetRepository
 import com.sans.finance.data.local.entity.BudgetEntity
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.first
-
+import com.sans.finance.domain.repository.BudgetRepository
 import com.sans.finance.domain.repository.ExpenseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -63,7 +59,6 @@ class SettingsViewModel @Inject constructor(
             }
         }
     }
-
 
 
     fun exportFullBackup(context: android.content.Context) {

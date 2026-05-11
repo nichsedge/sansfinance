@@ -16,6 +16,7 @@ interface CategoryDao {
 
     @Query("SELECT * FROM categories ORDER BY orderIndex ASC, id ASC")
     fun getAllCategories(): Flow<List<CategoryEntity>>
+
     @Query("SELECT * FROM categories")
     suspend fun getAllCategoriesSync(): List<CategoryEntity>
 
@@ -24,6 +25,7 @@ interface CategoryDao {
 
     @Update(onConflict = OnConflictStrategy.REPLACE)
     suspend fun updateCategory(category: CategoryEntity)
+
     @Update(onConflict = OnConflictStrategy.REPLACE)
     suspend fun updateCategories(categories: List<CategoryEntity>)
 

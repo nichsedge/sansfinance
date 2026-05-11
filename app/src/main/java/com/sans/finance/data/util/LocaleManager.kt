@@ -15,7 +15,7 @@ class LocaleManager @Inject constructor(
 
     fun setLocale(language: String) {
         prefs.edit().putString("language", language).apply()
-        
+
         val locale = Locale.forLanguageTag(language)
         Locale.setDefault(locale)
         val systemLocaleManager = context.getSystemService(android.app.LocaleManager::class.java)
@@ -26,8 +26,8 @@ class LocaleManager @Inject constructor(
 
     fun getLocale(): String {
         val systemLocaleManager = context.getSystemService(android.app.LocaleManager::class.java)
-        val currentLocale = systemLocaleManager?.applicationLocales?.let { 
-            if (it.isEmpty) null else it.get(0) 
+        val currentLocale = systemLocaleManager?.applicationLocales?.let {
+            if (it.isEmpty) null else it.get(0)
         }
         return currentLocale?.language ?: prefs.getString("language", "en") ?: "en"
     }

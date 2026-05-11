@@ -60,9 +60,13 @@ interface InstallmentDao {
     fun getTotalPaidAmountBetween(since: Long, until: Long): Flow<Long?>
 
     @Query("SELECT * FROM installment_items WHERE status = 'Paid' AND due_date >= :since AND due_date < :until")
-    fun getPaidItemsInDateRange(since: Long, until: Long): Flow<List<com.sans.finance.data.local.entity.InstallmentItemEntity>>
+    fun getPaidItemsInDateRange(
+        since: Long,
+        until: Long
+    ): Flow<List<com.sans.finance.data.local.entity.InstallmentItemEntity>>
 
-    @Query("""
+    @Query(
+        """
         SELECT 
             ii.id as id, 
             ii.due_date as date, 
@@ -76,10 +80,14 @@ interface InstallmentDao {
         JOIN installments i ON ii.installment_id = i.id
         JOIN expenses e ON i.expense_id = e.id
         WHERE ii.status = 'Paid' AND ii.due_date >= :since AND ii.due_date < :until
-    """)
+    """
+    )
 
 
-    fun getPaidInstallmentPaymentsBetween(since: Long, until: Long): Flow<List<com.sans.finance.data.local.entity.InstallmentPaymentRow>>
+    fun getPaidInstallmentPaymentsBetween(
+        since: Long,
+        until: Long
+    ): Flow<List<com.sans.finance.data.local.entity.InstallmentPaymentRow>>
 
     @Update
     suspend fun updateInstallment(installment: InstallmentEntity)

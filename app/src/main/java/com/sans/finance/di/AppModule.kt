@@ -75,7 +75,8 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideAccountDao(db: AppDatabase): com.sans.finance.data.local.dao.AccountDao = db.accountDao
+    fun provideAccountDao(db: AppDatabase): com.sans.finance.data.local.dao.AccountDao =
+        db.accountDao
 
     @Provides
     @Singleton
@@ -108,7 +109,8 @@ object AppModule {
         categoryDao: com.sans.finance.data.local.dao.CategoryDao,
         installmentDao: com.sans.finance.data.local.dao.InstallmentDao,
         accountDao: com.sans.finance.data.local.dao.AccountDao
-    ): ExpenseRepository = ExpenseRepositoryImpl(dao, tagDao, categoryDao, installmentDao, accountDao)
+    ): ExpenseRepository =
+        ExpenseRepositoryImpl(dao, tagDao, categoryDao, installmentDao, accountDao)
 
     @Provides
     @Singleton
