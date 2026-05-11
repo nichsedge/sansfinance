@@ -21,6 +21,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -55,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.core.util.CurrencyFormatter
+import com.sans.finance.presentation.components.PrivacyText
 import com.sans.finance.data.local.entity.CategoryEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,6 +76,14 @@ fun BudgetScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.togglePrivacyMode() }) {
+                        Icon(
+                            imageVector = if (state.isPrivacyModeEnabled) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (state.isPrivacyModeEnabled) "Show balances" else "Hide balances"
+                        )
                     }
                 }
             )
@@ -129,6 +140,7 @@ fun BudgetScreen(
                 BudgetItem(
                     status = status,
                     currencyCode = state.currentCurrency,
+                    isPrivacyModeEnabled = state.isPrivacyModeEnabled,
                     onDelete = { viewModel.deleteBudget(status.budget) }
                 )
             }
@@ -152,6 +164,7 @@ fun BudgetScreen(
 fun BudgetItem(
     status: BudgetStatus,
     currencyCode: String,
+    isPrivacyModeEnabled: Boolean = false,
     onDelete: () -> Unit
 ) {
     val progress = (status.spent.toFloat() / status.budget.amount.toFloat()).coerceIn(0f, 1.2f)
@@ -209,18 +222,30 @@ fun BudgetItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
-                Text(
-                    text = CurrencyFormatter.formatAmount(status.spent, currencyCode),
+                PrivacyText(
+                    amount = status.spent,
+                    currencyCode = currencyCode,
+                    isVisible = !isPrivacyModeEnabled,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Black,
                     color = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                 )
-                Text(
-                    "of ${CurrencyFormatter.formatAmount(status.budget.amount, currencyCode)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        "of ",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    PrivacyText(
+                        amount = status.budget.amount,
+                        currencyCode = currencyCode,
+                        isVisible = !isPrivacyModeEnabled,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -244,18 +269,39 @@ fun BudgetItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 if (isOverBudget) {
-                    Text(
-                        "Overspent by ${CurrencyFormatter.formatAmount(overspent, currencyCode)}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row {
+                        Text(
+                            "Overspent by ",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold
+                        )
+                        PrivacyText(
+                            amount = overspent,
+                            currencyCode = currencyCode,
+                            isVisible = !isPrivacyModeEnabled,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 } else {
-                    Text(
-                        "${CurrencyFormatter.formatAmount(remaining, currencyCode)} left",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Row {
+                        PrivacyText(
+                            amount = remaining,
+                            currencyCode = currencyCode,
+                            isVisible = !isPrivacyModeEnabled,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            " left",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 Text(

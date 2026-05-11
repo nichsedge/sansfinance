@@ -39,7 +39,9 @@ object AppModule {
                 AppDatabase.MIGRATION_11_12,
                 AppDatabase.MIGRATION_12_13,
                 AppDatabase.MIGRATION_13_14,
-                AppDatabase.MIGRATION_14_15
+                AppDatabase.MIGRATION_14_15,
+                AppDatabase.MIGRATION_15_16,
+                AppDatabase.MIGRATION_16_17
             )
             .addCallback(callback)
             .build()
@@ -101,6 +103,16 @@ object AppModule {
     @Singleton
     fun provideBudgetRepository(dao: com.sans.finance.data.local.dao.BudgetDao): com.sans.finance.domain.repository.BudgetRepository =
         com.sans.finance.data.repository.BudgetRepositoryImpl(dao)
+
+    @Provides
+    @Singleton
+    fun providePortfolioDao(db: AppDatabase): com.sans.finance.data.local.dao.PortfolioDao =
+        db.portfolioDao
+
+    @Provides
+    @Singleton
+    fun providePortfolioRepository(dao: com.sans.finance.data.local.dao.PortfolioDao): com.sans.finance.domain.repository.PortfolioRepository =
+        com.sans.finance.data.repository.PortfolioRepositoryImpl(dao)
 
     @Provides
     @Singleton

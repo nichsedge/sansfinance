@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +30,7 @@ import com.sans.finance.presentation.accounts.AccountScreen
 import com.sans.finance.presentation.dashboard.DashboardScreen
 import com.sans.finance.presentation.expense_list.ExpenseListScreen
 import com.sans.finance.presentation.navigation.Screen
+import com.sans.finance.presentation.portfolio.PortfolioScreen
 import com.sans.finance.presentation.settings.SettingsScreen
 
 @Composable
@@ -79,6 +81,9 @@ fun MainScreen(
                     }
                 )
             }
+            composable<Screen.Portfolio> {
+                PortfolioScreen()
+            }
             composable<Screen.Settings> {
                 SettingsScreen(
                     onBack = { /* Handled by bottom nav */ },
@@ -113,6 +118,7 @@ fun BottomNavigationBar(navController: NavHostController) {
         val items = listOf(
             Triple(Screen.Dashboard, "Home", Icons.Default.Dashboard),
             Triple(Screen.ExpenseList, "Trans.", Icons.Default.History),
+            Triple(Screen.Portfolio, "Assets", Icons.Default.PieChart),
             Triple(Screen.Accounts, "Accounts", Icons.Default.AccountBalanceWallet),
             Triple(Screen.Settings, "Settings", Icons.Default.Settings)
         )

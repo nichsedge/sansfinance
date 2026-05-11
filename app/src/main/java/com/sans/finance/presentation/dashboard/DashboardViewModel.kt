@@ -10,9 +10,13 @@ import com.sans.finance.domain.repository.GoalRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import com.sans.finance.domain.repository.PortfolioRepository
+import com.sans.finance.data.local.dao.SnapshotTotal
 import java.util.Calendar
 import javax.inject.Inject
+import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 
 data class DashboardState(
     val netWorth: Long = 0L,
@@ -34,7 +38,8 @@ data class DashboardState(
     val globalSpent: Long = 0L,
     val currentCurrency: String = "USD",
     val last30DaysTrend: List<Long> = emptyList(),
-    val daysLeftInMonth: Int = 0
+    val daysLeftInMonth: Int = 0,
+    val isPrivacyModeEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -43,6 +48,7 @@ class DashboardViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val goalRepository: GoalRepository,
     private val budgetRepository: BudgetRepository,
+    private val portfolioRepository: PortfolioRepository,
     private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
@@ -51,10 +57,26 @@ class DashboardViewModel @Inject constructor(
         expenseRepository.getExpensesBetween(0, Long.MAX_VALUE),
         expenseRepository.getRecurringExpenses(),
         goalRepository.getAllGoals(),
-        budgetRepository.getAllBudgets()
-    ) { accounts, transactions, recurring, goals, budgets ->
-        val assets =
+        budgetRepository.getAllBudgets(),
+        portfolioRepository.getTotalValueOverTime(),
+        portfolioRepository.getLatestSnapshot(),
+        localeManager.privacyMode
+    ) { flows: Array<Any?> ->
+        val accounts = flows[0] as List<com.sans.finance.data.local.entity.AccountEntity>
+        val transactions = flows[1] as List<com.sans.finance.domain.model.Expense>
+        val recurring = flows[2] as List<com.sans.finance.domain.model.Expense>
+        val goals = flows[3] as List<com.sans.finance.data.local.entity.GoalEntity>
+        val budgets = flows[4] as List<com.sans.finance.data.local.entity.BudgetEntity>
+        val portfolioHistory = flows[5] as List<SnapshotTotal>
+        val latestHoldings = flows[6] as List<PortfolioHoldingEntity>
+        val privacyMode = flows[7] as Boolean
+
+        val latestPortfolioIdr = portfolioHistory.lastOrNull()?.totalIdr ?: 0.0
+        val portfolioAssets = (latestPortfolioIdr * 100).toLong()
+
+        val accountAssets =
             accounts.filter { it.type != "Credit Card" && it.type != "Loan" }.sumOf { it.balance }
+        val assets = accountAssets + portfolioAssets
         val liabilities =
             accounts.filter { it.type == "Credit Card" || it.type == "Loan" }.sumOf { it.balance }
 
@@ -62,8 +84,16 @@ class DashboardViewModel @Inject constructor(
             if (it.type == "INCOME") it.amount else -it.amount
         }
 
-        val distribution = accounts.groupBy { it.type }
+        val accountDistribution = accounts.groupBy { it.type }
             .mapValues { entry -> entry.value.sumOf { it.balance } }
+            
+        val portfolioDistribution = latestHoldings.groupBy { it.category }
+            .mapValues { entry -> (entry.value.sumOf { it.valueIdr } * 100).toLong() }
+            
+        val distribution = accountDistribution.toMutableMap()
+        portfolioDistribution.forEach { (cat, value) ->
+            distribution[cat] = (distribution[cat] ?: 0L) + value
+        }
 
         // Compute this-month cash flow
         val cal = CalendarUtils.getInstance()
@@ -126,15 +156,20 @@ class DashboardViewModel @Inject constructor(
             monthlyIncome = monthlyIncome,
             monthlyExpense = monthlyExpense,
             monthlySavingsRate = savingsRate,
-            globalBudget = budgets.find { it.categoryId == null }?.amount ?: 0L,
+            globalBudget = budgets.find { b -> b.categoryId == null }?.amount ?: 0L,
             globalSpent = monthlyExpense,
             currentCurrency = localeManager.getCurrency(),
             last30DaysTrend = trend.reversed(),
-            daysLeftInMonth = daysLeft
+            daysLeftInMonth = daysLeft,
+            isPrivacyModeEnabled = privacyMode
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = DashboardState()
     )
+    
+    fun togglePrivacyMode() {
+        localeManager.setPrivacyModeEnabled(!localeManager.isPrivacyModeEnabled())
+    }
 }

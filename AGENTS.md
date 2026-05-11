@@ -7,7 +7,7 @@
 - UI and resources are in `app/src/main/res` (Compose UI lives in Kotlin under `presentation/`).
 - Unit tests are in `app/src/test/java/com/sans/finance`.
 - Instrumentation tests are in `app/src/androidTest/java/com/sans/finance`.
-- Utility scripts at repo root: `backup.sh`, `restore.sh`, `sync.sh`.
+- Utility scripts at repo root: `backup.sh`, `restore.sh`, `sync.sh`, `push_portfolio.sh`.
 - A sample database snapshot exists at `sans_finance_db_snapshot.sqlite` (do not edit in-place).
 
 ## Build, Test, and Development Commands

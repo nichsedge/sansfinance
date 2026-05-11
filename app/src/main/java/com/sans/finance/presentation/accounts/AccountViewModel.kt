@@ -19,7 +19,8 @@ data class AccountScreenState(
     val total: Long = 0L,
     val accountsByType: Map<String, List<AccountEntity>> = emptyMap(),
     val currentCurrency: String = "USD",
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val isPrivacyModeEnabled: Boolean = false
 )
 
 
@@ -32,8 +33,9 @@ class AccountViewModel @Inject constructor(
 
     val state = combine(
         accountRepository.getAllAccounts(),
-        expenseRepository.getExpensesBetween(0, Long.MAX_VALUE)
-    ) { accountsList, expensesList ->
+        expenseRepository.getExpensesBetween(0, Long.MAX_VALUE),
+        localeManager.privacyMode
+    ) { accountsList, expensesList, privacyMode ->
         val assets = accountsList.filter { it.type != "Credit Card" && it.type != "Loan" }
             .sumOf { it.balance }
         val liabilities = accountsList.filter { it.type == "Credit Card" || it.type == "Loan" }
@@ -48,7 +50,8 @@ class AccountViewModel @Inject constructor(
             total = total,
             accountsByType = grouped,
             currentCurrency = localeManager.getCurrency(),
-            isLoading = false
+            isLoading = false,
+            isPrivacyModeEnabled = privacyMode
         )
     }.stateIn(
         scope = viewModelScope,
@@ -86,5 +89,9 @@ class AccountViewModel @Inject constructor(
         viewModelScope.launch {
             accountRepository.deleteAccountById(id)
         }
+    }
+
+    fun togglePrivacyMode() {
+        localeManager.setPrivacyModeEnabled(!localeManager.isPrivacyModeEnabled())
     }
 }
