@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -62,6 +63,7 @@ import com.sans.finance.data.local.entity.AccountEntity
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(
+    onStatsClick: () -> Unit,
     viewModel: AccountViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -71,7 +73,15 @@ fun AccountScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Accounts", fontWeight = FontWeight.Bold) }
+                title = { Text("Accounts", fontWeight = FontWeight.Bold) },
+                actions = {
+                    IconButton(onClick = onStatsClick) {
+                        Icon(
+                            imageVector = Icons.Default.QueryStats,
+                            contentDescription = "Stats"
+                        )
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -90,11 +100,7 @@ fun AccountScreen(
                 AccountHeaderStats(state)
             }
 
-            item {
-                if (state.history.isNotEmpty()) {
-                    AccountHistoryChart(history = state.history)
-                }
-            }
+
 
             state.accountsByType.forEach { (type, accounts) ->
                 item {
@@ -274,93 +280,4 @@ fun AccountHeaderStats(state: AccountScreenState) {
     }
 }
 
-@Composable
-fun AccountHistoryChart(history: List<Pair<String, Long>>) {
-    val textMeasurer = rememberTextMeasurer()
-    val labelStyle = TextStyle(
-        fontSize = 10.sp,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-    )
-    val lineColor = Color(0xFFE57373)
-    val gridColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp)
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val chartTop = 20f
-            val chartBottom = size.height - 30f
-            val chartLeft = 0f
-            val chartRight = size.width
-            val chartHeight = chartBottom - chartTop
-
-            // Draw horizontal zero line if there are positive and negative values
-            val minVal = history.minOf { it.second }.coerceAtMost(0L)
-            val maxVal = history.maxOf { it.second }.coerceAtLeast(0L)
-            val range = (maxVal - minVal).toFloat().takeIf { it > 0 } ?: 1f
-
-            val zeroY = chartBottom - ((0 - minVal) / range) * chartHeight
-            if (zeroY in chartTop..chartBottom) {
-                drawLine(
-                    color = gridColor,
-                    start = Offset(chartLeft, zeroY),
-                    end = Offset(chartRight, zeroY),
-                    strokeWidth = 2f
-                )
-            }
-
-            // Draw line
-            if (history.size > 1) {
-                val stepX = (chartRight - chartLeft) / (history.size - 1)
-                val path = Path()
-
-                history.forEachIndexed { index, data ->
-                    val x = chartLeft + index * stepX
-                    val y = chartBottom - ((data.second - minVal) / range) * chartHeight
-
-                    if (index == 0) {
-                        path.moveTo(x, y)
-                    } else {
-                        path.lineTo(x, y)
-                    }
-
-                    // Draw point
-                    drawCircle(
-                        color = lineColor,
-                        radius = 6f,
-                        center = Offset(x, y)
-                    )
-                }
-
-                drawPath(
-                    path = path,
-                    color = lineColor,
-                    style = Stroke(width = 4f)
-                )
-            }
-
-            // Draw X axis labels and values
-            val stepX = if (history.size > 1) (chartRight - chartLeft) / (history.size - 1) else 0f
-            history.forEachIndexed { index, data ->
-                val x = chartLeft + index * stepX
-
-                // Draw month name at bottom
-                val monthLayout = textMeasurer.measure(data.first, style = labelStyle)
-                drawText(
-                    textLayoutResult = monthLayout,
-                    topLeft = Offset(x - monthLayout.size.width / 2f, chartBottom + 10f)
-                )
-
-                // Draw value below month
-                val valueLayout = textMeasurer.measure(CurrencyFormatter.formatAmountCompact(data.second), style = labelStyle)
-                drawText(
-                    textLayoutResult = valueLayout,
-                    topLeft = Offset(x - valueLayout.size.width / 2f, chartBottom + 10f + monthLayout.size.height)
-                )
-            }
-        }
-    }
-}

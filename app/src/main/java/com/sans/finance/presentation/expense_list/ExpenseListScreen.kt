@@ -214,7 +214,7 @@ fun ExpenseListScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = day,
-                                        style = MaterialTheme.typography.headlineSmall,
+                                        style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
@@ -600,7 +600,7 @@ fun SummaryCard(
                     )
                     Text(
                         com.sans.finance.core.util.CurrencyFormatter.formatAmount(income),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = Color(0xFF4CAF50)
                     )
                 }
@@ -612,7 +612,7 @@ fun SummaryCard(
                     )
                     Text(
                         com.sans.finance.core.util.CurrencyFormatter.formatAmount(expense),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = Color(0xFFE53935)
                     )
                 }
@@ -624,7 +624,7 @@ fun SummaryCard(
                     )
                     Text(
                         com.sans.finance.core.util.CurrencyFormatter.formatAmount(total),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -691,14 +691,14 @@ fun ExpenseItem(
                 Column(modifier = Modifier.weight(0.65f)) {
                     Text(
                         expense.note.ifBlank { expense.description ?: "" },
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = if (expense.isInstallmentPayment) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                     Text(
                         account?.name ?: "Unknown",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -711,7 +711,7 @@ fun ExpenseItem(
                     val amountColor = if (expense.type == "INCOME") Color(0xFF4CAF50) else Color(0xFFE53935)
                     Text(
                         com.sans.finance.core.util.CurrencyFormatter.formatAmount(displayAmount),
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = amountColor
                     )
                 }

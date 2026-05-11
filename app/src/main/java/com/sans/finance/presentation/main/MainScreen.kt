@@ -68,7 +68,11 @@ fun MainScreen(
                 )
             }
             composable<Screen.Accounts> {
-                AccountScreen()
+                AccountScreen(
+                    onStatsClick = {
+                        rootNavController.navigate(Screen.AccountStats)
+                    }
+                )
             }
             composable<Screen.Goals> {
                 GoalScreen()

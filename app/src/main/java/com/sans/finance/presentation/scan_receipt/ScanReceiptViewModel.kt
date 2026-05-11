@@ -212,7 +212,7 @@ class ScanReceiptViewModel @Inject constructor(
                     val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
                     accepted.forEach { tx ->
-                        val matchedCategory = categoryMap[tx.category?.lowercase(Locale.US)]
+                        val matchedCategory = categoryMap[tx.category.lowercase(Locale.US)]
                         val catId = matchedCategory?.id ?: defaultCategoryId
 
                         val txDate = try {

@@ -44,6 +44,9 @@ sealed class Screen {
     object Accounts : Screen()
 
     @Serializable
+    object AccountStats : Screen()
+
+    @Serializable
     object Goals : Screen()
 
     @Serializable

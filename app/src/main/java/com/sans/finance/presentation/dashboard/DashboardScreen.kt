@@ -169,7 +169,7 @@ fun NetWorthCard(
             )
             Text(
                 CurrencyFormatter.formatAmount(netWorth),
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
@@ -198,7 +198,7 @@ fun BreakdownItem(label: String, amount: Long, color: Color) {
         )
         Text(
             CurrencyFormatter.formatAmount(amount),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold,
             color = color
         )
@@ -226,7 +226,7 @@ fun ForecastCard(projectedBalance: Long) {
                 )
                 Text(
                     CurrencyFormatter.formatAmount(projectedBalance),
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -332,7 +332,7 @@ fun MonthlyCashFlowCard(income: Long, expense: Long, savingsRate: Float) {
                     }
                     Text(
                         CurrencyFormatter.formatAmount(income),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF4CAF50)
                     )
@@ -351,7 +351,7 @@ fun MonthlyCashFlowCard(income: Long, expense: Long, savingsRate: Float) {
                     }
                     Text(
                         CurrencyFormatter.formatAmount(expense),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFF44336)
                     )

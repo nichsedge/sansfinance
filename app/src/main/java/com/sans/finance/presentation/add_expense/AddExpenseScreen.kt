@@ -22,7 +22,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
@@ -114,21 +115,23 @@ fun AddExpenseScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // Transaction Type Selector (Segmented Buttons / Tabs)
+            // Transaction Type Selector (Rounded Chips)
             val types = listOf("EXPENSE", "INCOME", "TRANSFER")
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.fillMaxWidth()
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                types.forEachIndexed { index, type ->
-                    SegmentedButton(
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = types.size),
-                        onClick = { viewModel.transactionType = type },
+                items(types) { type ->
+                    FilterChip(
                         selected = viewModel.transactionType == type,
+                        onClick = { viewModel.transactionType = type },
                         label = { 
                             Text(
                                 type.lowercase().replaceFirstChar { it.uppercase() },
                                 fontWeight = if (viewModel.transactionType == type) FontWeight.Bold else FontWeight.Normal
                             ) 
-                        }
+                        },
+                        shape = androidx.compose.foundation.shape.CircleShape
                     )
                 }
             }
@@ -203,7 +206,7 @@ fun AddExpenseScreen(
                 onValueChange = { viewModel.amount = it },
                 label = { Text(stringResource(R.string.amount_spent)) },
                 modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                textStyle = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 singleLine = true,
                 visualTransformation = com.sans.finance.core.util.ThousandsSeparatorVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -317,7 +320,7 @@ fun AddExpenseScreen(
                                 Text(category.name)
                             }
                         },
-                        shape = MaterialTheme.shapes.small
+                        shape = androidx.compose.foundation.shape.CircleShape
                     )
                 }
             }
@@ -337,7 +340,7 @@ fun AddExpenseScreen(
                         selected = viewModel.selectedTags.contains(tagName),
                         onClick = { viewModel.toggleTag(tagName) },
                         label = { Text(tagName) },
-                        shape = MaterialTheme.shapes.small
+                        shape = androidx.compose.foundation.shape.CircleShape
                     )
                 }
             }
@@ -415,20 +418,22 @@ fun AddExpenseScreen(
                 stringResource(R.string.recurring_expenses),
                 stringResource(R.string.installment)
             )
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.fillMaxWidth()
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                paymentTypes.forEachIndexed { index, type ->
-                    SegmentedButton(
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = paymentTypes.size),
-                        onClick = { viewModel.paymentType = type },
+                items(paymentTypes.size) { index ->
+                    val type = paymentTypes[index]
+                    FilterChip(
                         selected = viewModel.paymentType == type,
+                        onClick = { viewModel.paymentType = type },
                         label = {
                             Text(
                                 paymentLabels[index],
                                 fontWeight = if (viewModel.paymentType == type) FontWeight.Bold else FontWeight.Normal
                             )
-                        }
+                        },
+                        shape = androidx.compose.foundation.shape.CircleShape
                     )
                 }
             }

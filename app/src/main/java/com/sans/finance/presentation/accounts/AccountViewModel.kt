@@ -22,7 +22,6 @@ data class AccountScreenState(
     val liabilities: Long = 0L,
     val total: Long = 0L,
     val accountsByType: Map<String, List<AccountEntity>> = emptyMap(),
-    val history: List<Pair<String, Long>> = emptyList(),
     val isLoading: Boolean = true
 )
 
@@ -43,49 +42,11 @@ class AccountViewModel @Inject constructor(
 
         val grouped = accountsList.groupBy { it.type }
 
-        // Calculate 6 months history
-        val historyList = mutableListOf<Pair<String, Long>>()
-        val cal = CalendarUtils.getInstance()
-        val monthFormat = SimpleDateFormat("MMM", Locale.US)
-
-        var currentSimulatedNetWorth = total
-
-        // We go backwards from current month to 5 months ago
-        for (i in 0 until 6) {
-            val monthEndCal = cal.clone() as Calendar
-            monthEndCal.set(Calendar.DAY_OF_MONTH, monthEndCal.getActualMaximum(Calendar.DAY_OF_MONTH))
-            monthEndCal.set(Calendar.HOUR_OF_DAY, 23)
-            monthEndCal.set(Calendar.MINUTE, 59)
-            monthEndCal.set(Calendar.SECOND, 59)
-            val monthEnd = monthEndCal.timeInMillis
-
-            val monthStartCal = cal.clone() as Calendar
-            monthStartCal.set(Calendar.DAY_OF_MONTH, 1)
-            monthStartCal.set(Calendar.HOUR_OF_DAY, 0)
-            monthStartCal.set(Calendar.MINUTE, 0)
-            monthStartCal.set(Calendar.SECOND, 0)
-            val monthStart = monthStartCal.timeInMillis
-
-            // For the current iteration, we record the net worth
-            historyList.add(0, Pair(monthFormat.format(cal.time), currentSimulatedNetWorth))
-
-            // To get the PREVIOUS month's ending net worth, we undo this month's net flow
-            val monthlyExpenses = expensesList.filter { it.date in monthStart..monthEnd && (!it.isInstallment || it.isInstallmentPayment) }
-            val monthlyIncome = monthlyExpenses.filter { it.type == "INCOME" }.sumOf { it.amount }
-            val monthlyExpenseSum = monthlyExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-            val netFlow = monthlyIncome - monthlyExpenseSum
-
-            currentSimulatedNetWorth -= netFlow
-
-            cal.add(Calendar.MONTH, -1)
-        }
-
         AccountScreenState(
             assets = assets,
             liabilities = liabilities,
             total = total,
             accountsByType = grouped,
-            history = historyList,
             isLoading = false
         )
     }.stateIn(

@@ -114,7 +114,14 @@ fun AppNavigation(onLanguageToggle: () -> Unit) {
             )
         }
         composable<Screen.Accounts> {
-            com.sans.finance.presentation.accounts.AccountScreen()
+            com.sans.finance.presentation.accounts.AccountScreen(
+                onStatsClick = { navController.navigate(Screen.AccountStats) }
+            )
+        }
+        composable<Screen.AccountStats> {
+            com.sans.finance.presentation.accounts.AccountStatsScreen(
+                onBack = { navController.popBackStack() }
+            )
         }
         composable<Screen.Budgets> {
             com.sans.finance.presentation.budgeting.BudgetScreen()

@@ -268,7 +268,7 @@ fun DateNavigator(
                 }
                 Text(
                     text = periodText,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -337,7 +337,7 @@ fun StatsSimpleCard(
             )
             Text(
                 CurrencyFormatter.formatAmount(amount),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.ExtraBold
             )
         }
@@ -436,13 +436,13 @@ fun CategoryDetailView(
         ) {
             Text(
                 text = category.categoryName,
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = CurrencyFormatter.formatAmount(category.totalAmount),
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -500,7 +500,7 @@ fun TransactionItem(transaction: Expense) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = transaction.note,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold
             )
             Text(
@@ -518,7 +518,7 @@ fun TransactionItem(transaction: Expense) {
         }
         Text(
             text = CurrencyFormatter.formatAmount(transaction.amount),
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Black,
             color = if (transaction.type == "INCOME") Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
         )
