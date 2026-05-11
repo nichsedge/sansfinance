@@ -629,7 +629,7 @@ fun SummaryCard(
                     )
                 }
             }
-            androidx.compose.material3.Divider(
+            androidx.compose.material3.HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant,
                 thickness = 1.dp
             )
@@ -716,7 +716,7 @@ fun ExpenseItem(
                     )
                 }
             }
-            androidx.compose.material3.Divider(
+            androidx.compose.material3.HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                 thickness = 1.dp
             )
@@ -773,7 +773,7 @@ fun FilterTabs(
         else -> 0
     }
 
-    androidx.compose.material3.ScrollableTabRow(
+    androidx.compose.material3.SecondaryScrollableTabRow(
         selectedTabIndex = tabIndex,
         edgePadding = 0.dp,
         containerColor = MaterialTheme.colorScheme.surface,
