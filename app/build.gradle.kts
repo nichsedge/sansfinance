@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.sans.finance"
-    compileSdk = 36 // Simplified
+    compileSdk = 37 // Simplified
 
     defaultConfig {
         applicationId = "com.sans.finance"
@@ -79,7 +79,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     // LiteRT-LM
-    implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.11.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
