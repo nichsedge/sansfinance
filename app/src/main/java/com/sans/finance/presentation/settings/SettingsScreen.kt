@@ -71,12 +71,13 @@ import com.sans.finance.presentation.components.CategoryIcon
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
     onLanguageToggle: () -> Unit,
     onNavigateToGoals: () -> Unit,
     onNavigateToBudgets: () -> Unit,
     onNavigateToCategories: () -> Unit,
     onNavigateToTags: () -> Unit,
+    onNavigateToRecurringExpenses: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val currentLanguage = viewModel.currentLanguage.value
@@ -109,8 +110,10 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.settings), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
                     }
                 }
             )
@@ -124,6 +127,7 @@ fun SettingsScreen(
             onBudget = onNavigateToBudgets,
             onNavigateToCategories = onNavigateToCategories,
             onNavigateToTags = onNavigateToTags,
+            onNavigateToRecurringExpenses = onNavigateToRecurringExpenses,
             exportBackup = { viewModel.exportFullBackup(it) },
             onLanguageToggle = onLanguageToggle,
             onCurrencyToggle = { viewModel.toggleCurrency() },
@@ -150,6 +154,7 @@ fun SettingsContent(
     onBudget: () -> Unit,
     onNavigateToCategories: () -> Unit,
     onNavigateToTags: () -> Unit,
+    onNavigateToRecurringExpenses: () -> Unit,
     exportBackup: (android.content.Context) -> Unit,
     onLanguageToggle: () -> Unit,
     onCurrencyToggle: () -> Unit,
@@ -172,96 +177,7 @@ fun SettingsContent(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // Data Management Section
-        item {
-            SettingsSectionTitle(stringResource(R.string.data_management))
-            Card(
-                onClick = { exportBackup(context) },
-                modifier = Modifier
-                    .fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.Sync,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onTertiaryContainer
-                            )
-                        }
-                        Spacer(Modifier.width(16.dp))
-                        Column {
-                            Text(
-                                stringResource(R.string.full_backup),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                stringResource(R.string.backup_to_downloads),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
-                }
-            }
-        }
 
-        // Security Section
-        item {
-            SettingsSectionTitle("Security")
-            Card(
-                onClick = onTogglePrivacyMode,
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            if (isPrivacyModeEnabled) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                            contentDescription = null
-                        )
-                        Spacer(Modifier.width(16.dp))
-                        Column {
-                            Text("Privacy Mode", style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                if (isPrivacyModeEnabled) "Hiding sensitive balances" else "Showing all balances",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    androidx.compose.material3.Switch(
-                        checked = isPrivacyModeEnabled,
-                        onCheckedChange = { onTogglePrivacyMode() }
-                    )
-                }
-            }
-        }
 
         // Language Section
         item {
@@ -417,7 +333,37 @@ fun SettingsContent(
                 }
             }
 
-
+            Surface(
+                onClick = onNavigateToRecurringExpenses,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 1.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Sync,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.recurring_expenses))
+                        Text(
+                            "Manage subscriptions and fixed costs",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
 
         item {
@@ -470,6 +416,97 @@ fun SettingsContent(
                     )
                     Spacer(Modifier.width(16.dp))
                     Text(stringResource(R.string.tags))
+                }
+            }
+        }
+
+        // Security Section
+        item {
+            SettingsSectionTitle("Security")
+            Card(
+                onClick = onTogglePrivacyMode,
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (isPrivacyModeEnabled) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            contentDescription = null
+                        )
+                        Spacer(Modifier.width(16.dp))
+                        Column {
+                            Text("Privacy Mode", style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                if (isPrivacyModeEnabled) "Hiding sensitive balances" else "Showing all balances",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    androidx.compose.material3.Switch(
+                        checked = isPrivacyModeEnabled,
+                        onCheckedChange = { onTogglePrivacyMode() }
+                    )
+                }
+            }
+        }
+
+        // Data Management Section
+        item {
+            SettingsSectionTitle(stringResource(R.string.data_management))
+            Card(
+                onClick = { exportBackup(context) },
+                modifier = Modifier
+                    .fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Sync,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                stringResource(R.string.full_backup),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                stringResource(R.string.backup_to_downloads),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
                 }
             }
         }

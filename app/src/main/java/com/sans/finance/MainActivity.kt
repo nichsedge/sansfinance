@@ -82,6 +82,9 @@ fun AppNavigation(onLanguageToggle: () -> Unit) {
                 onStatsClick = {
                     navController.navigate(Screen.TransactionStats)
                 },
+                onRecurringExpensesClick = {
+                    navController.navigate(Screen.RecurringExpenses)
+                },
                 onExpenseClick = { id ->
                     navController.navigate(Screen.EditExpense(id))
                 }
@@ -111,7 +114,14 @@ fun AppNavigation(onLanguageToggle: () -> Unit) {
                 onNavigateToGoals = { navController.navigate(Screen.Goals) },
                 onNavigateToBudgets = { navController.navigate(Screen.Budgets) },
                 onNavigateToCategories = { navController.navigate(Screen.CategorySettings) },
-                onNavigateToTags = { navController.navigate(Screen.TagSettings) }
+                onNavigateToTags = { navController.navigate(Screen.TagSettings) },
+                onNavigateToRecurringExpenses = { navController.navigate(Screen.RecurringExpenses) }
+            )
+        }
+        composable<Screen.RecurringExpenses> {
+            com.sans.finance.presentation.recurring.RecurringExpensesScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onExpenseClick = { id -> navController.navigate(Screen.EditExpense(id)) }
             )
         }
         composable<Screen.Accounts> {
@@ -120,7 +130,9 @@ fun AppNavigation(onLanguageToggle: () -> Unit) {
             )
         }
         composable<Screen.Portfolio> {
-            com.sans.finance.presentation.portfolio.PortfolioScreen()
+            com.sans.finance.presentation.portfolio.PortfolioScreen(
+                onDashboardClick = { navController.popBackStack() }
+            )
         }
         composable<Screen.AccountStats> {
             com.sans.finance.presentation.accounts.AccountStatsScreen(

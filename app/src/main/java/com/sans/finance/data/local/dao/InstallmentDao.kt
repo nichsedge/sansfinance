@@ -75,6 +75,7 @@ interface InstallmentDao {
             e.category_id as category_id,
             e.description as description,
             e.id as expense_id,
+            e.currency as currency,
             (SELECT GROUP_CONCAT(t.name) FROM tags t JOIN expense_tag_ref etr ON t.id = etr.tagId WHERE etr.expenseId = e.id) as tags_list
         FROM installment_items ii
         JOIN installments i ON ii.installment_id = i.id

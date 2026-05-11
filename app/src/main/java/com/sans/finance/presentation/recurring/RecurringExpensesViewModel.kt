@@ -23,10 +23,19 @@ class RecurringExpensesViewModel @Inject constructor(
         expenseRepository.getAllCategories()
     ) { expenses, categories ->
         val recurringExpenses = expenses.filter { it.isRecurring }
+        val totalMonthly = recurringExpenses.sumOf { 
+            when (it.recurrenceInterval) {
+                "DAILY" -> it.amount * 30
+                "WEEKLY" -> it.amount * 4
+                "MONTHLY" -> it.amount
+                "YEARLY" -> it.amount / 12
+                else -> it.amount
+            }
+        }
         RecurringExpensesState(
             recurringExpenses = recurringExpenses,
             categories = categories,
-            totalMonthlyRecurring = recurringExpenses.sumOf { it.amount },
+            totalMonthlyRecurring = totalMonthly,
             currentCurrency = localeManager.getCurrency()
         )
     }.stateIn(

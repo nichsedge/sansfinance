@@ -3,6 +3,7 @@ import com.sans.finance.presentation.dashboard.WealthDistributionTab
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,8 +23,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,6 +45,9 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,14 +67,48 @@ import androidx.compose.material.icons.filled.VisibilityOff
 @Composable
 fun DashboardScreen(
     onTransactionClick: (Long) -> Unit,
+    onPortfolioClick: () -> Unit,
+    onRecurringExpensesClick: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    var showViewMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Dashboard", fontWeight = FontWeight.Bold) },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { showViewMenu = true }
+                    ) {
+                        Text("Dashboard", fontWeight = FontWeight.Bold)
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Switch View",
+                            modifier = Modifier.size(20.dp)
+                        )
+
+                        DropdownMenu(
+                            expanded = showViewMenu,
+                            onDismissRequest = { showViewMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Dashboard") },
+                                onClick = { showViewMenu = false },
+                                leadingIcon = { Icon(Icons.Default.Dashboard, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Portfolio") },
+                                onClick = {
+                                    showViewMenu = false
+                                    onPortfolioClick()
+                                },
+                                leadingIcon = { Icon(Icons.Default.PieChart, contentDescription = null) }
+                            )
+                        }
+                    }
+                },
                 actions = {
                     IconButton(onClick = { viewModel.togglePrivacyMode() }) {
                         Icon(
@@ -165,12 +208,24 @@ fun DashboardScreen(
 
             if (state.upcomingBills.isNotEmpty()) {
                 item {
-                    Text(
-                        "UPCOMING BILLS",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.secondary,
-                        letterSpacing = 1.5.sp
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "UPCOMING BILLS",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.secondary,
+                            letterSpacing = 1.5.sp
+                        )
+                        Text(
+                            "See All",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { onRecurringExpensesClick() }
+                        )
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     state.upcomingBills.forEach { bill ->
                         DashboardBillItem(bill, state.currentCurrency, state.isPrivacyModeEnabled)
@@ -685,24 +740,27 @@ fun DashboardBillItem(bill: com.sans.finance.domain.model.Expense, currencyCode:
     }
 }
 
+
+
 @Composable
 fun GlobalBudgetCard(budget: Long, spent: Long, daysLeft: Int, currencyCode: String, isPrivacyModeEnabled: Boolean) {
     val progress = (spent.toFloat() / budget.toFloat()).coerceIn(0f, 1f)
     val isOverBudget = spent > budget
     val remaining = (budget - spent).coerceAtLeast(0L)
+    val errorColor = MaterialTheme.colorScheme.error
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = if (isOverBudget)
-                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)
+                errorColor.copy(alpha = 0.1f)
             else MaterialTheme.colorScheme.surface
         ),
         border = if (isOverBudget)
-            androidx.compose.foundation.BorderStroke(
+            BorderStroke(
                 1.dp,
-                MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
+                errorColor.copy(alpha = 0.5f)
             )
         else null
     ) {
