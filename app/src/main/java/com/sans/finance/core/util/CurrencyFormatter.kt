@@ -9,6 +9,7 @@ object CurrencyFormatter {
     private fun getFormatter(currencyCode: String = "USD"): NumberFormat {
         val locale = when (currencyCode) {
             "IDR" -> Locale("id", "ID")
+            "CNY" -> Locale.SIMPLIFIED_CHINESE
             "USD" -> Locale.US
             else -> Locale.getDefault()
         }
