@@ -46,7 +46,7 @@ class LocaleManager @Inject constructor(
     }
 
     fun getEnabledCurrencies(): List<String> {
-        val currencies = prefs.getString("enabled_currencies", "USD,IDR") ?: "USD,IDR"
+        val currencies = prefs.getString("enabled_currencies", "USD,IDR,CNY") ?: "USD,IDR,CNY"
         return currencies.split(",").filter { it.isNotBlank() }
     }
 

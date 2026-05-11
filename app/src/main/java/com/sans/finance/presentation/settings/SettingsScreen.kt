@@ -239,7 +239,7 @@ fun SettingsContent(
                         Icon(Icons.Default.Translate, contentDescription = null)
                         Spacer(Modifier.width(16.dp))
                         Text(
-                            if (currentLanguage == "en") "English" else "Indonesia",
+                            when { currentLanguage.startsWith("en") -> "English"; currentLanguage.startsWith("id") -> "Indonesia"; else -> "中文 (Chinese)" },
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -268,7 +268,7 @@ fun SettingsContent(
                         Icon(Icons.Default.ShoppingCart, contentDescription = null) // Using ShoppingCart as placeholder or find a better one
                         Spacer(Modifier.width(16.dp))
                         Text(
-                            if (currentCurrency == "USD") "US Dollar (USD)" else "Indonesian Rupiah (IDR)",
+                            when(currentCurrency) { "USD" -> "US Dollar (USD)"; "IDR" -> "Indonesian Rupiah (IDR)"; "CNY" -> "Chinese Yuan (CNY)"; else -> currentCurrency },
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
