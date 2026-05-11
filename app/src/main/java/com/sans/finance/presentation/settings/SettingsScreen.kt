@@ -364,7 +364,7 @@ fun SettingsContent(
                         Text("Monthly Budget")
                         Text(
                             if (currentBudget > 0L) com.sans.finance.core.util.CurrencyFormatter.formatAmount(
-                                currentBudget
+                                currentBudget, currentCurrency
                             ) else "Not Set",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant

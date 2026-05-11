@@ -50,7 +50,7 @@ fun GoalScreen(
     onBack: () -> Unit,
     viewModel: GoalViewModel = hiltViewModel()
 ) {
-    val goals by viewModel.goals.collectAsState()
+    val state by viewModel.state.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var goalToEdit by remember { mutableStateOf<GoalEntity?>(null) }
 
@@ -78,7 +78,7 @@ fun GoalScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(goals) { goal ->
+            items(state.goals) { goal ->
                 GoalItem(
                     goal = goal,
                     onEdit = { goalToEdit = goal },
@@ -167,13 +167,13 @@ fun GoalItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    CurrencyFormatter.formatAmount(goal.currentAmount),
+                    CurrencyFormatter.formatAmount(goal.currentAmount, goal.currency),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    "Target: ${CurrencyFormatter.formatAmount(goal.targetAmount)}",
+                    "Target: ${CurrencyFormatter.formatAmount(goal.targetAmount, goal.currency)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

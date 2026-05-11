@@ -53,7 +53,8 @@ data class ExpenseListState(
     val maxAmount: Long? = null,
     val dailySpending: Map<Long, Long> = emptyMap(),
     val monthlyBudget: Long = 0L,
-    val currentCurrency: String = "USD"
+    val currentCurrency: String = "USD",
+    val avgMonthlyExpense: Long = 0L
 )
 
 @HiltViewModel
@@ -159,6 +160,16 @@ class ExpenseListViewModel @Inject constructor(
                 val income = validExpenses.filter { it.type == "INCOME" }.sumOf { it.amount }
                 val expense = validExpenses.filter { it.type != "INCOME" }.sumOf { it.amount }
                 val periodTotal = income - expense
+
+                var avgMonthlyExpense = 0L
+                if (_state.value.activeDateFilter == DateRangeFilter.ALL_TIME && validExpenses.isNotEmpty()) {
+                    val firstDate = validExpenses.minOf { it.date }
+                    val lastDate = CalendarUtils.getInstance().timeInMillis
+                    val diff = lastDate - firstDate
+                    val months = (diff / (1000L * 60 * 60 * 24 * 30)).coerceAtLeast(1L)
+                    avgMonthlyExpense = expense / months
+                }
+
                 _state.update {
                     it.copy(
                         expenses = expenses,
@@ -167,6 +178,7 @@ class ExpenseListViewModel @Inject constructor(
                         totalFilteredIncome = income,
                         totalFilteredExpense = expense,
                         dailySpending = dailyMap,
+                        avgMonthlyExpense = avgMonthlyExpense,
                         isLoading = false
                     )
                 }

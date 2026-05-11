@@ -17,12 +17,14 @@ data class InstallmentsState(
     val historyInstallments: List<Installment> = emptyList(),
     val totalMonthlyDue: Long = 0L,
     val totalRemainingBalance: Long = 0L,
-    val selectedTab: Int = 0 // 0 for Active, 1 for History
+    val selectedTab: Int = 0, // 0 for Active, 1 for History
+    val currentCurrency: String = "USD"
 )
 
 @HiltViewModel
 class InstallmentsViewModel @Inject constructor(
-    private val installmentRepository: InstallmentRepository
+    private val installmentRepository: InstallmentRepository,
+    private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(InstallmentsState())
@@ -41,7 +43,8 @@ class InstallmentsViewModel @Inject constructor(
                         activeInstallments = active,
                         historyInstallments = history,
                         totalMonthlyDue = active.sumOf { it.monthlyPayment },
-                        totalRemainingBalance = active.sumOf { it.remainingBalance }
+                        totalRemainingBalance = active.sumOf { it.remainingBalance },
+                        currentCurrency = localeManager.getCurrency()
                     )
                 }
             }

@@ -63,8 +63,7 @@ fun BudgetScreen(
     onBack: () -> Unit,
     viewModel: BudgetViewModel = hiltViewModel()
 ) {
-    val budgetStatuses by viewModel.budgetStatuses.collectAsState()
-    val categories by viewModel.categories.collectAsState()
+    val state by viewModel.state.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -95,7 +94,7 @@ fun BudgetScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (budgetStatuses.isEmpty()) {
+            if (state.budgetStatuses.isEmpty()) {
                 item {
                     Box(
                         modifier = Modifier
@@ -126,9 +125,10 @@ fun BudgetScreen(
                 }
             }
 
-            items(budgetStatuses) { status ->
+            items(state.budgetStatuses) { status ->
                 BudgetItem(
                     status = status,
+                    currencyCode = state.currentCurrency,
                     onDelete = { viewModel.deleteBudget(status.budget) }
                 )
             }
@@ -136,7 +136,8 @@ fun BudgetScreen(
 
         if (showAddDialog) {
             AddBudgetDialog(
-                categories = categories,
+                categories = state.categories,
+                currencyCode = state.currentCurrency,
                 onDismiss = { showAddDialog = false },
                 onConfirm = { amount, categoryId ->
                     viewModel.addBudget(amount, categoryId)
@@ -150,6 +151,7 @@ fun BudgetScreen(
 @Composable
 fun BudgetItem(
     status: BudgetStatus,
+    currencyCode: String,
     onDelete: () -> Unit
 ) {
     val progress = (status.spent.toFloat() / status.budget.amount.toFloat()).coerceIn(0f, 1.2f)
@@ -208,13 +210,13 @@ fun BudgetItem(
                 verticalAlignment = Alignment.Bottom
             ) {
                 Text(
-                    CurrencyFormatter.formatAmount(status.spent),
+                    text = CurrencyFormatter.formatAmount(status.spent, currencyCode),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Black,
                     color = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    "of ${CurrencyFormatter.formatAmount(status.budget.amount)}",
+                    "of ${CurrencyFormatter.formatAmount(status.budget.amount, currencyCode)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -243,14 +245,14 @@ fun BudgetItem(
             ) {
                 if (isOverBudget) {
                     Text(
-                        "Overspent by ${CurrencyFormatter.formatAmount(overspent)}",
+                        "Overspent by ${CurrencyFormatter.formatAmount(overspent, currencyCode)}",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Bold
                     )
                 } else {
                     Text(
-                        "${CurrencyFormatter.formatAmount(remaining)} left",
+                        "${CurrencyFormatter.formatAmount(remaining, currencyCode)} left",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -270,6 +272,7 @@ fun BudgetItem(
 @Composable
 fun AddBudgetDialog(
     categories: List<CategoryEntity>,
+    currencyCode: String,
     onDismiss: () -> Unit,
     onConfirm: (Long, Long?) -> Unit
 ) {
@@ -287,7 +290,7 @@ fun AddBudgetDialog(
                     onValueChange = { amount = it.filter { char -> char.isDigit() } },
                     label = { Text("Monthly Limit") },
                     placeholder = { Text("e.g. 5,000,000") },
-                    prefix = { Text("Rp ") },
+                    prefix = { Text("$currencyCode ") },
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation = com.sans.finance.core.util.ThousandsSeparatorVisualTransformation(),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(

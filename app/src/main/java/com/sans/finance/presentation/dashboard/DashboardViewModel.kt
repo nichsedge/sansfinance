@@ -32,7 +32,9 @@ data class DashboardState(
     // Global budget
     val globalBudget: Long = 0L,
     val globalSpent: Long = 0L,
-    val currentCurrency: String = "USD"
+    val currentCurrency: String = "USD",
+    val last30DaysTrend: List<Long> = emptyList(),
+    val daysLeftInMonth: Int = 0
 )
 
 @HiltViewModel
@@ -92,11 +94,29 @@ class DashboardViewModel @Inject constructor(
         if (monthlyIncome > 0 && savingsRate < 0.1f) suggestions.add("You're saving less than 10% of your income this month. Try to reduce discretionary spending.")
         if (monthlyExpense > monthlyIncome && monthlyIncome > 0) suggestions.add("⚠️ You're spending more than you earn this month. Review your expenses.")
 
+        // 30-day trend
+        val now = System.currentTimeMillis()
+        val thirtyDaysAgo = now - (30L * 24 * 60 * 60 * 1000)
+        val trendTxns = transactions.filter { it.date >= thirtyDaysAgo }
+        val trend = mutableListOf<Long>()
+        var runningNW = assets - liabilities
+        trend.add(runningNW)
+        for (i in 1..29) {
+            val dayStart = now - (i.toLong() * 24 * 60 * 60 * 1000)
+            val dayEnd = now - ((i - 1).toLong() * 24 * 60 * 60 * 1000)
+            val dayNet = trendTxns.filter { it.date >= dayStart && it.date < dayEnd }
+                .sumOf { if (it.type == "INCOME") it.amount else -it.amount }
+            runningNW -= dayNet
+            trend.add(runningNW)
+        }
+
+        val todayCal = CalendarUtils.getInstance()
+        val daysLeft = todayCal.getActualMaximum(Calendar.DAY_OF_MONTH) - todayCal.get(Calendar.DAY_OF_MONTH)
+
         DashboardState(
             netWorth = assets - liabilities,
             totalAssets = assets,
             totalLiabilities = liabilities,
-
             upcomingBills = recurring.take(3),
             goals = goals.take(2),
             projectedBalance30Days = (assets - liabilities) + recurringNet,
@@ -108,7 +128,9 @@ class DashboardViewModel @Inject constructor(
             monthlySavingsRate = savingsRate,
             globalBudget = budgets.find { it.categoryId == null }?.amount ?: 0L,
             globalSpent = monthlyExpense,
-            currentCurrency = localeManager.getCurrency()
+            currentCurrency = localeManager.getCurrency(),
+            last30DaysTrend = trend.reversed(),
+            daysLeftInMonth = daysLeft
         )
     }.stateIn(
         scope = viewModelScope,

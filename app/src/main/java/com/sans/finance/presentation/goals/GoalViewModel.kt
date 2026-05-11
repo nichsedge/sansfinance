@@ -8,17 +8,29 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
 import javax.inject.Inject
+
+data class GoalState(
+    val goals: List<GoalEntity> = emptyList(),
+    val currentCurrency: String = "USD"
+)
 
 @HiltViewModel
 class GoalViewModel @Inject constructor(
-    private val goalRepository: GoalRepository
+    private val goalRepository: GoalRepository,
+    private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
-    val goals = goalRepository.getAllGoals().stateIn(
+    val state = combine(
+        goalRepository.getAllGoals(),
+        kotlinx.coroutines.flow.flowOf(localeManager.getCurrency()) // This is a bit hacky since it doesn't observe changes, but matches other viewmodels
+    ) { goals, currency ->
+        GoalState(goals, currency)
+    }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
+        initialValue = GoalState()
     )
 
     fun addGoal(name: String, targetAmount: Long, deadline: Long? = null) {
@@ -27,6 +39,7 @@ class GoalViewModel @Inject constructor(
                 GoalEntity(
                     name = name,
                     targetAmount = targetAmount,
+                    currency = localeManager.getCurrency(),
                     deadline = deadline
                 )
             )

@@ -12,7 +12,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class RecurringExpensesViewModel @Inject constructor(
-    private val expenseRepository: ExpenseRepository
+    private val expenseRepository: ExpenseRepository,
+    private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
     private val _expenses = expenseRepository.getAllExpenses()
@@ -25,7 +26,8 @@ class RecurringExpensesViewModel @Inject constructor(
         RecurringExpensesState(
             recurringExpenses = recurringExpenses,
             categories = categories,
-            totalMonthlyRecurring = recurringExpenses.sumOf { it.amount }
+            totalMonthlyRecurring = recurringExpenses.sumOf { it.amount },
+            currentCurrency = localeManager.getCurrency()
         )
     }.stateIn(
         scope = viewModelScope,
@@ -37,5 +39,6 @@ class RecurringExpensesViewModel @Inject constructor(
 data class RecurringExpensesState(
     val recurringExpenses: List<Expense> = emptyList(),
     val categories: List<com.sans.finance.data.local.entity.CategoryEntity> = emptyList(),
-    val totalMonthlyRecurring: Long = 0L
+    val totalMonthlyRecurring: Long = 0L,
+    val currentCurrency: String = "USD"
 )

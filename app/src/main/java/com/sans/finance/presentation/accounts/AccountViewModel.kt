@@ -18,6 +18,7 @@ data class AccountScreenState(
     val liabilities: Long = 0L,
     val total: Long = 0L,
     val accountsByType: Map<String, List<AccountEntity>> = emptyMap(),
+    val currentCurrency: String = "USD",
     val isLoading: Boolean = true
 )
 
@@ -25,7 +26,8 @@ data class AccountScreenState(
 @HiltViewModel
 class AccountViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
-    private val expenseRepository: ExpenseRepository
+    private val expenseRepository: ExpenseRepository,
+    private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
     val state = combine(
@@ -45,6 +47,7 @@ class AccountViewModel @Inject constructor(
             liabilities = liabilities,
             total = total,
             accountsByType = grouped,
+            currentCurrency = localeManager.getCurrency(),
             isLoading = false
         )
     }.stateIn(

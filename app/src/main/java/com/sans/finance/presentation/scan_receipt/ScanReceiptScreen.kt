@@ -279,7 +279,8 @@ fun ScanReceiptScreen(
                                     it
                                 )
                             )
-                        }
+                        },
+                        currencyCode = state.currentCurrency
                     )
                 }
 
@@ -568,7 +569,8 @@ fun SuggestedTransactionCard(
     onEditTitle: (String) -> Unit,
     onEditAmount: (Long) -> Unit,
     onEditCategory: (String) -> Unit,
-    onEditDate: (String?) -> Unit
+    onEditDate: (String?) -> Unit,
+    currencyCode: String = "USD"
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -631,7 +633,7 @@ fun SuggestedTransactionCard(
                 }
             }
             Text(
-                text = CurrencyFormatter.formatAmount(transaction.amount),
+                text = CurrencyFormatter.formatAmount(transaction.amount, currencyCode),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,

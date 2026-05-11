@@ -85,7 +85,7 @@ fun RecurringExpensesScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        CurrencyFormatter.formatAmount(state.totalMonthlyRecurring),
+                        CurrencyFormatter.formatAmount(state.totalMonthlyRecurring, state.currentCurrency),
                         style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black),
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )

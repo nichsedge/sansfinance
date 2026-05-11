@@ -11,12 +11,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.QueryStats
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
@@ -102,13 +110,32 @@ fun AccountScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val headerIcon = when (type) {
+                                "Cash" -> Icons.Default.AccountBalanceWallet
+                                "Bank" -> Icons.Default.AccountBalance
+                                "Credit Card" -> Icons.Default.CreditCard
+                                "Loan" -> Icons.Default.Payments
+                                "Investment" -> Icons.AutoMirrored.Filled.ShowChart
+                                else -> Icons.Default.AccountBalance
+                            }
+                            Icon(
+                                imageVector = headerIcon,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                type,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         Text(
-                            type,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = CurrencyFormatter.formatAmount(groupTotal),
+                            text = CurrencyFormatter.formatAmount(groupTotal, state.currentCurrency),
                             fontWeight = FontWeight.Bold,
                             color = if (groupTotal < 0) Color(0xFFE57373) else MaterialTheme.colorScheme.primary
                         )
@@ -121,12 +148,33 @@ fun AccountScreen(
                             .fillMaxWidth()
                             .clickable { accountToEdit = account }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(account.name, color = MaterialTheme.colorScheme.onSurface)
+                        val icon = when (account.type) {
+                            "Cash" -> Icons.Default.AccountBalanceWallet
+                            "Bank" -> Icons.Default.AccountBalance
+                            "Credit Card" -> Icons.Default.CreditCard
+                            "Loan" -> Icons.Default.Payments
+                            "Investment" -> Icons.AutoMirrored.Filled.ShowChart
+                            else -> Icons.Default.AccountBalance
+                        }
+                        
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        
                         Text(
-                            text = CurrencyFormatter.formatAmount(account.balance),
+                            account.name, 
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        
+                        Text(
+                            text = CurrencyFormatter.formatAmount(account.balance, account.currency),
                             color = if (account.type == "Credit Card" || account.type == "Loan") Color(
                                 0xFFE57373
                             ) else MaterialTheme.colorScheme.onSurface
@@ -188,8 +236,23 @@ fun AccountScreen(
                                     "Loan",
                                     "Investment"
                                 ).forEach { accountType ->
+                                    val accountIcon = when (accountType) {
+                                        "Cash" -> Icons.Default.AccountBalanceWallet
+                                        "Bank" -> Icons.Default.AccountBalance
+                                        "Credit Card" -> Icons.Default.CreditCard
+                                        "Loan" -> Icons.Default.Payments
+                                        "Investment" -> Icons.AutoMirrored.Filled.ShowChart
+                                        else -> Icons.Default.AccountBalance
+                                    }
                                     DropdownMenuItem(
                                         text = { Text(accountType) },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = accountIcon,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        },
                                         onClick = {
                                             type = accountType
                                             expanded = false
@@ -217,7 +280,7 @@ fun AccountScreen(
                         if (isEditing) {
                             viewModel.updateAccount(accountToEdit!!, name, type, parsedBalance)
                         } else {
-                            viewModel.addAccount(name, type, parsedBalance)
+                            viewModel.addAccount(name, type, parsedBalance, state.currentCurrency)
                         }
                         showAddDialog = false
                         accountToEdit = null
@@ -263,37 +326,61 @@ fun AccountHeaderStats(state: AccountScreenState) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(
+                    Icons.AutoMirrored.Filled.TrendingUp,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    "Assets",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
             Text(
-                "Assets",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-            Text(
-                CurrencyFormatter.formatAmount(state.assets),
+                CurrencyFormatter.formatAmount(state.assets, state.currentCurrency),
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
             )
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(
+                    Icons.AutoMirrored.Filled.TrendingDown,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = Color(0xFFE57373)
+                )
+                Text(
+                    "Liabilities",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
             Text(
-                "Liabilities",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-            Text(
-                CurrencyFormatter.formatAmount(state.liabilities),
+                CurrencyFormatter.formatAmount(state.liabilities, state.currentCurrency),
                 color = Color(0xFFE57373),
                 fontWeight = FontWeight.Bold
             )
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(
+                    Icons.Default.AccountBalance,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = if (state.total < 0) Color(0xFFE57373) else MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    "Total",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
             Text(
-                "Total",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-            Text(
-                CurrencyFormatter.formatAmount(state.total),
+                CurrencyFormatter.formatAmount(state.total, state.currentCurrency),
                 color = if (state.total < 0) Color(0xFFE57373) else MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
             )

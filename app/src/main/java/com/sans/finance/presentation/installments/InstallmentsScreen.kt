@@ -95,14 +95,14 @@ fun InstallmentsScreen(
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                     )
                     Text(
-                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(state.totalMonthlyDue),
+                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(state.totalMonthlyDue, state.currentCurrency),
                         style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Black),
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         stringResource(R.string.total_remaining_balance) + ": " + com.sans.finance.core.util.CurrencyFormatter.formatAmount(
-                            state.totalRemainingBalance
+                            state.totalRemainingBalance, state.currentCurrency
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
@@ -136,7 +136,7 @@ fun InstallmentsScreen(
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(currentList) { item ->
-                        ExpandableInstallment(item, viewModel)
+                        ExpandableInstallment(item, state.currentCurrency, viewModel)
                     }
                 }
             }
@@ -147,6 +147,7 @@ fun InstallmentsScreen(
 @Composable
 fun ExpandableInstallment(
     installment: Installment,
+    currencyCode: String,
     viewModel: InstallmentsViewModel
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -186,7 +187,7 @@ fun ExpandableInstallment(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(installment.monthlyPayment) + "/mo",
+                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(installment.monthlyPayment, currencyCode) + "/mo",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.ExtraBold

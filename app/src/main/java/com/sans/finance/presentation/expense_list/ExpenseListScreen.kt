@@ -177,14 +177,15 @@ fun ExpenseListScreen(
                 income = state.totalFilteredIncome,
                 expense = state.totalFilteredExpense,
                 total = state.totalFilteredAmount,
-                currencyCode = state.currentCurrency
+                currencyCode = state.currentCurrency,
+                avgMonthlyExpense = state.avgMonthlyExpense,
             )
 
 
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 80.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 state.groupedExpenses.forEach { (date, expenses) ->
@@ -264,6 +265,19 @@ fun ExpenseListScreen(
                                             ),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = Color(0xFFE53935)
+                                        )
+                                    }
+                                    val dayTransfer = expenses.filter { it.type == "TRANSFER" }
+                                        .sumOf { it.amount }
+                                    if (dayTransfer > 0) {
+                                        Spacer(modifier = Modifier.size(8.dp))
+                                        Text(
+                                            text = com.sans.finance.core.util.CurrencyFormatter.formatAmount(
+                                                dayTransfer,
+                                                state.currentCurrency
+                                            ),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = Color(0xFF2196F3)
                                         )
                                     }
                                 }
@@ -595,7 +609,8 @@ fun SummaryCard(
     income: Long,
     expense: Long,
     total: Long,
-    currencyCode: String
+    currencyCode: String,
+    avgMonthlyExpense: Long = 0L
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -644,6 +659,26 @@ fun SummaryCard(
                         com.sans.finance.core.util.CurrencyFormatter.formatAmount(total, currencyCode),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+            if (avgMonthlyExpense > 0) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp, start = 16.dp, end = 16.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Avg. Monthly Expense: ",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = com.sans.finance.core.util.CurrencyFormatter.formatAmount(avgMonthlyExpense, currencyCode),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -729,8 +764,12 @@ fun ExpenseItem(
                 Column(horizontalAlignment = Alignment.End) {
                     val displayAmount =
                         if (expense.isInstallment && expense.monthlyPayment > 0) expense.monthlyPayment else expense.amount
-                    val amountColor =
-                        if (expense.type == "INCOME") Color(0xFF4CAF50) else Color(0xFFE53935)
+                    val amountColor = when (expense.type) {
+                        "INCOME" -> Color(0xFF4CAF50)
+                        "EXPENSE" -> Color(0xFFE53935)
+                        "TRANSFER" -> Color(0xFF2196F3)
+                        else -> Color(0xFFE53935)
+                    }
                     Text(
                         com.sans.finance.core.util.CurrencyFormatter.formatAmount(displayAmount, expense.currency),
                         style = MaterialTheme.typography.bodyMedium,

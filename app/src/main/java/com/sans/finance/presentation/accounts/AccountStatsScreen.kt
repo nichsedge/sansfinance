@@ -121,7 +121,7 @@ fun AccountStatsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        CurrencyFormatter.formatAmount(state.totalBalance),
+                        CurrencyFormatter.formatAmount(state.totalBalance, state.currentCurrency),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Black
                     )
@@ -133,7 +133,7 @@ fun AccountStatsScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        TotalStatsLineChart(history = state.netWorthHistory)
+                        TotalStatsLineChart(history = state.netWorthHistory, currencyCode = state.currentCurrency)
                     }
                 }
 
@@ -143,7 +143,7 @@ fun AccountStatsScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        TotalStatsBarChart(history = state.incomeExpenseHistory)
+                        TotalStatsBarChart(history = state.incomeExpenseHistory, currencyCode = state.currentCurrency)
                     }
                 }
             }
@@ -152,7 +152,7 @@ fun AccountStatsScreen(
 }
 
 @Composable
-fun TotalStatsLineChart(history: List<Pair<String, Long>>) {
+fun TotalStatsLineChart(history: List<Pair<String, Long>>, currencyCode: String) {
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(
         fontSize = 9.sp,
@@ -192,7 +192,7 @@ fun TotalStatsLineChart(history: List<Pair<String, Long>>) {
                     strokeWidth = 1f
                 )
 
-                val label = CurrencyFormatter.formatAmountCompact(value)
+                val label = CurrencyFormatter.formatAmountCompact(value, currencyCode)
                 val layout = textMeasurer.measure(label, style = labelStyle)
                 drawText(
                     textLayoutResult = layout,
@@ -245,7 +245,7 @@ fun TotalStatsLineChart(history: List<Pair<String, Long>>) {
 
                     // Value Label
                     val valueLayout = textMeasurer.measure(
-                        CurrencyFormatter.formatAmountCompact(data.second),
+                        CurrencyFormatter.formatAmountCompact(data.second, currencyCode),
                         style = labelStyle
                     )
                     drawText(
@@ -262,7 +262,7 @@ fun TotalStatsLineChart(history: List<Pair<String, Long>>) {
 }
 
 @Composable
-fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>) {
+fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>, currencyCode: String) {
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(
         fontSize = 9.sp,
@@ -302,7 +302,7 @@ fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>) {
                     strokeWidth = 1f
                 )
 
-                val label = CurrencyFormatter.formatAmountCompact(value)
+                val label = CurrencyFormatter.formatAmountCompact(value, currencyCode)
                 val layout = textMeasurer.measure(label, style = labelStyle)
                 drawText(
                     textLayoutResult = layout,
@@ -353,7 +353,7 @@ fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>) {
 
                     // Income Value Label (Blue)
                     val incomeLayout = textMeasurer.measure(
-                        CurrencyFormatter.formatAmountCompact(data.second),
+                        CurrencyFormatter.formatAmountCompact(data.second, currencyCode),
                         style = labelStyle.copy(color = incomeColor)
                     )
                     drawText(
@@ -366,7 +366,7 @@ fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>) {
 
                     // Expense Value Label (Red)
                     val expenseLayout = textMeasurer.measure(
-                        CurrencyFormatter.formatAmountCompact(data.third),
+                        CurrencyFormatter.formatAmountCompact(data.third, currencyCode),
                         style = labelStyle.copy(color = expenseColor)
                     )
                     drawText(

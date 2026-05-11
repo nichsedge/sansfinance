@@ -22,10 +22,18 @@ data class BudgetStatus(
     val categoryName: String? = null
 )
 
+data class BudgetState(
+    val budgetStatuses: List<BudgetStatus> = emptyList(),
+    val categories: List<com.sans.finance.data.local.entity.CategoryEntity> = emptyList(),
+    val currentCurrency: String = "USD",
+    val isLoading: Boolean = true
+)
+
 @HiltViewModel
 class BudgetViewModel @Inject constructor(
     private val budgetRepository: BudgetRepository,
-    private val expenseRepository: ExpenseRepository
+    private val expenseRepository: ExpenseRepository,
+    private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
     private val _categories = expenseRepository.getAllCategories().stateIn(
@@ -33,9 +41,8 @@ class BudgetViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
-    val categories = _categories
 
-    val budgetStatuses = combine(
+    val state = combine(
         budgetRepository.getAllBudgets(),
         _categories
     ) { budgets, categories ->
@@ -50,7 +57,7 @@ class BudgetViewModel @Inject constructor(
         calendar.add(Calendar.MONTH, 1)
         val end = calendar.timeInMillis
 
-        budgets.map { budget ->
+        val statuses = budgets.map { budget ->
             val spentFlow = if (budget.categoryId != null) {
                 expenseRepository.getSpendingByCategoryBetween(start, end)
                     .map { categorySpents ->
@@ -70,10 +77,17 @@ class BudgetViewModel @Inject constructor(
                 categoryName = categories.find { it.id == budget.categoryId }?.name
             )
         }
+
+        BudgetState(
+            budgetStatuses = statuses,
+            categories = categories,
+            currentCurrency = localeManager.getCurrency(),
+            isLoading = false
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
+        initialValue = BudgetState()
     )
 
     fun addBudget(amount: Long, categoryId: Long? = null, accountId: Long? = null) {

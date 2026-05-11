@@ -22,13 +22,15 @@ data class AccountStatsState(
     val totalBalance: Long = 0L,
     val netWorthHistory: List<Pair<String, Long>> = emptyList(),
     val incomeExpenseHistory: List<Triple<String, Long, Long>> = emptyList(),
+    val currentCurrency: String = "USD",
     val isLoading: Boolean = true
 )
 
 @HiltViewModel
 class AccountStatsViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
-    private val expenseRepository: ExpenseRepository
+    private val expenseRepository: ExpenseRepository,
+    private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
     private val _selectedDate = MutableStateFlow(CalendarUtils.getInstance())
@@ -120,6 +122,7 @@ class AccountStatsViewModel @Inject constructor(
             totalBalance = simulatedNetWorthAtSelectedDate,
             netWorthHistory = netWorthHistory,
             incomeExpenseHistory = incomeExpenseHistory,
+            currentCurrency = localeManager.getCurrency(),
             isLoading = false
         )
     }.stateIn(

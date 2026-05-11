@@ -97,6 +97,7 @@ fun DashboardScreen(
                     GlobalBudgetCard(
                         budget = state.globalBudget,
                         spent = state.globalSpent,
+                        daysLeft = state.daysLeftInMonth,
                         currencyCode = state.currentCurrency
                     )
                 }
@@ -105,6 +106,7 @@ fun DashboardScreen(
             item {
                 ForecastCard(
                     projectedBalance = state.projectedBalance30Days,
+                    trendData = state.last30DaysTrend,
                     currencyCode = state.currentCurrency
                 )
             }
@@ -233,7 +235,7 @@ fun BreakdownItem(label: String, amount: Long, color: Color, currencyCode: Strin
 }
 
 @Composable
-fun ForecastCard(projectedBalance: Long, currencyCode: String) {
+fun ForecastCard(projectedBalance: Long, trendData: List<Long>, currencyCode: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -248,7 +250,7 @@ fun ForecastCard(projectedBalance: Long, currencyCode: String) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     "30-Day Forecast",
                     style = MaterialTheme.typography.labelMedium,
@@ -261,11 +263,13 @@ fun ForecastCard(projectedBalance: Long, currencyCode: String) {
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
-            Icon(
-                Icons.AutoMirrored.Filled.TrendingUp,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(32.dp)
+            com.sans.finance.presentation.components.Sparkline(
+                data = trendData,
+                modifier = Modifier
+                    .width(100.dp)
+                    .height(40.dp),
+                color = MaterialTheme.colorScheme.secondary,
+                lineWidth = 3f
             )
         }
     }
@@ -441,19 +445,33 @@ fun MonthlyCashFlowCard(income: Long, expense: Long, savingsRate: Float, currenc
                 }
             }
             if (income > 0) {
-                Text(
-                    "Savings Rate: ${(savingsRate * 100).toInt()}%",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                LinearProgressIndicator(
-                    progress = { animatedSavings },
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    color = if (savingsRate >= 0.2f) Color(0xFF4CAF50) else if (savingsRate >= 0.1f) Color(
-                        0xFFFFC107
-                    ) else Color(0xFFF44336),
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Monthly Savings Rate",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            if (savingsRate >= 0.2f) "Excellent progress!" 
+                            else if (savingsRate >= 0.1f) "Good, keep it up."
+                            else "Try to save more.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    com.sans.finance.presentation.components.CircularGauge(
+                        progress = savingsRate,
+                        size = 64.dp,
+                        color = if (savingsRate >= 0.2f) Color(0xFF4CAF50) 
+                                else if (savingsRate >= 0.1f) Color(0xFFFFC107) 
+                                else Color(0xFFF44336)
+                    )
+                }
             }
         }
     }
@@ -566,7 +584,7 @@ fun DashboardBillItem(bill: com.sans.finance.domain.model.Expense, currencyCode:
 }
 
 @Composable
-fun GlobalBudgetCard(budget: Long, spent: Long, currencyCode: String) {
+fun GlobalBudgetCard(budget: Long, spent: Long, daysLeft: Int, currencyCode: String) {
     val progress = (spent.toFloat() / budget.toFloat()).coerceIn(0f, 1f)
     val isOverBudget = spent > budget
     val remaining = (budget - spent).coerceAtLeast(0L)
@@ -597,12 +615,19 @@ fun GlobalBudgetCard(budget: Long, spent: Long, currencyCode: String) {
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Text(
-                    if (isOverBudget) "OVER BUDGET" else "ON TRACK",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isOverBudget) MaterialTheme.colorScheme.error else Color(0xFF4CAF50),
-                    fontWeight = FontWeight.Black
-                )
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        if (isOverBudget) "OVER BUDGET" else "ON TRACK",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isOverBudget) MaterialTheme.colorScheme.error else Color(0xFF4CAF50),
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        "$daysLeft days left",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))

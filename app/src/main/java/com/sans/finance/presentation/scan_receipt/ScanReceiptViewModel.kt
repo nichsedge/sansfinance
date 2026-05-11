@@ -69,7 +69,8 @@ data class ScanReceiptState(
     val availableCategories: List<String> = emptyList(),
     val aiThinking: String? = null,
     val errorMessage: String? = null,
-    val noResultsFound: Boolean = false
+    val noResultsFound: Boolean = false,
+    val currentCurrency: String = "USD"
 )
 
 sealed class ScanReceiptEvent {
@@ -91,6 +92,7 @@ sealed class ScanReceiptEvent {
 class ScanReceiptViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val aiPreferences: AiPreferences,
+    private val localeManager: com.sans.finance.data.util.LocaleManager,
     @param:ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -104,6 +106,7 @@ class ScanReceiptViewModel @Inject constructor(
     private var inferenceJob: Job? = null
 
     init {
+        _state.update { it.copy(currentCurrency = localeManager.getCurrency()) }
         viewModelScope.launch {
             aiPreferences.getAiModelPath()
                 .distinctUntilChanged()
@@ -234,7 +237,8 @@ class ScanReceiptViewModel @Inject constructor(
                                 amount = tx.amount,
                                 categoryId = catId,
                                 description = null,
-                                tags = listOf("Scanned Receipt")
+                                tags = listOf("Scanned Receipt"),
+                                currency = localeManager.getCurrency()
                             )
                         )
                     }
