@@ -26,7 +26,8 @@ data class BudgetState(
     val budgetStatuses: List<BudgetStatus> = emptyList(),
     val categories: List<com.sans.finance.data.local.entity.CategoryEntity> = emptyList(),
     val currentCurrency: String = "USD",
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val isPrivacyModeEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -44,8 +45,9 @@ class BudgetViewModel @Inject constructor(
 
     val state = combine(
         budgetRepository.getAllBudgets(),
-        _categories
-    ) { budgets, categories ->
+        _categories,
+        localeManager.privacyMode
+    ) { budgets, categories, privacyMode ->
         val calendar = CalendarUtils.getInstance()
         calendar.set(Calendar.DAY_OF_MONTH, 1)
         calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -82,7 +84,8 @@ class BudgetViewModel @Inject constructor(
             budgetStatuses = statuses,
             categories = categories,
             currentCurrency = localeManager.getCurrency(),
-            isLoading = false
+            isLoading = false,
+            isPrivacyModeEnabled = privacyMode
         )
     }.stateIn(
         scope = viewModelScope,
@@ -106,5 +109,9 @@ class BudgetViewModel @Inject constructor(
         viewModelScope.launch {
             budgetRepository.deleteBudget(budget)
         }
+    }
+
+    fun togglePrivacyMode() {
+        localeManager.setPrivacyModeEnabled(!localeManager.isPrivacyModeEnabled())
     }
 }

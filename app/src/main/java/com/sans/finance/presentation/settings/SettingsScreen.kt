@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -130,7 +132,9 @@ fun SettingsScreen(
             currentBudget = currentBudget,
             isLoading = isLoading,
             enabledCurrencies = viewModel.enabledCurrencies.value,
-            onToggleEnabledCurrency = { viewModel.toggleEnabledCurrency(it) }
+            onToggleEnabledCurrency = { viewModel.toggleEnabledCurrency(it) },
+            isPrivacyModeEnabled = viewModel.isPrivacyModeEnabled.value,
+            onTogglePrivacyMode = { viewModel.togglePrivacyMode() }
         )
     }
 
@@ -154,7 +158,9 @@ fun SettingsContent(
     currentBudget: Long,
     isLoading: Boolean,
     enabledCurrencies: List<String>,
-    onToggleEnabledCurrency: (String) -> Unit
+    onToggleEnabledCurrency: (String) -> Unit,
+    isPrivacyModeEnabled: Boolean,
+    onTogglePrivacyMode: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -214,6 +220,44 @@ fun SettingsContent(
                         Icons.Default.ChevronRight,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+            }
+        }
+
+        // Security Section
+        item {
+            SettingsSectionTitle("Security")
+            Card(
+                onClick = onTogglePrivacyMode,
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (isPrivacyModeEnabled) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            contentDescription = null
+                        )
+                        Spacer(Modifier.width(16.dp))
+                        Column {
+                            Text("Privacy Mode", style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                if (isPrivacyModeEnabled) "Hiding sensitive balances" else "Showing all balances",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    androidx.compose.material3.Switch(
+                        checked = isPrivacyModeEnabled,
+                        onCheckedChange = { onTogglePrivacyMode() }
                     )
                 }
             }

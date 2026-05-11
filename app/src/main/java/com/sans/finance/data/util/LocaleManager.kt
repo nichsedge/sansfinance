@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.asStateFlow
 
 @Singleton
 class LocaleManager @Inject constructor(
@@ -52,5 +53,17 @@ class LocaleManager @Inject constructor(
 
     fun setEnabledCurrencies(currencies: List<String>) {
         prefs.edit().putString("enabled_currencies", currencies.joinToString(",")).apply()
+    }
+
+    private val _privacyMode = kotlinx.coroutines.flow.MutableStateFlow(isPrivacyModeEnabled())
+    val privacyMode: kotlinx.coroutines.flow.StateFlow<Boolean> = _privacyMode.asStateFlow()
+
+    fun isPrivacyModeEnabled(): Boolean {
+        return prefs.getBoolean("privacy_mode", false)
+    }
+
+    fun setPrivacyModeEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("privacy_mode", enabled).apply()
+        _privacyMode.value = enabled
     }
 }

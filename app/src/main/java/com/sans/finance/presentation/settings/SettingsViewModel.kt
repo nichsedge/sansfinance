@@ -42,6 +42,9 @@ class SettingsViewModel @Inject constructor(
     private val _enabledCurrencies = mutableStateOf(localeManager.getEnabledCurrencies())
     val enabledCurrencies: State<List<String>> = _enabledCurrencies
 
+    private val _isPrivacyModeEnabled = mutableStateOf(localeManager.isPrivacyModeEnabled())
+    val isPrivacyModeEnabled: State<Boolean> = _isPrivacyModeEnabled
+
     fun updateLanguage(lang: String) {
         _currentLanguage.value = lang
     }
@@ -65,6 +68,12 @@ class SettingsViewModel @Inject constructor(
         }
         localeManager.setEnabledCurrencies(currentList)
         _enabledCurrencies.value = currentList
+    }
+
+    fun togglePrivacyMode() {
+        val next = !localeManager.isPrivacyModeEnabled()
+        localeManager.setPrivacyModeEnabled(next)
+        _isPrivacyModeEnabled.value = next
     }
 
     val monthlyBudget = budgetRepository.getAllBudgets().map { budgets ->

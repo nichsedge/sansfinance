@@ -26,6 +26,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -46,6 +47,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.core.util.CurrencyFormatter
+import com.sans.finance.presentation.components.PrivacyText
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,6 +64,14 @@ fun DashboardScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Dashboard", fontWeight = FontWeight.Bold) },
+                actions = {
+                    IconButton(onClick = { viewModel.togglePrivacyMode() }) {
+                        Icon(
+                            imageVector = if (state.isPrivacyModeEnabled) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            contentDescription = if (state.isPrivacyModeEnabled) "Show balances" else "Hide balances"
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
                     scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
@@ -79,7 +91,8 @@ fun DashboardScreen(
                     netWorth = state.netWorth,
                     assets = state.totalAssets,
                     liabilities = state.totalLiabilities,
-                    currencyCode = state.currentCurrency
+                    currencyCode = state.currentCurrency,
+                    isPrivacyModeEnabled = state.isPrivacyModeEnabled
                 )
             }
 
@@ -88,7 +101,8 @@ fun DashboardScreen(
                     income = state.monthlyIncome,
                     expense = state.monthlyExpense,
                     savingsRate = state.monthlySavingsRate,
-                    currencyCode = state.currentCurrency
+                    currencyCode = state.currentCurrency,
+                    isPrivacyModeEnabled = state.isPrivacyModeEnabled
                 )
             }
 
@@ -98,7 +112,8 @@ fun DashboardScreen(
                         budget = state.globalBudget,
                         spent = state.globalSpent,
                         daysLeft = state.daysLeftInMonth,
-                        currencyCode = state.currentCurrency
+                        currencyCode = state.currentCurrency,
+                        isPrivacyModeEnabled = state.isPrivacyModeEnabled
                     )
                 }
             }
@@ -107,7 +122,8 @@ fun DashboardScreen(
                 ForecastCard(
                     projectedBalance = state.projectedBalance30Days,
                     trendData = state.last30DaysTrend,
-                    currencyCode = state.currentCurrency
+                    currencyCode = state.currentCurrency,
+                    isPrivacyModeEnabled = state.isPrivacyModeEnabled
                 )
             }
 
@@ -115,7 +131,8 @@ fun DashboardScreen(
                 item {
                     WealthDistributionCard(
                     distribution = state.wealthDistribution,
-                    currencyCode = state.currentCurrency
+                    currencyCode = state.currentCurrency,
+                    isPrivacyModeEnabled = state.isPrivacyModeEnabled
                 )
                 }
             }
@@ -136,7 +153,7 @@ fun DashboardScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     state.goals.forEach { goal ->
-                        DashboardGoalItem(goal, state.currentCurrency)
+                        DashboardGoalItem(goal, state.currentCurrency, state.isPrivacyModeEnabled)
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
@@ -152,7 +169,7 @@ fun DashboardScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     state.upcomingBills.forEach { bill ->
-                        DashboardBillItem(bill, state.currentCurrency)
+                        DashboardBillItem(bill, state.currentCurrency, state.isPrivacyModeEnabled)
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
@@ -168,7 +185,8 @@ fun NetWorthCard(
     netWorth: Long,
     assets: Long,
     liabilities: Long,
-    currencyCode: String
+    currencyCode: String,
+    isPrivacyModeEnabled: Boolean
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -196,8 +214,10 @@ fun NetWorthCard(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
             )
-            Text(
-                CurrencyFormatter.formatAmount(netWorth, currencyCode),
+            PrivacyText(
+                amount = netWorth,
+                currencyCode = currencyCode,
+                isVisible = !isPrivacyModeEnabled,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -209,24 +229,26 @@ fun NetWorthCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                BreakdownItem("Assets", assets, Color(0xFF4CAF50), currencyCode)
+                BreakdownItem("Assets", assets, Color(0xFF4CAF50), currencyCode, isPrivacyModeEnabled)
                 VerticalDivider(modifier = Modifier.height(40.dp))
-                BreakdownItem("Liabilities", liabilities, Color(0xFFF44336), currencyCode)
+                BreakdownItem("Liabilities", liabilities, Color(0xFFF44336), currencyCode, isPrivacyModeEnabled)
             }
         }
     }
 }
 
 @Composable
-fun BreakdownItem(label: String, amount: Long, color: Color, currencyCode: String) {
+fun BreakdownItem(label: String, amount: Long, color: Color, currencyCode: String, isPrivacyModeEnabled: Boolean) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             label.uppercase(),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
         )
-        Text(
-            CurrencyFormatter.formatAmount(amount, currencyCode),
+        PrivacyText(
+            amount = amount,
+            currencyCode = currencyCode,
+            isVisible = !isPrivacyModeEnabled,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold,
             color = color
@@ -235,7 +257,7 @@ fun BreakdownItem(label: String, amount: Long, color: Color, currencyCode: Strin
 }
 
 @Composable
-fun ForecastCard(projectedBalance: Long, trendData: List<Long>, currencyCode: String) {
+fun ForecastCard(projectedBalance: Long, trendData: List<Long>, currencyCode: String, isPrivacyModeEnabled: Boolean) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -256,8 +278,10 @@ fun ForecastCard(projectedBalance: Long, trendData: List<Long>, currencyCode: St
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                 )
-                Text(
-                    CurrencyFormatter.formatAmount(projectedBalance, currencyCode),
+                PrivacyText(
+                    amount = projectedBalance,
+                    currencyCode = currencyCode,
+                    isVisible = !isPrivacyModeEnabled,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -276,7 +300,7 @@ fun ForecastCard(projectedBalance: Long, trendData: List<Long>, currencyCode: St
 }
 
 @Composable
-fun WealthDistributionCard(distribution: Map<String, Long>, currencyCode: String) {
+fun WealthDistributionCard(distribution: Map<String, Long>, currencyCode: String, isPrivacyModeEnabled: Boolean) {
     val total = distribution.values.sumOf { kotlin.math.abs(it) }.coerceAtLeast(1L)
 
     Card(
@@ -342,8 +366,10 @@ fun WealthDistributionCard(distribution: Map<String, Long>, currencyCode: String
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.weight(1f)
                         )
-                        Text(
-                            CurrencyFormatter.formatAmount(entry.value, currencyCode),
+                        PrivacyText(
+                            amount = entry.value,
+                            currencyCode = currencyCode,
+                            isVisible = !isPrivacyModeEnabled,
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -355,7 +381,7 @@ fun WealthDistributionCard(distribution: Map<String, Long>, currencyCode: String
 }
 
 @Composable
-fun MonthlyCashFlowCard(income: Long, expense: Long, savingsRate: Float, currencyCode: String) {
+fun MonthlyCashFlowCard(income: Long, expense: Long, savingsRate: Float, currencyCode: String, isPrivacyModeEnabled: Boolean) {
     val animatedSavings by animateFloatAsState(
         targetValue = savingsRate,
         animationSpec = tween(800),
@@ -405,8 +431,10 @@ fun MonthlyCashFlowCard(income: Long, expense: Long, savingsRate: Float, currenc
                             color = Color(0xFF4CAF50)
                         )
                     }
-                    Text(
-                        CurrencyFormatter.formatAmount(income, currencyCode),
+                    PrivacyText(
+                        amount = income,
+                        currencyCode = currencyCode,
+                        isVisible = !isPrivacyModeEnabled,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF4CAF50)
@@ -436,8 +464,10 @@ fun MonthlyCashFlowCard(income: Long, expense: Long, savingsRate: Float, currenc
                             color = Color(0xFFF44336)
                         )
                     }
-                    Text(
-                        CurrencyFormatter.formatAmount(expense, currencyCode),
+                    PrivacyText(
+                        amount = expense,
+                        currencyCode = currencyCode,
+                        isVisible = !isPrivacyModeEnabled,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFF44336)
@@ -518,7 +548,7 @@ fun AiAdvisorCard(suggestions: List<String>) {
 }
 
 @Composable
-fun DashboardGoalItem(goal: com.sans.finance.data.local.entity.GoalEntity, currencyCode: String) {
+fun DashboardGoalItem(goal: com.sans.finance.data.local.entity.GoalEntity, currencyCode: String, isPrivacyModeEnabled: Boolean) {
     val progress = (goal.currentAmount.toFloat() / goal.targetAmount.toFloat()).coerceIn(0f, 1f)
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -534,7 +564,11 @@ fun DashboardGoalItem(goal: com.sans.finance.data.local.entity.GoalEntity, curre
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
+                if (!isPrivacyModeEnabled) {
+                    Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    Text("•••%", style = MaterialTheme.typography.bodySmall)
+                }
             }
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
@@ -549,7 +583,7 @@ fun DashboardGoalItem(goal: com.sans.finance.data.local.entity.GoalEntity, curre
 }
 
 @Composable
-fun DashboardBillItem(bill: com.sans.finance.domain.model.Expense, currencyCode: String) {
+fun DashboardBillItem(bill: com.sans.finance.domain.model.Expense, currencyCode: String, isPrivacyModeEnabled: Boolean) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -573,8 +607,10 @@ fun DashboardBillItem(bill: com.sans.finance.domain.model.Expense, currencyCode:
                 )
                 Text("Recurring Payment", style = MaterialTheme.typography.labelSmall)
             }
-            Text(
-                CurrencyFormatter.formatAmount(bill.amount, bill.currency),
+            PrivacyText(
+                amount = bill.amount,
+                currencyCode = bill.currency,
+                isVisible = !isPrivacyModeEnabled,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.error
@@ -584,7 +620,7 @@ fun DashboardBillItem(bill: com.sans.finance.domain.model.Expense, currencyCode:
 }
 
 @Composable
-fun GlobalBudgetCard(budget: Long, spent: Long, daysLeft: Int, currencyCode: String) {
+fun GlobalBudgetCard(budget: Long, spent: Long, daysLeft: Int, currencyCode: String, isPrivacyModeEnabled: Boolean) {
     val progress = (spent.toFloat() / budget.toFloat()).coerceIn(0f, 1f)
     val isOverBudget = spent > budget
     val remaining = (budget - spent).coerceAtLeast(0L)
@@ -654,8 +690,10 @@ fun GlobalBudgetCard(budget: Long, spent: Long, daysLeft: Int, currencyCode: Str
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(
-                        CurrencyFormatter.formatAmount(spent, currencyCode),
+                    PrivacyText(
+                        amount = spent,
+                        currencyCode = currencyCode,
+                        isVisible = !isPrivacyModeEnabled,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -666,8 +704,10 @@ fun GlobalBudgetCard(budget: Long, spent: Long, daysLeft: Int, currencyCode: Str
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(
-                        CurrencyFormatter.formatAmount(if (isOverBudget) spent - budget else remaining, currencyCode),
+                    PrivacyText(
+                        amount = if (isOverBudget) spent - budget else remaining,
+                        currencyCode = currencyCode,
+                        isVisible = !isPrivacyModeEnabled,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary

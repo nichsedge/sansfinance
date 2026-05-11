@@ -16,6 +16,8 @@ import com.sans.finance.data.local.entity.GoalEntity
 import com.sans.finance.data.local.entity.InstallmentEntity
 import com.sans.finance.data.local.entity.InstallmentItemEntity
 import com.sans.finance.data.local.entity.NetWorthSnapshotEntity
+import com.sans.finance.data.local.entity.PortfolioHoldingEntity
+import com.sans.finance.data.local.entity.PortfolioSnapshotHeaderEntity
 import com.sans.finance.data.local.entity.TagEntity
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -31,9 +33,11 @@ import kotlinx.coroutines.launch
         AccountEntity::class,
         NetWorthSnapshotEntity::class,
         GoalEntity::class,
-        BudgetEntity::class
+        BudgetEntity::class,
+        PortfolioSnapshotHeaderEntity::class,
+        PortfolioHoldingEntity::class
     ],
-    version = 15,
+    version = 17,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -44,6 +48,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val accountDao: com.sans.finance.data.local.dao.AccountDao
     abstract val goalDao: com.sans.finance.data.local.dao.GoalDao
     abstract val budgetDao: com.sans.finance.data.local.dao.BudgetDao
+    abstract val portfolioDao: com.sans.finance.data.local.dao.PortfolioDao
 
     fun checkpoint() {
         val cursor =
@@ -292,6 +297,86 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_14_15 = object : androidx.room.migration.Migration(14, 15) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE expenses ADD COLUMN currency TEXT NOT NULL DEFAULT 'USD'")
+            }
+        }
+
+        val MIGRATION_15_16 = object : androidx.room.migration.Migration(15, 16) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `portfolio_snapshots` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `snapshot_date` INTEGER NOT NULL,
+                        `source` TEXT NOT NULL,
+                        `category` TEXT NOT NULL,
+                        `asset` TEXT NOT NULL,
+                        `currency` TEXT NOT NULL,
+                        `amount` REAL NOT NULL,
+                        `price` REAL,
+                        `value_idr` REAL NOT NULL,
+                        `value_usd` REAL NOT NULL,
+                        `account` TEXT NOT NULL,
+                        `details` TEXT,
+                        `created_at` INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_portfolio_snapshots_snapshot_date` ON `portfolio_snapshots` (`snapshot_date`)")
+            }
+        }
+
+        val MIGRATION_16_17 = object : androidx.room.migration.Migration(16, 17) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // 1. Create new header table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `portfolio_snapshot_headers` (
+                        `snapshotDate` INTEGER PRIMARY KEY NOT NULL,
+                        `exchangeRateUsd` REAL NOT NULL,
+                        `totalValueIdr` REAL NOT NULL,
+                        `totalValueUsd` REAL NOT NULL,
+                        `createdAt` INTEGER NOT NULL
+                    )
+                """.trimIndent())
+
+                // 2. Create new holdings table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `portfolio_holdings` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `snapshot_date` INTEGER NOT NULL,
+                        `source` TEXT NOT NULL,
+                        `category` TEXT NOT NULL,
+                        `asset` TEXT NOT NULL,
+                        `currency` TEXT NOT NULL,
+                        `amount` REAL NOT NULL,
+                        `price` REAL,
+                        `value_idr` REAL NOT NULL,
+                        `account` TEXT NOT NULL,
+                        `details` TEXT,
+                        FOREIGN KEY(`snapshot_date`) REFERENCES `portfolio_snapshot_headers`(`snapshotDate`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_portfolio_holdings_snapshot_date` ON `portfolio_holdings` (`snapshot_date`)")
+
+                // 3. Migrate data from old flat table
+                // Estimate exchange rate from existing data (value_idr / value_usd)
+                db.execSQL("""
+                    INSERT OR IGNORE INTO portfolio_snapshot_headers (snapshotDate, exchangeRateUsd, totalValueIdr, totalValueUsd, createdAt)
+                    SELECT 
+                        snapshot_date, 
+                        AVG(value_idr / NULLIF(value_usd, 0)), 
+                        SUM(value_idr), 
+                        SUM(value_usd),
+                        MIN(created_at)
+                    FROM portfolio_snapshots
+                    GROUP BY snapshot_date
+                """.trimIndent())
+
+                db.execSQL("""
+                    INSERT INTO portfolio_holdings (snapshot_date, source, category, asset, currency, amount, price, value_idr, account, details)
+                    SELECT snapshot_date, source, category, asset, currency, amount, price, value_idr, account, details
+                    FROM portfolio_snapshots
+                """.trimIndent())
+
+                // 4. Drop old table
+                db.execSQL("DROP TABLE portfolio_snapshots")
             }
         }
     }

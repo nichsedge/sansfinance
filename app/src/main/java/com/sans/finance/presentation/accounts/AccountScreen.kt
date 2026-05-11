@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
@@ -54,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.core.util.CurrencyFormatter
+import com.sans.finance.presentation.components.PrivacyText
 import com.sans.finance.data.local.entity.AccountEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,6 +78,12 @@ fun AccountScreen(
                         Icon(
                             imageVector = Icons.Default.QueryStats,
                             contentDescription = "Stats"
+                        )
+                    }
+                    IconButton(onClick = { viewModel.togglePrivacyMode() }) {
+                        Icon(
+                            imageVector = if (state.isPrivacyModeEnabled) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (state.isPrivacyModeEnabled) "Show balances" else "Hide balances"
                         )
                     }
                 }
@@ -134,8 +143,10 @@ fun AccountScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Text(
-                            text = CurrencyFormatter.formatAmount(groupTotal, state.currentCurrency),
+                        PrivacyText(
+                            amount = groupTotal,
+                            currencyCode = state.currentCurrency,
+                            isVisible = !state.isPrivacyModeEnabled,
                             fontWeight = FontWeight.Bold,
                             color = if (groupTotal < 0) Color(0xFFE57373) else MaterialTheme.colorScheme.primary
                         )
@@ -173,8 +184,10 @@ fun AccountScreen(
                             modifier = Modifier.weight(1f)
                         )
                         
-                        Text(
-                            text = CurrencyFormatter.formatAmount(account.balance, account.currency),
+                        PrivacyText(
+                            amount = account.balance,
+                            currencyCode = account.currency,
+                            isVisible = !state.isPrivacyModeEnabled,
                             color = if (account.type == "Credit Card" || account.type == "Loan") Color(
                                 0xFFE57373
                             ) else MaterialTheme.colorScheme.onSurface
@@ -339,8 +352,10 @@ fun AccountHeaderStats(state: AccountScreenState) {
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
             }
-            Text(
-                CurrencyFormatter.formatAmount(state.assets, state.currentCurrency),
+            PrivacyText(
+                amount = state.assets,
+                currencyCode = state.currentCurrency,
+                isVisible = !state.isPrivacyModeEnabled,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
             )
@@ -359,8 +374,10 @@ fun AccountHeaderStats(state: AccountScreenState) {
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
             }
-            Text(
-                CurrencyFormatter.formatAmount(state.liabilities, state.currentCurrency),
+            PrivacyText(
+                amount = state.liabilities,
+                currencyCode = state.currentCurrency,
+                isVisible = !state.isPrivacyModeEnabled,
                 color = Color(0xFFE57373),
                 fontWeight = FontWeight.Bold
             )
@@ -379,8 +396,10 @@ fun AccountHeaderStats(state: AccountScreenState) {
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
             }
-            Text(
-                CurrencyFormatter.formatAmount(state.total, state.currentCurrency),
+            PrivacyText(
+                amount = state.total,
+                currencyCode = state.currentCurrency,
+                isVisible = !state.isPrivacyModeEnabled,
                 color = if (state.total < 0) Color(0xFFE57373) else MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
             )

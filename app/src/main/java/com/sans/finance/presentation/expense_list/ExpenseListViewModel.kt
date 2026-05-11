@@ -54,7 +54,8 @@ data class ExpenseListState(
     val dailySpending: Map<Long, Long> = emptyMap(),
     val monthlyBudget: Long = 0L,
     val currentCurrency: String = "USD",
-    val avgMonthlyExpense: Long = 0L
+    val avgMonthlyExpense: Long = 0L,
+    val isPrivacyModeEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -84,6 +85,15 @@ class ExpenseListViewModel @Inject constructor(
         loadAccounts()
         loadTags()
         loadBudget()
+        observePrivacyMode()
+    }
+
+    private fun observePrivacyMode() {
+        localeManager.privacyMode
+            .onEach { enabled ->
+                _state.update { it.copy(isPrivacyModeEnabled = enabled) }
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun loadBudget() {
@@ -383,5 +393,9 @@ class ExpenseListViewModel @Inject constructor(
         viewModelScope.launch {
             repository.deleteExpense(expense)
         }
+    }
+
+    fun togglePrivacyMode() {
+        localeManager.setPrivacyModeEnabled(!localeManager.isPrivacyModeEnabled())
     }
 }

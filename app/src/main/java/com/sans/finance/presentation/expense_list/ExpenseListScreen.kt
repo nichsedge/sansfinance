@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -73,6 +75,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.R
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.presentation.components.CategoryIcon
+import com.sans.finance.presentation.components.PrivacyText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,6 +115,12 @@ fun ExpenseListScreen(
                         Icon(
                             Icons.AutoMirrored.Filled.ReceiptLong,
                             contentDescription = "Active Installments"
+                        )
+                    }
+                    IconButton(onClick = { viewModel.togglePrivacyMode() }) {
+                        Icon(
+                            imageVector = if (state.isPrivacyModeEnabled) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            contentDescription = if (state.isPrivacyModeEnabled) "Show balances" else "Hide balances"
                         )
                     }
                 }
@@ -179,6 +188,7 @@ fun ExpenseListScreen(
                 total = state.totalFilteredAmount,
                 currencyCode = state.currentCurrency,
                 avgMonthlyExpense = state.avgMonthlyExpense,
+                isPrivacyModeEnabled = state.isPrivacyModeEnabled
             )
 
 
@@ -247,22 +257,20 @@ fun ExpenseListScreen(
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     if (dayIncome > 0) {
-                                        Text(
-                                            text = com.sans.finance.core.util.CurrencyFormatter.formatAmount(
-                                                dayIncome,
-                                                state.currentCurrency
-                                            ),
+                                        PrivacyText(
+                                            amount = dayIncome,
+                                            currencyCode = state.currentCurrency,
+                                            isVisible = !state.isPrivacyModeEnabled,
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = Color(0xFF4CAF50)
                                         )
                                         Spacer(modifier = Modifier.size(8.dp))
                                     }
                                     if (dayExpense > 0) {
-                                        Text(
-                                            text = com.sans.finance.core.util.CurrencyFormatter.formatAmount(
-                                                dayExpense,
-                                                state.currentCurrency
-                                            ),
+                                        PrivacyText(
+                                            amount = dayExpense,
+                                            currencyCode = state.currentCurrency,
+                                            isVisible = !state.isPrivacyModeEnabled,
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = Color(0xFFE53935)
                                         )
@@ -271,11 +279,10 @@ fun ExpenseListScreen(
                                         .sumOf { it.amount }
                                     if (dayTransfer > 0) {
                                         Spacer(modifier = Modifier.size(8.dp))
-                                        Text(
-                                            text = com.sans.finance.core.util.CurrencyFormatter.formatAmount(
-                                                dayTransfer,
-                                                state.currentCurrency
-                                            ),
+                                        PrivacyText(
+                                            amount = dayTransfer,
+                                            currencyCode = state.currentCurrency,
+                                            isVisible = !state.isPrivacyModeEnabled,
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = Color(0xFF2196F3)
                                         )
@@ -299,7 +306,8 @@ fun ExpenseListScreen(
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 expenseToDelete = expense
                                 showDeleteDialog = true
-                            }
+                            },
+                            isPrivacyModeEnabled = state.isPrivacyModeEnabled
                         )
                     }
                 }
@@ -610,7 +618,8 @@ fun SummaryCard(
     expense: Long,
     total: Long,
     currencyCode: String,
-    avgMonthlyExpense: Long = 0L
+    avgMonthlyExpense: Long = 0L,
+    isPrivacyModeEnabled: Boolean = false
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -631,8 +640,10 @@ fun SummaryCard(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(
-                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(income, currencyCode),
+                    PrivacyText(
+                        amount = income,
+                        currencyCode = currencyCode,
+                        isVisible = !isPrivacyModeEnabled,
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color(0xFF4CAF50)
                     )
@@ -643,8 +654,10 @@ fun SummaryCard(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(
-                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(expense, currencyCode),
+                    PrivacyText(
+                        amount = expense,
+                        currencyCode = currencyCode,
+                        isVisible = !isPrivacyModeEnabled,
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color(0xFFE53935)
                     )
@@ -655,8 +668,10 @@ fun SummaryCard(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(
-                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(total, currencyCode),
+                    PrivacyText(
+                        amount = total,
+                        currencyCode = currencyCode,
+                        isVisible = !isPrivacyModeEnabled,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -674,8 +689,10 @@ fun SummaryCard(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(
-                        text = com.sans.finance.core.util.CurrencyFormatter.formatAmount(avgMonthlyExpense, currencyCode),
+                    PrivacyText(
+                        amount = avgMonthlyExpense,
+                        currencyCode = currencyCode,
+                        isVisible = !isPrivacyModeEnabled,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -698,6 +715,7 @@ fun ExpenseItem(
     category: com.sans.finance.data.local.entity.CategoryEntity?,
     account: com.sans.finance.data.local.entity.AccountEntity? = null,
     showNextDueDate: Boolean = false,
+    isPrivacyModeEnabled: Boolean = false,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -770,8 +788,10 @@ fun ExpenseItem(
                         "TRANSFER" -> Color(0xFF2196F3)
                         else -> Color(0xFFE53935)
                     }
-                    Text(
-                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(displayAmount, expense.currency),
+                    PrivacyText(
+                        amount = displayAmount,
+                        currencyCode = expense.currency,
+                        isVisible = !isPrivacyModeEnabled,
                         style = MaterialTheme.typography.bodyMedium,
                         color = amountColor
                     )
