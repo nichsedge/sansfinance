@@ -14,7 +14,8 @@ interface ExpenseRepository {
         until: Long = Long.MAX_VALUE,
         minAmount: Long? = null,
         maxAmount: Long? = null,
-        tags: List<String> = emptyList()
+        tags: List<String> = emptyList(),
+        types: List<String> = emptyList()
     ): Flow<List<Expense>>
 
     suspend fun getExpenseById(id: Long): Expense?

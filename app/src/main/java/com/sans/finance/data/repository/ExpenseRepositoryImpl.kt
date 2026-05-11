@@ -53,7 +53,8 @@ class ExpenseRepositoryImpl(
         until: Long,
         minAmount: Long?,
         maxAmount: Long?,
-        tags: List<String>
+        tags: List<String>,
+        types: List<String>
     ): Flow<List<Expense>> {
         val searchQuery = if (query.isNullOrBlank()) null else query
 
@@ -66,7 +67,9 @@ class ExpenseRepositoryImpl(
             minAmount,
             maxAmount,
             tags,
-            tags.size
+            tags.size,
+            types,
+            types.size
         )
 
         // For filtered installments, we use a simpler filter logic in Kotlin for now
@@ -84,7 +87,8 @@ class ExpenseRepositoryImpl(
                     val matchesMinAmount = minAmount == null || payment.amount >= minAmount
                     val matchesMaxAmount = maxAmount == null || payment.amount <= maxAmount
                     val matchesTags = tags.isEmpty() || payment.tags.any { tags.contains(it) }
-                    matchesQuery && matchesCategory && matchesMinAmount && matchesMaxAmount && matchesTags
+                    val matchesType = types.isEmpty() || types.contains(payment.type)
+                    matchesQuery && matchesCategory && matchesMinAmount && matchesMaxAmount && matchesTags && matchesType
                 }
 
             (expenses + installmentPayments).sortedByDescending { it.date }
@@ -110,6 +114,7 @@ class ExpenseRepositoryImpl(
                     categoryId = parentExpense?.expense?.categoryId ?: 1L,
                     isInstallmentPayment = true,
                     description = parentExpense?.expense?.description,
+                    currency = parentExpense?.expense?.currency ?: "USD",
                     tags = parentExpense?.tags?.map { it.name } ?: emptyList()
                 )
             }
@@ -377,6 +382,7 @@ class ExpenseRepositoryImpl(
             categoryId = categoryId,
             isInstallmentPayment = true,
             description = description,
+            currency = currency,
             tags = tagsList?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
                 ?: emptyList()
         )

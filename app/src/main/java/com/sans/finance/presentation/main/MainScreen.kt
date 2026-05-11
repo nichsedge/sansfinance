@@ -55,6 +55,16 @@ fun MainScreen(
                 DashboardScreen(
                     onTransactionClick = { id ->
                         rootNavController.navigate(Screen.EditExpense(id))
+                    },
+                    onPortfolioClick = {
+                        navController.navigate(Screen.Portfolio) {
+                            popUpTo(Screen.Dashboard) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onRecurringExpensesClick = {
+                        rootNavController.navigate(Screen.RecurringExpenses)
                     }
                 )
             }
@@ -69,6 +79,9 @@ fun MainScreen(
                     onStatsClick = {
                         rootNavController.navigate(Screen.TransactionStats)
                     },
+                    onRecurringExpensesClick = {
+                        rootNavController.navigate(Screen.RecurringExpenses)
+                    },
                     onExpenseClick = { id ->
                         rootNavController.navigate(Screen.EditExpense(id))
                     }
@@ -82,11 +95,18 @@ fun MainScreen(
                 )
             }
             composable<Screen.Portfolio> {
-                PortfolioScreen()
+                PortfolioScreen(
+                    onDashboardClick = {
+                        navController.navigate(Screen.Dashboard) {
+                            popUpTo(Screen.Dashboard) { inclusive = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
             }
             composable<Screen.Settings> {
                 SettingsScreen(
-                    onBack = { /* Handled by bottom nav */ },
                     onLanguageToggle = onLanguageToggle,
                     onNavigateToGoals = {
                         rootNavController.navigate(Screen.Goals)
@@ -99,6 +119,9 @@ fun MainScreen(
                     },
                     onNavigateToTags = {
                         rootNavController.navigate(Screen.TagSettings)
+                    },
+                    onNavigateToRecurringExpenses = {
+                        rootNavController.navigate(Screen.RecurringExpenses)
                     }
                 )
             }
@@ -117,13 +140,15 @@ fun BottomNavigationBar(navController: NavHostController) {
     ) {
         val items = listOf(
             Triple(Screen.Dashboard, "Home", Icons.Default.Dashboard),
-            Triple(Screen.ExpenseList, "Trans.", Icons.Default.History),
-            Triple(Screen.Portfolio, "Assets", Icons.Default.PieChart),
+            Triple(Screen.ExpenseList, "Transactions", Icons.Default.History),
             Triple(Screen.Accounts, "Accounts", Icons.Default.AccountBalanceWallet),
             Triple(Screen.Settings, "Settings", Icons.Default.Settings)
         )
 
         items.forEach { (screen, label, icon) ->
+            val isSelected = currentDestination?.hierarchy?.any { it.hasRoute(screen::class) } == true ||
+                (screen is Screen.Dashboard && currentDestination?.hierarchy?.any { it.hasRoute(Screen.Portfolio::class) } == true)
+
             NavigationBarItem(
                 icon = { Icon(icon, contentDescription = label) },
                 label = {
@@ -134,7 +159,7 @@ fun BottomNavigationBar(navController: NavHostController) {
                     )
                 },
                 alwaysShowLabel = true,
-                selected = currentDestination?.hierarchy?.any { it.hasRoute(screen::class) } == true,
+                selected = isSelected,
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.tertiary,
                     selectedTextColor = MaterialTheme.colorScheme.tertiary,

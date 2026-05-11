@@ -29,9 +29,11 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PortfolioScreen(
+    onDashboardClick: () -> Unit,
     viewModel: PortfolioViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    var showViewMenu by remember { mutableStateOf(false) }
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.US) }
     
     val launcher = rememberLauncherForActivityResult(
@@ -58,7 +60,36 @@ fun PortfolioScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Portfolio", fontWeight = FontWeight.Bold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { showViewMenu = true }
+                        ) {
+                            Text("Portfolio", fontWeight = FontWeight.Bold)
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Switch View",
+                                modifier = Modifier.size(20.dp)
+                            )
+
+                            DropdownMenu(
+                                expanded = showViewMenu,
+                                onDismissRequest = { showViewMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Dashboard") },
+                                    onClick = {
+                                        showViewMenu = false
+                                        onDashboardClick()
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Dashboard, contentDescription = null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Portfolio") },
+                                    onClick = { showViewMenu = false },
+                                    leadingIcon = { Icon(Icons.Default.PieChart, contentDescription = null) }
+                                )
+                            }
+                        }
                         if (state.snapshotDates.isNotEmpty()) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = { viewModel.togglePrivacyMode() }) {

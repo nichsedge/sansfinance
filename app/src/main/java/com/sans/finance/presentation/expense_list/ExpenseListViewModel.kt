@@ -55,7 +55,8 @@ data class ExpenseListState(
     val monthlyBudget: Long = 0L,
     val currentCurrency: String = "USD",
     val avgMonthlyExpense: Long = 0L,
-    val isPrivacyModeEnabled: Boolean = false
+    val isPrivacyModeEnabled: Boolean = false,
+    val selectedTypes: Set<String> = emptySet()
 )
 
 @HiltViewModel
@@ -141,7 +142,8 @@ class ExpenseListViewModel @Inject constructor(
                     it.selectedCategoryIds,
                     it.minAmount,
                     it.maxAmount,
-                    it.selectedTags
+                    it.selectedTags,
+                    it.selectedTypes
                 )
             }
             .distinctUntilChanged()
@@ -154,7 +156,8 @@ class ExpenseListViewModel @Inject constructor(
                     until = s.endDate,
                     minAmount = s.minAmount,
                     maxAmount = s.maxAmount,
-                    tags = s.selectedTags.toList()
+                    tags = s.selectedTags.toList(),
+                    types = s.selectedTypes.toList()
                 )
 
                 val dailyFlow = repository.getDailySpendingBetween(s.startDate, s.endDate)
@@ -238,8 +241,20 @@ class ExpenseListViewModel @Inject constructor(
                 selectedTags = emptySet(),
                 startDate = start,
                 endDate = end,
-                activeDateFilter = DateRangeFilter.THIS_MONTH
+                activeDateFilter = DateRangeFilter.THIS_MONTH,
+                selectedTypes = emptySet()
             )
+        }
+    }
+
+    fun toggleTypeFilter(type: String) {
+        _state.update { currentState ->
+            val newSelectedTypes = if (currentState.selectedTypes.contains(type)) {
+                currentState.selectedTypes - type
+            } else {
+                currentState.selectedTypes + type
+            }
+            currentState.copy(selectedTypes = newSelectedTypes)
         }
     }
 

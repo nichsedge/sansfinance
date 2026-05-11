@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -84,6 +85,7 @@ fun ExpenseListScreen(
 
     onInstallmentsClick: () -> Unit,
     onStatsClick: () -> Unit,
+    onRecurringExpensesClick: () -> Unit,
     onExpenseClick: (Long) -> Unit,
     viewModel: ExpenseListViewModel = hiltViewModel()
 ) {
@@ -106,7 +108,7 @@ fun ExpenseListScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.transactions), fontWeight = FontWeight.Bold) },
                 actions = {
                     IconButton(onClick = onStatsClick) {
                         Icon(Icons.Default.QueryStats, contentDescription = "Transaction Statistics")
@@ -115,6 +117,12 @@ fun ExpenseListScreen(
                         Icon(
                             Icons.AutoMirrored.Filled.ReceiptLong,
                             contentDescription = "Active Installments"
+                        )
+                    }
+                    IconButton(onClick = onRecurringExpensesClick) {
+                        Icon(
+                            Icons.Default.Sync,
+                            contentDescription = stringResource(R.string.recurring_expenses)
                         )
                     }
                     IconButton(onClick = { viewModel.togglePrivacyMode() }) {
@@ -127,12 +135,7 @@ fun ExpenseListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddTransactionClick,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = MaterialTheme.shapes.medium
-            ) {
+            FloatingActionButton(onClick = onAddTransactionClick) {
                 Icon(Icons.Default.Add, contentDescription = "Add Transaction")
             }
         }
@@ -158,7 +161,8 @@ fun ExpenseListScreen(
                             val isFiltered = state.selectedCategoryIds.isNotEmpty() ||
                                     state.minAmount != null ||
                                     state.maxAmount != null ||
-                                    state.selectedTags.isNotEmpty()
+                                    state.selectedTags.isNotEmpty() ||
+                                    state.selectedTypes.isNotEmpty()
                             Icon(
                                 Icons.Default.Tune,
                                 contentDescription = "Filters",
@@ -353,6 +357,7 @@ fun ExpenseListScreen(
             onCategoryToggle = { viewModel.toggleCategoryFilter(it) },
             onAmountFilterChanged = { min, max -> viewModel.updateAmountFilter(min, max) },
             onTagToggle = { viewModel.toggleTagFilter(it) },
+            onTypeToggle = { viewModel.toggleTypeFilter(it) },
             onDateRangeSelected = { start, end -> viewModel.updateCustomDateRange(start, end) },
             onClearFilters = {
                 viewModel.clearFilters()
@@ -370,6 +375,7 @@ fun AdvancedFilterSheet(
     onCategoryToggle: (Long) -> Unit,
     onAmountFilterChanged: (Long?, Long?) -> Unit,
     onTagToggle: (String) -> Unit,
+    onTypeToggle: (String) -> Unit,
     onDateRangeSelected: (Long, Long) -> Unit,
     onClearFilters: () -> Unit
 ) {
@@ -463,6 +469,40 @@ fun AdvancedFilterSheet(
                     modifier = Modifier.padding(start = 8.dp)
                 ) {
                     Text("Select")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                "Transaction Type",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val types = listOf("EXPENSE", "INCOME", "TRANSFER")
+                types.forEach { type ->
+                    FilterChip(
+                        selected = state.selectedTypes.contains(type),
+                        onClick = { onTypeToggle(type) },
+                        label = {
+                            Text(
+                                when (type) {
+                                    "EXPENSE" -> "Expense"
+                                    "INCOME" -> "Income"
+                                    "TRANSFER" -> "Transfer"
+                                    else -> type
+                                }
+                            )
+                        }
+                    )
                 }
             }
 
@@ -770,13 +810,32 @@ fun ExpenseItem(
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
-                    Text(
-                        account?.name ?: "Unknown",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            account?.name ?: "Unknown",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                        if (expense.isRecurring && expense.recurrenceInterval != null) {
+                            Text(
+                                " • ${expense.recurrenceInterval}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    if (showNextDueDate && expense.nextDueDate != null) {
+                        val dateStr = com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter()
+                            .format(java.util.Date(expense.nextDueDate))
+                        Text(
+                            "Next: $dateStr",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 Column(horizontalAlignment = Alignment.End) {

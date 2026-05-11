@@ -133,7 +133,8 @@ class TransactionStatsViewModel @Inject constructor(
                 expenseRepository.getFilteredExpenses(
                     categoryIds = listOf(currentState.selectedCategory.categoryId),
                     since = since,
-                    until = until
+                    until = until,
+                    types = listOf(type)
                 ),
                 expenseRepository.getMonthlyBreakdownByCategory(
                     currentState.selectedCategory.categoryId,

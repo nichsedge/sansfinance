@@ -40,6 +40,7 @@ interface ExpenseDao {
         AND (:minAmount IS NULL OR e.final_price >= :minAmount)
         AND (:maxAmount IS NULL OR e.final_price <= :maxAmount)
         AND (:tagCount = 0 OR t.name IN (:tags))
+        AND (:typeCount = 0 OR e.type IN (:types))
         ORDER BY e.date DESC
     """
     )
@@ -52,7 +53,9 @@ interface ExpenseDao {
         minAmount: Long?,
         maxAmount: Long?,
         tags: List<String>,
-        tagCount: Int
+        tagCount: Int,
+        types: List<String>,
+        typeCount: Int
     ): Flow<List<com.sans.finance.data.local.entity.ExpenseWithTags>>
 
     @Transaction

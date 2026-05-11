@@ -10,7 +10,8 @@ data class InstallmentPaymentRow(
     @ColumnInfo(name = "category_id") val categoryId: Long,
     @ColumnInfo(name = "description") val description: String?,
     @ColumnInfo(name = "expense_id") val expenseId: Long,
-    @ColumnInfo(name = "tags_list") val tagsList: String? = null
+    @ColumnInfo(name = "tags_list") val tagsList: String? = null,
+    @ColumnInfo(name = "currency") val currency: String = "USD"
 )
 
 
