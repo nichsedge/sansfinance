@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +22,7 @@ import com.sans.finance.data.local.entity.GoalEntity
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GoalScreen(
+    onBack: () -> Unit,
     viewModel: GoalViewModel = hiltViewModel()
 ) {
     val goals by viewModel.goals.collectAsState()
@@ -30,7 +32,12 @@ fun GoalScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Savings Goals", fontWeight = FontWeight.Bold) }
+                title = { Text("Savings Goals", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
             )
         },
         floatingActionButton = {

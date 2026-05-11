@@ -5,10 +5,8 @@ import androidx.room.Room
 import com.sans.finance.data.local.AppDatabase
 import com.sans.finance.data.local.dao.ExpenseDao
 import com.sans.finance.data.preferences.AiPreferencesImpl
-import com.sans.finance.data.preferences.BudgetPreferencesImpl
 import com.sans.finance.data.repository.ExpenseRepositoryImpl
 import com.sans.finance.domain.preferences.AiPreferences
-import com.sans.finance.domain.preferences.BudgetPreferences
 import com.sans.finance.domain.repository.ExpenseRepository
 import dagger.Module
 import dagger.Provides
@@ -121,10 +119,6 @@ object AppModule {
     @Singleton
     fun provideLocaleManager(app: Application): com.sans.finance.data.util.LocaleManager =
         com.sans.finance.data.util.LocaleManager(app)
-
-    @Provides
-    @Singleton
-    fun provideBudgetPreferences(app: Application): BudgetPreferences = BudgetPreferencesImpl(app)
 
     @Provides
     @Singleton

@@ -25,6 +25,7 @@ import com.sans.finance.presentation.goals.GoalScreen
 import com.sans.finance.presentation.settings.SettingsScreen
 import com.sans.finance.presentation.navigation.Screen
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.ui.unit.dp
 
 @Composable
 fun MainScreen(
@@ -74,13 +75,13 @@ fun MainScreen(
                     }
                 )
             }
-            composable<Screen.Goals> {
-                GoalScreen()
-            }
             composable<Screen.Settings> {
                 SettingsScreen(
                     onBack = { /* Handled by bottom nav */ },
                     onLanguageToggle = onLanguageToggle,
+                    onNavigateToGoals = {
+                        rootNavController.navigate(Screen.Goals)
+                    },
                     onNavigateToBudgets = {
                         rootNavController.navigate(Screen.Budgets)
                     },
@@ -101,12 +102,14 @@ fun BottomNavigationBar(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    NavigationBar {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
+        tonalElevation = 8.dp
+    ) {
         val items = listOf(
             Triple(Screen.Dashboard, "Home", Icons.Default.Dashboard),
             Triple(Screen.ExpenseList, "Trans.", Icons.Default.History),
             Triple(Screen.Accounts, "Accounts", Icons.Default.AccountBalanceWallet),
-            Triple(Screen.Goals, "Goals", Icons.Default.Flag),
             Triple(Screen.Settings, "Settings", Icons.Default.Settings)
         )
 
@@ -120,7 +123,7 @@ fun BottomNavigationBar(navController: NavHostController) {
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 },
-                alwaysShowLabel = false,
+                alwaysShowLabel = true,
                 selected = currentDestination?.hierarchy?.any { it.hasRoute(screen::class) } == true,
                 onClick = {
                     navController.navigate(screen) {
