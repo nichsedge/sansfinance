@@ -26,7 +26,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.core.util.CurrencyFormatter
-import com.sans.finance.presentation.expense_list.ExpenseItem
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,7 +39,11 @@ fun DashboardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Dashboard", fontWeight = FontWeight.Bold) }
+                title = { Text("Dashboard", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                )
             )
         }
     ) { paddingValues ->
@@ -64,6 +68,15 @@ fun DashboardScreen(
                     expense = state.monthlyExpense,
                     savingsRate = state.monthlySavingsRate
                 )
+            }
+
+            if (state.globalBudget > 0L) {
+                item {
+                    GlobalBudgetCard(
+                        budget = state.globalBudget,
+                        spent = state.globalSpent
+                    )
+                }
             }
 
             item {
@@ -114,23 +127,7 @@ fun DashboardScreen(
                 }
             }
 
-            item {
-                Text(
-                    "RECENT TRANS.",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.secondary,
-                    letterSpacing = 1.5.sp
-                )
-            }
 
-            items(state.recentTransactions) { transaction ->
-                ExpenseItem(
-                    expense = transaction,
-                    category = null, // In a real app we'd fetch categories, but keeping it simple for now
-                    onClick = { onTransactionClick(transaction.id) },
-                    onLongClick = {}
-                )
-            }
         }
     }
 }
@@ -154,8 +151,8 @@ fun NetWorthCard(
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         )
                     )
                 )
@@ -247,7 +244,10 @@ fun WealthDistributionCard(distribution: Map<String, Long>) {
     
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -309,7 +309,10 @@ fun MonthlyCashFlowCard(income: Long, expense: Long, savingsRate: Float) {
     )
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
@@ -453,6 +456,76 @@ fun DashboardBillItem(bill: com.sans.finance.domain.model.Expense) {
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.error
             )
+        }
+    }
+}
+
+@Composable
+fun GlobalBudgetCard(budget: Long, spent: Long) {
+    val progress = (spent.toFloat() / budget.toFloat()).coerceIn(0f, 1f)
+    val isOverBudget = spent > budget
+    val remaining = (budget - spent).coerceAtLeast(0L)
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = if (isOverBudget) 
+                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)
+                else MaterialTheme.colorScheme.surface
+        ),
+        border = if (isOverBudget) 
+            androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+            else null
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Global Budget",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    if (isOverBudget) "OVER BUDGET" else "ON TRACK",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isOverBudget) MaterialTheme.colorScheme.error else Color(0xFF4CAF50),
+                    fontWeight = FontWeight.Black
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth().height(8.dp).clip(MaterialTheme.shapes.small),
+                color = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("Spent", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(CurrencyFormatter.formatAmount(spent), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(if (isOverBudget) "Overspent" else "Remaining", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        CurrencyFormatter.formatAmount(if (isOverBudget) spent - budget else remaining),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
     }
 }

@@ -14,6 +14,7 @@ import com.sans.finance.presentation.add_expense.AddExpenseScreen
 import com.sans.finance.presentation.expense_list.ExpenseListScreen
 import com.sans.finance.presentation.navigation.Screen
 import com.sans.finance.presentation.main.MainScreen
+import com.sans.finance.presentation.goals.GoalScreen
 
 import com.sans.finance.presentation.settings.SettingsScreen
 import com.sans.finance.ui.theme.SansFinanceTheme
@@ -108,6 +109,7 @@ fun AppNavigation(onLanguageToggle: () -> Unit) {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onLanguageToggle = onLanguageToggle,
+                onNavigateToGoals = { navController.navigate(Screen.Goals) },
                 onNavigateToBudgets = { navController.navigate(Screen.Budgets) },
                 onNavigateToCategories = { navController.navigate(Screen.CategorySettings) },
                 onNavigateToTags = { navController.navigate(Screen.TagSettings) }
@@ -124,7 +126,10 @@ fun AppNavigation(onLanguageToggle: () -> Unit) {
             )
         }
         composable<Screen.Budgets> {
-            com.sans.finance.presentation.budgeting.BudgetScreen()
+            com.sans.finance.presentation.budgeting.BudgetScreen(onBack = { navController.popBackStack() })
+        }
+        composable<Screen.Goals> {
+            GoalScreen(onBack = { navController.popBackStack() })
         }
     }
 }

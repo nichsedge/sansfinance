@@ -7,7 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.sans.finance.data.local.AppDatabase
 import com.sans.finance.data.local.entity.CategoryEntity
 import com.sans.finance.data.local.entity.TagEntity
-import com.sans.finance.domain.preferences.BudgetPreferences
+import com.sans.finance.domain.repository.BudgetRepository
+import com.sans.finance.data.local.entity.BudgetEntity
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 
 import com.sans.finance.domain.repository.ExpenseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,7 +25,7 @@ class SettingsViewModel @Inject constructor(
     private val repository: ExpenseRepository,
     private val localeManager: com.sans.finance.data.util.LocaleManager,
     private val db: AppDatabase,
-    private val budgetPreferences: BudgetPreferences
+    private val budgetRepository: BudgetRepository
 ) : ViewModel() {
 
     private val _isLoading = mutableStateOf(false)
@@ -41,7 +44,9 @@ class SettingsViewModel @Inject constructor(
         _currentLanguage.value = lang
     }
 
-    val monthlyBudget = budgetPreferences.getMonthlyBudget().stateIn(
+    val monthlyBudget = budgetRepository.getAllBudgets().map { budgets ->
+        budgets.find { it.categoryId == null }?.amount ?: 0L
+    }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = 0L
@@ -49,7 +54,13 @@ class SettingsViewModel @Inject constructor(
 
     fun updateMonthlyBudget(amount: Long) {
         viewModelScope.launch {
-            budgetPreferences.setMonthlyBudget(amount)
+            val budgets = budgetRepository.getAllBudgets().first()
+            val existingGlobal = budgets.find { it.categoryId == null }
+            if (existingGlobal != null) {
+                budgetRepository.insertBudget(existingGlobal.copy(amount = amount))
+            } else {
+                budgetRepository.insertBudget(BudgetEntity(amount = amount, categoryId = null))
+            }
         }
     }
 

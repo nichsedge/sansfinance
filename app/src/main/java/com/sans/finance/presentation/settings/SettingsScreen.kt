@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -77,6 +78,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 fun SettingsScreen(
     onBack: () -> Unit,
     onLanguageToggle: () -> Unit,
+    onNavigateToGoals: () -> Unit,
     onNavigateToBudgets: () -> Unit,
     onNavigateToCategories: () -> Unit,
     onNavigateToTags: () -> Unit,
@@ -123,6 +125,7 @@ fun SettingsScreen(
             paddingValues = paddingValues,
             listState = listState,
             viewModel = viewModel,
+            onGoals = onNavigateToGoals,
             onBudget = onNavigateToBudgets,
             onNavigateToCategories = onNavigateToCategories,
             onNavigateToTags = onNavigateToTags,
@@ -143,6 +146,7 @@ fun SettingsContent(
     paddingValues: PaddingValues,
     listState: androidx.compose.foundation.lazy.LazyListState,
     viewModel: SettingsViewModel,
+    onGoals: () -> Unit,
     onBudget: () -> Unit,
     onNavigateToCategories: () -> Unit,
     onNavigateToTags: () -> Unit,
@@ -248,6 +252,34 @@ fun SettingsContent(
         item {
             Spacer(Modifier.height(16.dp))
             SettingsSectionTitle("Features")
+            
+            Surface(
+                onClick = onGoals,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 1.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Flag,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Savings Goals")
+                    }
+                }
+            }
+
             Surface(
                 onClick = onBudget,
                 modifier = Modifier

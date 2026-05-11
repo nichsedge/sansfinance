@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.sans.finance.domain.repository.AccountRepository
 import com.sans.finance.domain.repository.ExpenseRepository
 import com.sans.finance.domain.repository.GoalRepository
+import com.sans.finance.domain.repository.BudgetRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -17,7 +18,7 @@ data class DashboardState(
     val netWorth: Long = 0L,
     val totalAssets: Long = 0L,
     val totalLiabilities: Long = 0L,
-    val recentTransactions: List<com.sans.finance.domain.model.Expense> = emptyList(),
+
     val upcomingBills: List<com.sans.finance.domain.model.Expense> = emptyList(),
     val goals: List<com.sans.finance.data.local.entity.GoalEntity> = emptyList(),
     val projectedBalance30Days: Long = 0L,
@@ -27,22 +28,27 @@ data class DashboardState(
     // Monthly cash flow
     val monthlyIncome: Long = 0L,
     val monthlyExpense: Long = 0L,
-    val monthlySavingsRate: Float = 0f
+    val monthlySavingsRate: Float = 0f,
+    // Global budget
+    val globalBudget: Long = 0L,
+    val globalSpent: Long = 0L
 )
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val expenseRepository: ExpenseRepository,
-    private val goalRepository: GoalRepository
+    private val goalRepository: GoalRepository,
+    private val budgetRepository: BudgetRepository
 ) : ViewModel() {
 
     val state = combine(
         accountRepository.getAllAccounts(),
         expenseRepository.getExpensesBetween(0, Long.MAX_VALUE),
         expenseRepository.getRecurringExpenses(),
-        goalRepository.getAllGoals()
-    ) { accounts, transactions, recurring, goals ->
+        goalRepository.getAllGoals(),
+        budgetRepository.getAllBudgets()
+    ) { accounts, transactions, recurring, goals, budgets ->
         val assets = accounts.filter { it.type != "Credit Card" && it.type != "Loan" }.sumOf { it.balance }
         val liabilities = accounts.filter { it.type == "Credit Card" || it.type == "Loan" }.sumOf { it.balance }
         
@@ -82,7 +88,7 @@ class DashboardViewModel @Inject constructor(
             netWorth = assets - liabilities,
             totalAssets = assets,
             totalLiabilities = liabilities,
-            recentTransactions = transactions.take(5),
+
             upcomingBills = recurring.take(3),
             goals = goals.take(2),
             projectedBalance30Days = (assets - liabilities) + recurringNet,
@@ -91,7 +97,9 @@ class DashboardViewModel @Inject constructor(
             isLoading = false,
             monthlyIncome = monthlyIncome,
             monthlyExpense = monthlyExpense,
-            monthlySavingsRate = savingsRate
+            monthlySavingsRate = savingsRate,
+            globalBudget = budgets.find { it.categoryId == null }?.amount ?: 0L,
+            globalSpent = monthlyExpense
         )
     }.stateIn(
         scope = viewModelScope,

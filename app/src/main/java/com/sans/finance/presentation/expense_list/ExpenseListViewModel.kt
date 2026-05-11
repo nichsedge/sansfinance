@@ -3,7 +3,7 @@ package com.sans.finance.presentation.expense_list
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.domain.model.Expense
-import com.sans.finance.domain.preferences.BudgetPreferences
+import com.sans.finance.domain.repository.BudgetRepository
 import com.sans.finance.domain.usecase.GetExpensesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -64,7 +64,7 @@ class ExpenseListViewModel @Inject constructor(
     private val accountRepository: com.sans.finance.domain.repository.AccountRepository,
     private val installmentRepository: com.sans.finance.domain.repository.InstallmentRepository,
     private val getCategoriesUseCase: com.sans.finance.domain.usecase.GetCategoriesUseCase,
-    private val budgetPreferences: BudgetPreferences
+    private val budgetRepository: BudgetRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ExpenseListState())
@@ -85,7 +85,8 @@ class ExpenseListViewModel @Inject constructor(
     }
 
     private fun loadBudget() {
-        budgetPreferences.getMonthlyBudget()
+        budgetRepository.getAllBudgets()
+            .map { budgets -> budgets.find { it.categoryId == null }?.amount ?: 0L }
             .onEach { budget ->
                 _state.update { it.copy(monthlyBudget = budget) }
             }
