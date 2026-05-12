@@ -31,7 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.R
-import com.sans.finance.data.local.entity.TagEntity
+import com.sans.finance.domain.model.Tag
 import com.sans.finance.presentation.settings.SettingsItem
 import com.sans.finance.presentation.settings.TagEditDialog
 
@@ -43,8 +43,8 @@ fun TagSettingsScreen(
 ) {
     val tags by viewModel.tags.collectAsState()
 
-    var tagToEdit by remember { mutableStateOf<TagEntity?>(null) }
-    var tagToDelete by remember { mutableStateOf<TagEntity?>(null) }
+    var tagToEdit by remember { mutableStateOf<Tag?>(null) }
+    var tagToDelete by remember { mutableStateOf<Tag?>(null) }
 
     Scaffold(
         topBar = {

@@ -1,6 +1,6 @@
 package com.sans.finance.domain.repository
 
-import com.sans.finance.domain.model.Expense
+import com.sans.finance.domain.model.*
 import kotlinx.coroutines.flow.Flow
 
 interface ExpenseRepository {
@@ -31,29 +31,29 @@ interface ExpenseRepository {
     fun getAllTags(): Flow<List<String>>
 
     // Category management
-    fun getAllCategories(): Flow<List<com.sans.finance.data.local.entity.CategoryEntity>>
-    fun getCategoriesByType(type: String): Flow<List<com.sans.finance.data.local.entity.CategoryEntity>>
-    suspend fun insertCategory(category: com.sans.finance.data.local.entity.CategoryEntity)
-    suspend fun updateCategory(category: com.sans.finance.data.local.entity.CategoryEntity)
-    suspend fun updateCategories(categories: List<com.sans.finance.data.local.entity.CategoryEntity>)
-    suspend fun deleteCategory(category: com.sans.finance.data.local.entity.CategoryEntity)
+    fun getAllCategories(): Flow<List<Category>>
+    fun getCategoriesByType(type: String): Flow<List<Category>>
+    suspend fun insertCategory(category: Category)
+    suspend fun updateCategory(category: Category)
+    suspend fun updateCategories(categories: List<Category>)
+    suspend fun deleteCategory(category: Category)
 
     // Tag management
-    fun getAllTagEntities(): Flow<List<com.sans.finance.data.local.entity.TagEntity>>
-    suspend fun updateTag(tag: com.sans.finance.data.local.entity.TagEntity)
-    suspend fun updateTags(tags: List<com.sans.finance.data.local.entity.TagEntity>)
-    suspend fun deleteTag(tag: com.sans.finance.data.local.entity.TagEntity)
+    fun getAllTagEntities(): Flow<List<Tag>>
+    suspend fun updateTag(tag: Tag)
+    suspend fun updateTags(tags: List<Tag>)
+    suspend fun deleteTag(tag: Tag)
 
     fun getSpendingByCategoryBetween(
         since: Long,
         until: Long
-    ): Flow<List<com.sans.finance.data.local.entity.CategorySpent>>
+    ): Flow<List<CategorySpent>>
 
     fun getBreakdownByCategoryBetween(
         since: Long,
         until: Long,
         type: String
-    ): Flow<List<com.sans.finance.data.local.entity.CategorySpent>>
+    ): Flow<List<CategorySpent>>
 
     fun getTotalAmountByTypeBetween(
         since: Long,
@@ -64,17 +64,17 @@ interface ExpenseRepository {
     fun getDailySpendingBetween(
         since: Long,
         until: Long
-    ): Flow<List<com.sans.finance.data.local.entity.DaySpent>>
+    ): Flow<List<DaySpent>>
 
     fun getDailyBreakdownByCategoryBetween(
         since: Long,
         until: Long,
         categoryId: Long,
         type: String
-    ): Flow<List<com.sans.finance.data.local.entity.DaySpent>>
+    ): Flow<List<DaySpent>>
 
     fun getMonthlyBreakdownByCategory(
         categoryId: Long,
         type: String
-    ): Flow<List<com.sans.finance.data.local.entity.DaySpent>>
+    ): Flow<List<DaySpent>>
 }

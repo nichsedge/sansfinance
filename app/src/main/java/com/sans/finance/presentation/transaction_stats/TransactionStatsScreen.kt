@@ -77,8 +77,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.R
 import com.sans.finance.core.util.CurrencyFormatter
 import com.sans.finance.core.util.DateFormatterUtils
-import com.sans.finance.data.local.entity.CategorySpent
-import com.sans.finance.data.local.entity.DaySpent
+import com.sans.finance.domain.model.CategorySpent
+import com.sans.finance.domain.model.DaySpent
 import com.sans.finance.domain.model.Expense
 import java.text.SimpleDateFormat
 import java.util.Calendar

@@ -1,12 +1,14 @@
 package com.sans.finance.data.repository
 
-import com.sans.finance.domain.model.Expense
+import com.sans.finance.domain.model.*
 import com.sans.finance.domain.repository.ExpenseRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import androidx.room.withTransaction
 
 class ExpenseRepositoryImpl(
+    private val db: com.sans.finance.data.local.AppDatabase,
     private val dao: com.sans.finance.data.local.dao.ExpenseDao,
     private val tagDao: com.sans.finance.data.local.dao.TagDao,
     private val categoryDao: com.sans.finance.data.local.dao.CategoryDao,
@@ -75,27 +77,25 @@ class ExpenseRepositoryImpl(
             types.size
         )
 
-        // For filtered installments, we use a simpler filter logic in Kotlin for now
-        // since mapping complex filters to SQL join is non-trivial for this dynamic use case
-        val installmentsFlow = installmentDao.getInstallmentPaymentsBetween(since, until)
+        val installmentsFlow = installmentDao.getFilteredInstallmentPayments(
+            since,
+            until,
+            searchQuery,
+            categoryIds,
+            categoryIds.size,
+            accountIds,
+            accountIds.size,
+            minAmount,
+            maxAmount,
+            tags,
+            tags.size,
+            types,
+            types.size
+        )
 
-        return combine(expensesFlow, installmentsFlow) { expenseEntities: List<com.sans.finance.data.local.entity.ExpenseWithTags>, installmentRows: List<com.sans.finance.data.local.entity.InstallmentPaymentRow> ->
+        return combine(expensesFlow, installmentsFlow) { expenseEntities, installmentRows ->
             val expenses = expenseEntities.map { it.toDomain() }
             val installmentPayments = installmentRows.map { it.toDomain() }
-                .filter { payment ->
-                    val matchesQuery =
-                        searchQuery == null || payment.note.contains(searchQuery, ignoreCase = true)
-                    val matchesCategory =
-                        categoryIds.isEmpty() || categoryIds.contains(payment.categoryId)
-                    val matchesAccount =
-                        accountIds.isEmpty() || accountIds.contains(payment.accountId)
-                    val matchesMinAmount = minAmount == null || payment.amount >= minAmount
-                    val matchesMaxAmount = maxAmount == null || payment.amount <= maxAmount
-                    val matchesTags = tags.isEmpty() || payment.tags.any { tags.contains(it) }
-                    val matchesType = types.isEmpty() || types.contains(payment.type)
-                    matchesQuery && matchesCategory && matchesAccount && matchesMinAmount && matchesMaxAmount && matchesTags && matchesType
-                }
-
             (expenses + installmentPayments).sortedByDescending { it.date }
         }
     }
@@ -139,101 +139,103 @@ class ExpenseRepositoryImpl(
         return dao.getDescriptionSuggestions(query)
     }
 
-    override suspend fun insertExpense(expense: Expense): Long {
+    override suspend fun insertExpense(expense: Expense): Long = db.withTransaction {
         val expenseId = dao.insertExpense(expense.toEntity())
         syncTags(expenseId, expense.tags)
-
-        // Update account balance
-        if (expense.type == "TRANSFER") {
-            updateAccountBalance(expense.accountId, -expense.amount)
-            if (expense.toAccountId != null) {
-                updateAccountBalance(expense.toAccountId, expense.amount)
-            }
-        } else {
-            val delta = if (expense.type == "INCOME") expense.amount else -expense.amount
-            updateAccountBalance(expense.accountId, delta)
-        }
-
-        return expenseId
+        adjustAccountBalance(expense, isReverse = false)
+        expenseId
     }
 
-    override suspend fun updateExpense(expense: Expense) {
+    override suspend fun updateExpense(expense: Expense) = db.withTransaction {
         if (expense.id >= INSTALLMENT_PAYMENT_ID_OFFSET) {
-            val itemId = expense.id - INSTALLMENT_PAYMENT_ID_OFFSET
-            val oldItem = installmentDao.getInstallmentItemById(itemId)
+            updateInstallmentPayment(expense)
+            return@withTransaction
+        }
+
+        val oldExpense = dao.getExpenseById(expense.id)?.toDomain()
+
+        if (oldExpense != null) {
+            // Reverse old balance effect
+            adjustAccountBalance(oldExpense, isReverse = true)
             
-            if (oldItem != null) {
-                // If status changed from Pending to Paid, subtract from balance
-                if (oldItem.status == "Pending" && expense.status == "Paid") {
-                    updateAccountBalance(expense.accountId, -expense.amount)
-                    
-                    // Update parent installment remaining balance
-                    val installment = installmentDao.getInstallmentById(oldItem.installmentId)
-                    if (installment != null) {
-                        val newBalance = installment.remainingBalance - expense.amount
-                        val nextDate = installmentDao.getNextDueDateForInstallment(installment.id) ?: installment.nextDueDate
-                        installmentDao.updateInstallment(installment.copy(
+            // Apply new balance effect
+            adjustAccountBalance(expense, isReverse = false)
+            
+            // Update expense and tags
+            dao.updateExpense(expense.toEntity())
+            syncTags(expense.id, expense.tags)
+        }
+    }
+
+    private suspend fun updateInstallmentPayment(expense: Expense) {
+        val itemId = expense.id - INSTALLMENT_PAYMENT_ID_OFFSET
+        val oldItem = installmentDao.getInstallmentItemById(itemId)
+
+        if (oldItem != null) {
+            // If status changed from Pending to Paid, subtract from balance
+            if (oldItem.status == "Pending" && expense.status == "Paid") {
+                updateAccountBalance(expense.accountId, -expense.amount)
+
+                // Update parent installment remaining balance
+                val installment = installmentDao.getInstallmentById(oldItem.installmentId)
+                if (installment != null) {
+                    val newBalance = installment.remainingBalance - expense.amount
+                    val nextDate = installmentDao.getNextDueDateForInstallment(installment.id)
+                        ?: installment.nextDueDate
+                    installmentDao.updateInstallment(
+                        installment.copy(
                             remainingBalance = newBalance,
                             nextDueDate = nextDate,
                             status = if (newBalance <= 0) "Completed" else "Active"
-                        ))
-                    }
-                } else if (oldItem.status == "Paid" && expense.status == "Pending") {
-                    // Reverse balance if changed back to Pending
-                    updateAccountBalance(expense.accountId, expense.amount)
-                    
-                    val installment = installmentDao.getInstallmentById(oldItem.installmentId)
-                    if (installment != null) {
-                        val newBalance = installment.remainingBalance + expense.amount
-                        val nextDate = installmentDao.getNextDueDateForInstallment(installment.id) ?: installment.nextDueDate
-                        installmentDao.updateInstallment(installment.copy(
+                        )
+                    )
+                }
+            } else if (oldItem.status == "Paid" && expense.status == "Pending") {
+                // Reverse balance if changed back to Pending
+                updateAccountBalance(expense.accountId, expense.amount)
+
+                val installment = installmentDao.getInstallmentById(oldItem.installmentId)
+                if (installment != null) {
+                    val newBalance = installment.remainingBalance + expense.amount
+                    val nextDate = installmentDao.getNextDueDateForInstallment(installment.id)
+                        ?: installment.nextDueDate
+                    installmentDao.updateInstallment(
+                        installment.copy(
                             remainingBalance = newBalance,
                             nextDueDate = nextDate,
                             status = "Active"
-                        ))
-                    }
-                } else if (oldItem.status == "Paid" && oldItem.amount != expense.amount) {
-                    // If amount changed and it was already paid, adjust balance
-                    val diff = oldItem.amount - expense.amount
-                    updateAccountBalance(expense.accountId, diff)
+                        )
+                    )
                 }
+            } else if (oldItem.status == "Paid" && oldItem.amount != expense.amount) {
+                // If amount changed and it was already paid, adjust balance
+                val diff = oldItem.amount - expense.amount
+                updateAccountBalance(expense.accountId, diff)
+            }
 
-                // Update the item itself
-                installmentDao.insertInstallmentItem(oldItem.copy(
+            // Update the item itself
+            installmentDao.insertInstallmentItem(
+                oldItem.copy(
                     amount = expense.amount,
                     dueDate = expense.date,
                     status = expense.status
-                ))
-            }
-            return
+                )
+            )
         }
+    }
 
-        val oldExpense = dao.getExpenseById(expense.id)?.expense
-
-        // Update account balance
-        if (oldExpense != null) {
-            // Reverse old amount
-            if (oldExpense.type == "TRANSFER") {
-                updateAccountBalance(oldExpense.accountId, oldExpense.finalPrice)
-                if (oldExpense.toAccountId != null) {
-                    updateAccountBalance(oldExpense.toAccountId, -oldExpense.finalPrice)
-                }
-            } else {
-                val oldDelta =
-                    if (oldExpense.type == "INCOME") -oldExpense.finalPrice else oldExpense.finalPrice
-                updateAccountBalance(oldExpense.accountId, oldDelta)
+    private suspend fun adjustAccountBalance(expense: Expense, isReverse: Boolean) {
+        if (expense.type == "TRANSFER") {
+            val amount = if (isReverse) -expense.amount else expense.amount
+            updateAccountBalance(expense.accountId, -amount)
+            if (expense.toAccountId != null) {
+                updateAccountBalance(expense.toAccountId, amount)
             }
-
-            // Apply new amount
-            if (expense.type == "TRANSFER") {
-                updateAccountBalance(expense.accountId, -expense.amount)
-                if (expense.toAccountId != null) {
-                    updateAccountBalance(expense.toAccountId, expense.amount)
-                }
-            } else {
-                val newDelta = if (expense.type == "INCOME") expense.amount else -expense.amount
-                updateAccountBalance(expense.accountId, newDelta)
-            }
+        } else {
+            val isIncome = expense.type == "INCOME"
+            val multiplier = if (isReverse) -1 else 1
+            val delta = if (isIncome) expense.amount * multiplier else -expense.amount * multiplier
+            updateAccountBalance(expense.accountId, delta)
         }
     }
 
@@ -261,7 +263,7 @@ class ExpenseRepositoryImpl(
         }
     }
 
-    override suspend fun deleteExpense(expense: Expense) {
+    override suspend fun deleteExpense(expense: Expense) = db.withTransaction {
         if (expense.id >= INSTALLMENT_PAYMENT_ID_OFFSET) {
             val itemId = expense.id - INSTALLMENT_PAYMENT_ID_OFFSET
             installmentDao.getInstallmentItemById(itemId)?.let { item ->
@@ -272,7 +274,8 @@ class ExpenseRepositoryImpl(
                 val installment = installmentDao.getInstallmentById(item.installmentId)
                 if (installment != null) {
                     val newRemaining = installment.remainingBalance + item.amount
-                    val nextDue = installmentDao.getNextDueDateForInstallment(item.installmentId) ?: item.dueDate
+                    val nextDue = installmentDao.getNextDueDateForInstallment(item.installmentId)
+                        ?: item.dueDate
                     installmentDao.updateInstallment(
                         installment.copy(
                             remainingBalance = newRemaining,
@@ -287,15 +290,7 @@ class ExpenseRepositoryImpl(
         }
 
         // Update account balance (reverse the transaction)
-        if (expense.type == "TRANSFER") {
-            updateAccountBalance(expense.accountId, expense.amount)
-            if (expense.toAccountId != null) {
-                updateAccountBalance(expense.toAccountId, -expense.amount)
-            }
-        } else {
-            val delta = if (expense.type == "INCOME") -expense.amount else expense.amount
-            updateAccountBalance(expense.accountId, delta)
-        }
+        adjustAccountBalance(expense, isReverse = true)
     }
 
     override fun getTotalSpentSince(since: Long): Flow<Long?> {
@@ -316,59 +311,69 @@ class ExpenseRepositoryImpl(
         }
     }
 
-    override fun getAllCategories(): Flow<List<com.sans.finance.data.local.entity.CategoryEntity>> {
-        return categoryDao.getAllCategories()
+    override fun getAllCategories(): Flow<List<Category>> {
+        return categoryDao.getAllCategories().map { entities ->
+            entities.map { it.toDomain() }
+        }
     }
 
-    override fun getCategoriesByType(type: String): Flow<List<com.sans.finance.data.local.entity.CategoryEntity>> {
-        return categoryDao.getCategoriesByType(type)
+    override fun getCategoriesByType(type: String): Flow<List<Category>> {
+        return categoryDao.getCategoriesByType(type).map { entities ->
+            entities.map { it.toDomain() }
+        }
     }
 
-    override suspend fun insertCategory(category: com.sans.finance.data.local.entity.CategoryEntity) {
-        categoryDao.insertCategory(category)
+    override suspend fun insertCategory(category: Category) {
+        categoryDao.insertCategory(category.toEntity())
     }
 
-    override suspend fun updateCategory(category: com.sans.finance.data.local.entity.CategoryEntity) {
-        categoryDao.updateCategory(category)
+    override suspend fun updateCategory(category: Category) {
+        categoryDao.updateCategory(category.toEntity())
     }
 
-    override suspend fun updateCategories(categories: List<com.sans.finance.data.local.entity.CategoryEntity>) {
-        categoryDao.updateCategories(categories)
+    override suspend fun updateCategories(categories: List<Category>) {
+        categoryDao.updateCategories(categories.map { it.toEntity() })
     }
 
-    override suspend fun deleteCategory(category: com.sans.finance.data.local.entity.CategoryEntity) {
-        categoryDao.deleteCategory(category)
+    override suspend fun deleteCategory(category: Category) {
+        categoryDao.deleteCategory(category.toEntity())
     }
 
-    override fun getAllTagEntities(): Flow<List<com.sans.finance.data.local.entity.TagEntity>> {
-        return tagDao.getAllTags()
+    override fun getAllTagEntities(): Flow<List<Tag>> {
+        return tagDao.getAllTags().map { entities ->
+            entities.map { it.toDomain() }
+        }
     }
 
-    override suspend fun updateTag(tag: com.sans.finance.data.local.entity.TagEntity) {
-        tagDao.updateTag(tag)
+    override suspend fun updateTag(tag: Tag) {
+        tagDao.updateTag(tag.toEntity())
     }
 
-    override suspend fun updateTags(tags: List<com.sans.finance.data.local.entity.TagEntity>) {
-        tagDao.updateTags(tags)
+    override suspend fun updateTags(tags: List<Tag>) {
+        tagDao.updateTags(tags.map { it.toEntity() })
     }
 
-    override suspend fun deleteTag(tag: com.sans.finance.data.local.entity.TagEntity) {
-        tagDao.deleteTag(tag)
+    override suspend fun deleteTag(tag: Tag) {
+        tagDao.deleteTag(tag.toEntity())
     }
 
     override fun getSpendingByCategoryBetween(
         since: Long,
         until: Long
-    ): Flow<List<com.sans.finance.data.local.entity.CategorySpent>> {
-        return dao.getSpendingByCategoryBetween(since, until)
+    ): Flow<List<CategorySpent>> {
+        return dao.getSpendingByCategoryBetween(since, until).map { entities ->
+            entities.map { it.toDomain() }
+        }
     }
 
     override fun getBreakdownByCategoryBetween(
         since: Long,
         until: Long,
         type: String
-    ): Flow<List<com.sans.finance.data.local.entity.CategorySpent>> {
-        return dao.getBreakdownByCategoryBetween(since, until, type)
+    ): Flow<List<CategorySpent>> {
+        return dao.getBreakdownByCategoryBetween(since, until, type).map { entities ->
+            entities.map { it.toDomain() }
+        }
     }
 
     override fun getTotalAmountByTypeBetween(
@@ -382,8 +387,10 @@ class ExpenseRepositoryImpl(
     override fun getDailySpendingBetween(
         since: Long,
         until: Long
-    ): Flow<List<com.sans.finance.data.local.entity.DaySpent>> {
-        return dao.getDailySpendingBetween(since, until)
+    ): Flow<List<DaySpent>> {
+        return dao.getDailySpendingBetween(since, until).map { entities ->
+            entities.map { it.toDomain() }
+        }
     }
 
     override fun getDailyBreakdownByCategoryBetween(
@@ -391,15 +398,19 @@ class ExpenseRepositoryImpl(
         until: Long,
         categoryId: Long,
         type: String
-    ): Flow<List<com.sans.finance.data.local.entity.DaySpent>> {
-        return dao.getDailyBreakdownByCategoryBetween(since, until, categoryId, type)
+    ): Flow<List<DaySpent>> {
+        return dao.getDailyBreakdownByCategoryBetween(since, until, categoryId, type).map { entities ->
+            entities.map { it.toDomain() }
+        }
     }
 
     override fun getMonthlyBreakdownByCategory(
         categoryId: Long,
         type: String
-    ): Flow<List<com.sans.finance.data.local.entity.DaySpent>> {
-        return dao.getMonthlyBreakdownByCategory(categoryId, type)
+    ): Flow<List<DaySpent>> {
+        return dao.getMonthlyBreakdownByCategory(categoryId, type).map { entities ->
+            entities.map { it.toDomain() }
+        }
     }
 
     // Internal mapping extension
@@ -470,4 +481,44 @@ class ExpenseRepositoryImpl(
                 ?: emptyList()
         )
     }
+
+    private fun com.sans.finance.data.local.entity.CategoryEntity.toDomain() = Category(
+        id = id,
+        name = name,
+        icon = icon,
+        orderIndex = orderIndex,
+        type = type
+    )
+
+    private fun Category.toEntity() = com.sans.finance.data.local.entity.CategoryEntity(
+        id = id,
+        name = name,
+        icon = icon,
+        orderIndex = orderIndex,
+        type = type
+    )
+
+    private fun com.sans.finance.data.local.entity.TagEntity.toDomain() = Tag(
+        id = id,
+        name = name,
+        orderIndex = orderIndex
+    )
+
+    private fun Tag.toEntity() = com.sans.finance.data.local.entity.TagEntity(
+        id = id,
+        name = name,
+        orderIndex = orderIndex
+    )
+
+    private fun com.sans.finance.data.local.entity.CategorySpent.toDomain() = CategorySpent(
+        categoryId = categoryId,
+        categoryName = categoryName,
+        categoryIcon = categoryIcon,
+        totalAmount = totalAmount
+    )
+
+    private fun com.sans.finance.data.local.entity.DaySpent.toDomain() = DaySpent(
+        day = day,
+        amount = amount
+    )
 }

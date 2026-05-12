@@ -56,7 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.sans.finance.data.local.entity.CategoryEntity
+import com.sans.finance.domain.model.Category
 import com.sans.finance.presentation.components.PrivacyText
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -316,7 +316,7 @@ fun BudgetItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddBudgetDialog(
-    categories: List<CategoryEntity>,
+    categories: List<Category>,
     currencyCode: String,
     onDismiss: () -> Unit,
     onConfirm: (Long, Long?) -> Unit

@@ -2,7 +2,7 @@ package com.sans.finance.presentation.settings.categories
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sans.finance.data.local.entity.CategoryEntity
+import com.sans.finance.domain.model.Category
 import com.sans.finance.domain.repository.ExpenseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -38,17 +38,17 @@ class CategorySettingsViewModel @Inject constructor(
 
     fun addCategory(name: String, icon: String, type: String) {
         viewModelScope.launch {
-            repository.insertCategory(CategoryEntity(name = name, icon = icon, type = type))
+            repository.insertCategory(Category(name = name, icon = icon, type = type))
         }
     }
 
-    fun updateCategory(category: CategoryEntity) {
+    fun updateCategory(category: Category) {
         viewModelScope.launch {
             repository.updateCategory(category)
         }
     }
 
-    fun onCategoriesReordered(reorderedCategories: List<CategoryEntity>) {
+    fun onCategoriesReordered(reorderedCategories: List<Category>) {
         viewModelScope.launch {
             val updatedCategories = reorderedCategories.mapIndexed { index, category ->
                 category.copy(orderIndex = index)
@@ -57,7 +57,7 @@ class CategorySettingsViewModel @Inject constructor(
         }
     }
 
-    fun deleteCategory(category: CategoryEntity) {
+    fun deleteCategory(category: Category) {
         viewModelScope.launch {
             repository.deleteCategory(category)
         }

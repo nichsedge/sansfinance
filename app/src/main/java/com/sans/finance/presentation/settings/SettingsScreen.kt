@@ -64,8 +64,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.R
-import com.sans.finance.data.local.entity.CategoryEntity
-import com.sans.finance.data.local.entity.TagEntity
+import com.sans.finance.domain.model.Category
+import com.sans.finance.domain.model.Tag
 import com.sans.finance.presentation.components.CategoryIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -609,7 +609,7 @@ fun SettingsItem(
 
 @Composable
 fun CategoryEditDialog(
-    category: CategoryEntity? = null,
+    category: Category? = null,
     onDismiss: () -> Unit,
     onConfirm: (String, String) -> Unit
 ) {
@@ -683,7 +683,7 @@ fun CategoryEditDialog(
 
 @Composable
 fun TagEditDialog(
-    tag: TagEntity,
+    tag: Tag,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
 ) {

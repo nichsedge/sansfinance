@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.core.util.CalendarUtils
 import com.sans.finance.core.util.DateFormatterUtils
+import com.sans.finance.domain.model.Category
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.repository.BudgetRepository
 import com.sans.finance.domain.usecase.GetExpensesUseCase
@@ -45,7 +46,7 @@ data class ExpenseListState(
     val isLoading: Boolean = true,
     val error: String? = null,
     val accounts: List<com.sans.finance.data.local.entity.AccountEntity> = emptyList(),
-    val categories: List<com.sans.finance.data.local.entity.CategoryEntity> = emptyList(),
+    val categories: List<Category> = emptyList(),
     val availableTags: List<String> = emptyList(),
     val selectedTags: Set<String> = emptySet(),
     val searchQuery: String = "",

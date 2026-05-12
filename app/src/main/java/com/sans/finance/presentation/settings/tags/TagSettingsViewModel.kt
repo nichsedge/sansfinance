@@ -2,7 +2,7 @@ package com.sans.finance.presentation.settings.tags
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sans.finance.data.local.entity.TagEntity
+import com.sans.finance.domain.model.Tag
 import com.sans.finance.domain.repository.ExpenseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,13 +21,13 @@ class TagSettingsViewModel @Inject constructor(
         initialValue = emptyList()
     )
 
-    fun updateTag(tag: TagEntity) {
+    fun updateTag(tag: Tag) {
         viewModelScope.launch {
             repository.updateTag(tag)
         }
     }
 
-    fun onTagsReordered(reorderedTags: List<TagEntity>) {
+    fun onTagsReordered(reorderedTags: List<Tag>) {
         viewModelScope.launch {
             val updatedTags = reorderedTags.mapIndexed { index, tag ->
                 tag.copy(orderIndex = index)
@@ -36,7 +36,7 @@ class TagSettingsViewModel @Inject constructor(
         }
     }
 
-    fun deleteTag(tag: TagEntity) {
+    fun deleteTag(tag: Tag) {
         viewModelScope.launch {
             repository.deleteTag(tag)
         }

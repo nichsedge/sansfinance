@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.core.util.CalendarUtils
 import com.sans.finance.data.local.entity.BudgetEntity
+import com.sans.finance.domain.model.Category
 import com.sans.finance.domain.repository.BudgetRepository
 import com.sans.finance.domain.repository.ExpenseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,7 +25,7 @@ data class BudgetStatus(
 
 data class BudgetState(
     val budgetStatuses: List<BudgetStatus> = emptyList(),
-    val categories: List<com.sans.finance.data.local.entity.CategoryEntity> = emptyList(),
+    val categories: List<Category> = emptyList(),
     val currentCurrency: String = "USD",
     val isLoading: Boolean = true,
     val isPrivacyModeEnabled: Boolean = false

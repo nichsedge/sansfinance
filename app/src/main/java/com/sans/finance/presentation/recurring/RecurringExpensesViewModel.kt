@@ -2,6 +2,7 @@ package com.sans.finance.presentation.recurring
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sans.finance.domain.model.Category
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.repository.ExpenseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -75,7 +76,7 @@ enum class RecurringViewMode {
 
 data class RecurringExpensesState(
     val recurringExpenses: List<Expense> = emptyList(),
-    val categories: List<com.sans.finance.data.local.entity.CategoryEntity> = emptyList(),
+    val categories: List<Category> = emptyList(),
     val totalMonthlyRecurring: Long = 0L,
     val currentCurrency: String = "USD",
     val viewMode: RecurringViewMode = RecurringViewMode.MONTHLY

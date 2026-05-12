@@ -65,9 +65,13 @@ interface InstallmentDao {
         until: Long
     ): Flow<List<com.sans.finance.data.local.entity.InstallmentItemEntity>>
 
+    @Query("SELECT ii.id as id, ii.due_date as date, e.note as note, ii.amount as amount, e.category_id as category_id, e.description as description, e.id as expense_id, e.account_id as account_id, ii.month_number as month_number, i.duration_months as total_months, ii.status as status, e.currency as currency, (SELECT GROUP_CONCAT(t.name) FROM tags t JOIN expense_tag_ref etr ON t.id = etr.tagId WHERE etr.expenseId = e.id) as tags_list FROM installment_items ii JOIN installments i ON ii.installment_id = i.id JOIN expenses e ON i.expense_id = e.id WHERE ii.due_date >= :since AND ii.due_date < :until")
+    fun getInstallmentPaymentsBetween(since: Long, until: Long): Flow<List<com.sans.finance.data.local.entity.InstallmentPaymentRow>>
+
+    @androidx.room.Transaction
     @Query(
         """
-        SELECT 
+        SELECT DISTINCT
             ii.id as id, 
             ii.due_date as date, 
             e.note as note,
@@ -84,12 +88,32 @@ interface InstallmentDao {
         FROM installment_items ii
         JOIN installments i ON ii.installment_id = i.id
         JOIN expenses e ON i.expense_id = e.id
-        WHERE ii.due_date >= :since AND ii.due_date < :until
+        LEFT JOIN expense_tag_ref etr ON e.id = etr.expenseId
+        LEFT JOIN tags t ON etr.tagId = t.id
+        WHERE (ii.due_date >= :since AND ii.due_date < :until)
+        AND (:query IS NULL OR e.note LIKE '%' || :query || '%' OR e.description LIKE '%' || :query || '%')
+        AND (:categoryCount = 0 OR e.category_id IN (:categoryIds))
+        AND (:accountCount = 0 OR e.account_id IN (:accountIds))
+        AND (:minAmount IS NULL OR ii.amount >= :minAmount)
+        AND (:maxAmount IS NULL OR ii.amount <= :maxAmount)
+        AND (:tagCount = 0 OR t.name IN (:tags))
+        AND (:typeCount = 0 OR 'EXPENSE' IN (:types))
     """
     )
-    fun getInstallmentPaymentsBetween(
+    fun getFilteredInstallmentPayments(
         since: Long,
-        until: Long
+        until: Long,
+        query: String?,
+        categoryIds: List<Long>,
+        categoryCount: Int,
+        accountIds: List<Long>,
+        accountCount: Int,
+        minAmount: Long?,
+        maxAmount: Long?,
+        tags: List<String>,
+        tagCount: Int,
+        types: List<String>,
+        typeCount: Int
     ): Flow<List<com.sans.finance.data.local.entity.InstallmentPaymentRow>>
 
     @Update

@@ -3,8 +3,8 @@ package com.sans.finance.presentation.transaction_stats
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.core.util.CalendarUtils
-import com.sans.finance.data.local.entity.CategorySpent
-import com.sans.finance.data.local.entity.DaySpent
+import com.sans.finance.domain.model.CategorySpent
+import com.sans.finance.domain.model.DaySpent
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.repository.ExpenseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel

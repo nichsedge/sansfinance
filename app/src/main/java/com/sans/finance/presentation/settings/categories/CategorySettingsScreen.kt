@@ -34,7 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.R
-import com.sans.finance.data.local.entity.CategoryEntity
+import com.sans.finance.domain.model.Category
 import com.sans.finance.presentation.settings.CategoryEditDialog
 import com.sans.finance.presentation.settings.SettingsItem
 
@@ -48,8 +48,8 @@ fun CategorySettingsScreen(
     val selectedType by viewModel.selectedType.collectAsState()
 
     var showAddCategoryDialog by remember { mutableStateOf(false) }
-    var categoryToEdit by remember { mutableStateOf<CategoryEntity?>(null) }
-    var categoryToDelete by remember { mutableStateOf<CategoryEntity?>(null) }
+    var categoryToEdit by remember { mutableStateOf<Category?>(null) }
+    var categoryToDelete by remember { mutableStateOf<Category?>(null) }
 
     Scaffold(
         topBar = {

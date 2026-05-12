@@ -1,13 +1,14 @@
 package com.sans.finance.domain.usecase
 
-import com.sans.finance.data.local.entity.CategoryEntity
+import com.sans.finance.domain.model.Category
+import com.sans.finance.domain.repository.ExpenseRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class GetCategoriesUseCase @Inject constructor(
-    private val dao: com.sans.finance.data.local.dao.CategoryDao
+    private val repository: ExpenseRepository
 ) {
-    operator fun invoke(): Flow<List<CategoryEntity>> {
-        return dao.getAllCategories()
+    operator fun invoke(): Flow<List<Category>> {
+        return repository.getAllCategories()
     }
 }
