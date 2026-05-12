@@ -10,6 +10,10 @@ data class InstallmentPaymentRow(
     @ColumnInfo(name = "category_id") val categoryId: Long,
     @ColumnInfo(name = "description") val description: String?,
     @ColumnInfo(name = "expense_id") val expenseId: Long,
+    @ColumnInfo(name = "account_id") val accountId: Long = 1,
+    @ColumnInfo(name = "month_number") val monthNumber: Int = 0,
+    @ColumnInfo(name = "total_months") val totalMonths: Int = 0,
+    @ColumnInfo(name = "status") val status: String = "Paid",
     @ColumnInfo(name = "tags_list") val tagsList: String? = null,
     @ColumnInfo(name = "currency") val currency: String = "USD"
 )

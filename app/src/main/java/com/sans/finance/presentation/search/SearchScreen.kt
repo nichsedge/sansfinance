@@ -22,7 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.sans.finance.R
 import com.sans.finance.core.util.CalendarUtils
 import com.sans.finance.presentation.components.ExpenseItem
 import com.sans.finance.presentation.components.SummaryCard
@@ -37,6 +39,8 @@ fun SearchScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var showFilterSheet by remember { mutableStateOf(false) }
+    var expenseToDelete by remember { mutableStateOf<com.sans.finance.domain.model.Expense?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -119,6 +123,50 @@ fun SearchScreen(
             )
         }
     ) { paddingValues ->
+        if (showDeleteDialog && expenseToDelete != null) {
+            AlertDialog(
+                onDismissRequest = {
+                    showDeleteDialog = false
+                    expenseToDelete = null
+                },
+                title = { Text(stringResource(R.string.delete_confirmation_title)) },
+                text = {
+                    Column {
+                        Text(stringResource(R.string.delete_confirmation_msg))
+                        if (expenseToDelete?.isInstallmentPayment == true) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "This is an installment payment. Deleting it will mark it as unpaid in the plan.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val exp: com.sans.finance.domain.model.Expense? = expenseToDelete
+                            if (exp != null) {
+                                viewModel.deleteExpense(exp)
+                            }
+                            showDeleteDialog = false
+                            expenseToDelete = null
+                        }
+                    ) {
+                        Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showDeleteDialog = false
+                        expenseToDelete = null
+                    }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -159,7 +207,11 @@ fun SearchScreen(
                                 categoryIcon = category?.icon ?: (if (expense.isInstallmentPayment) "💳" else "📁"),
                                 accountName = account?.name,
                                 isPrivacyModeEnabled = state.isPrivacyModeEnabled,
-                                onClick = { onExpenseClick(expense.id) }
+                                onClick = { onExpenseClick(expense.id) },
+                                onLongClick = {
+                                    expenseToDelete = expense
+                                    showDeleteDialog = true
+                                }
                             )
                         }
                     }

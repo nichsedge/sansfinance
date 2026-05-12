@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -35,6 +39,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -77,6 +82,7 @@ fun AddTransactionScreen(
     var accountExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var toAccountExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var recurrenceExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showDeleteDialog by remember { androidx.compose.runtime.mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -92,18 +98,112 @@ fun AddTransactionScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
+                },
+                actions = {
+                    if (viewModel.isEditMode) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.delete),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
                 }
             )
         }
     ) { paddingValues ->
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text(stringResource(R.string.delete_confirmation_title)) },
+                text = {
+                    Column {
+                        Text(stringResource(R.string.delete_confirmation_msg))
+                        if (viewModel.isInstallmentPayment) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "This is an individual installment payment. Deleting it will mark it as unpaid in the installment plan.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        } else if (viewModel.isInstallment) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "This is an installment plan anchor. Deleting it will remove the entire plan and all associated payments.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.onDeleteClick(deleteEntirePlan = true, onSuccess = onBack)
+                            showDeleteDialog = false
+                        }
+                    ) {
+                        Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
         Column(
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (viewModel.isInstallmentPayment) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Installment Payment",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "Payment ${viewModel.installmentMonth} of ${viewModel.installmentTotalMonths} for this plan",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        if (viewModel.status == "Pending") {
+                            Button(
+                                onClick = {
+                                    viewModel.onStatusChange("Paid")
+                                    viewModel.onSaveClick { onBack() }
+                                },
+                                contentPadding = PaddingValues(horizontal = 12.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Text("Mark as Paid", fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            }
             // Transaction Type Selector (Segmented Buttons / Tabs)
             // Transaction Type Selector (Rounded Chips)
             val types = listOf("EXPENSE", "INCOME", "TRANSFER")

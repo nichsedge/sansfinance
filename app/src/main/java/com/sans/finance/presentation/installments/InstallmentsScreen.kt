@@ -1,6 +1,5 @@
 package com.sans.finance.presentation.installments
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,18 +15,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -39,6 +34,8 @@ import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -62,59 +59,18 @@ import java.util.Locale
 @Composable
 fun InstallmentsScreen(
     onBack: () -> Unit,
-    onRecurringExpensesClick: () -> Unit,
     viewModel: InstallmentsViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    var showViewMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable { showViewMenu = true }
-                    ) {
-                        Text(
-                            stringResource(R.string.active_installments),
-                            fontWeight = FontWeight.Bold
-                        )
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = "Switch View",
-                            modifier = Modifier.size(20.dp)
-                        )
-
-                        DropdownMenu(
-                            expanded = showViewMenu,
-                            onDismissRequest = { showViewMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.recurring_expenses)) },
-                                onClick = {
-                                    showViewMenu = false
-                                    onRecurringExpensesClick()
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Sync,
-                                        contentDescription = null
-                                    )
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.active_installments)) },
-                                onClick = { showViewMenu = false },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.ReceiptLong,
-                                        contentDescription = null
-                                    )
-                                }
-                            )
-                        }
-                    }
+                    Text(
+                        stringResource(R.string.active_installments),
+                        fontWeight = FontWeight.Bold
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -204,6 +160,7 @@ fun ExpandableInstallment(
     var expanded by remember { mutableStateOf(false) }
     val items by viewModel.getItemsForInstallment(installment.id)
         .collectAsState(initial = emptyList())
+    var showDeleteDialog by remember { mutableStateOf(false) }
     val dateFormatter = DateFormatterUtils.getStandardFormatter()
     val monthYearFormatter =
         remember { java.text.SimpleDateFormat("MMM yyyy", Locale.getDefault()) }
@@ -246,11 +203,42 @@ fun ExpandableInstallment(
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.ExtraBold
                     )
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete Plan",
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                     Icon(
                         if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                         contentDescription = null
                     )
                 }
+            }
+
+            if (showDeleteDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDeleteDialog = false },
+                    title = { Text("Delete Installment Plan") },
+                    text = { Text("Are you sure you want to delete this entire installment plan? This will remove all payment history associated with it.") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                viewModel.deleteInstallmentPlan(installment)
+                                showDeleteDialog = false
+                            }
+                        ) {
+                            Text("Delete", color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
 
             val paidCount = items.count { it.status == "Paid" }

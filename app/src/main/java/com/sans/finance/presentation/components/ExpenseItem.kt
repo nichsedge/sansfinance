@@ -12,6 +12,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import com.sans.finance.R
 import com.sans.finance.domain.model.Expense
 
@@ -33,7 +36,6 @@ fun ExpenseItem(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
-                enabled = !expense.isInstallmentPayment,
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
@@ -95,6 +97,38 @@ fun ExpenseItem(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
+                        }
+                        if (expense.isInstallmentPayment && expense.installmentTotalMonths > 0) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                            ) {
+                                Text(
+                                    "${expense.installmentMonth} / ${expense.installmentTotalMonths}",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        if (expense.status == "Pending") {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.errorContainer)
+                                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                            ) {
+                                Text(
+                                    "Pending",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                     if (showNextDueDate && expense.nextDueDate != null) {

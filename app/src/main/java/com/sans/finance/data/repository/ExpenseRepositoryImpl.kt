@@ -21,8 +21,8 @@ class ExpenseRepositoryImpl(
     override fun getAllExpenses(): Flow<List<Expense>> {
         return combine(
             dao.getAllExpenses(),
-            installmentDao.getPaidInstallmentPaymentsBetween(0, Long.MAX_VALUE)
-        ) { expenseEntities, installmentRows ->
+            installmentDao.getInstallmentPaymentsBetween(0, Long.MAX_VALUE)
+        ) { expenseEntities: List<com.sans.finance.data.local.entity.ExpenseWithTags>, installmentRows: List<com.sans.finance.data.local.entity.InstallmentPaymentRow> ->
             val expenses = expenseEntities.map { it.toDomain() }
             val installmentPayments = installmentRows.map { it.toDomain() }
             (expenses + installmentPayments).sortedByDescending { it.date }
@@ -32,8 +32,8 @@ class ExpenseRepositoryImpl(
     override fun getExpensesBetween(since: Long, until: Long): Flow<List<Expense>> {
         return combine(
             dao.getExpensesBetween(since, until),
-            installmentDao.getPaidInstallmentPaymentsBetween(since, until)
-        ) { expenseEntities, installmentRows ->
+            installmentDao.getInstallmentPaymentsBetween(since, until)
+        ) { expenseEntities: List<com.sans.finance.data.local.entity.ExpenseWithTags>, installmentRows: List<com.sans.finance.data.local.entity.InstallmentPaymentRow> ->
             val expenses = expenseEntities.map { it.toDomain() }
             val installmentPayments = installmentRows.map { it.toDomain() }
             (expenses + installmentPayments).sortedByDescending { it.date }
@@ -77,9 +77,9 @@ class ExpenseRepositoryImpl(
 
         // For filtered installments, we use a simpler filter logic in Kotlin for now
         // since mapping complex filters to SQL join is non-trivial for this dynamic use case
-        val installmentsFlow = installmentDao.getPaidInstallmentPaymentsBetween(since, until)
+        val installmentsFlow = installmentDao.getInstallmentPaymentsBetween(since, until)
 
-        return combine(expensesFlow, installmentsFlow) { expenseEntities, installmentRows ->
+        return combine(expensesFlow, installmentsFlow) { expenseEntities: List<com.sans.finance.data.local.entity.ExpenseWithTags>, installmentRows: List<com.sans.finance.data.local.entity.InstallmentPaymentRow> ->
             val expenses = expenseEntities.map { it.toDomain() }
             val installmentPayments = installmentRows.map { it.toDomain() }
                 .filter { payment ->
@@ -113,12 +113,15 @@ class ExpenseRepositoryImpl(
                 Expense(
                     id = id,
                     date = item.dueDate,
-                    note = (parentExpense?.expense?.note
-                        ?: "Installment") + " (Installment ${item.monthNumber})",
+                    note = parentExpense?.expense?.note ?: "Installment",
                     amount = item.amount,
                     categoryId = parentExpense?.expense?.categoryId ?: 1L,
                     isInstallmentPayment = true,
+                    installmentMonth = item.monthNumber,
+                    installmentTotalMonths = installment?.durationMonths ?: 0,
+                    status = item.status,
                     description = parentExpense?.expense?.description,
+                    accountId = parentExpense?.expense?.accountId ?: 1L,
                     currency = parentExpense?.expense?.currency ?: "USD",
                     tags = parentExpense?.tags?.map { it.name } ?: emptyList()
                 )
@@ -155,9 +158,57 @@ class ExpenseRepositoryImpl(
     }
 
     override suspend fun updateExpense(expense: Expense) {
+        if (expense.id >= INSTALLMENT_PAYMENT_ID_OFFSET) {
+            val itemId = expense.id - INSTALLMENT_PAYMENT_ID_OFFSET
+            val oldItem = installmentDao.getInstallmentItemById(itemId)
+            
+            if (oldItem != null) {
+                // If status changed from Pending to Paid, subtract from balance
+                if (oldItem.status == "Pending" && expense.status == "Paid") {
+                    updateAccountBalance(expense.accountId, -expense.amount)
+                    
+                    // Update parent installment remaining balance
+                    val installment = installmentDao.getInstallmentById(oldItem.installmentId)
+                    if (installment != null) {
+                        val newBalance = installment.remainingBalance - expense.amount
+                        val nextDate = installmentDao.getNextDueDateForInstallment(installment.id) ?: installment.nextDueDate
+                        installmentDao.updateInstallment(installment.copy(
+                            remainingBalance = newBalance,
+                            nextDueDate = nextDate,
+                            status = if (newBalance <= 0) "Completed" else "Active"
+                        ))
+                    }
+                } else if (oldItem.status == "Paid" && expense.status == "Pending") {
+                    // Reverse balance if changed back to Pending
+                    updateAccountBalance(expense.accountId, expense.amount)
+                    
+                    val installment = installmentDao.getInstallmentById(oldItem.installmentId)
+                    if (installment != null) {
+                        val newBalance = installment.remainingBalance + expense.amount
+                        val nextDate = installmentDao.getNextDueDateForInstallment(installment.id) ?: installment.nextDueDate
+                        installmentDao.updateInstallment(installment.copy(
+                            remainingBalance = newBalance,
+                            nextDueDate = nextDate,
+                            status = "Active"
+                        ))
+                    }
+                } else if (oldItem.status == "Paid" && oldItem.amount != expense.amount) {
+                    // If amount changed and it was already paid, adjust balance
+                    val diff = oldItem.amount - expense.amount
+                    updateAccountBalance(expense.accountId, diff)
+                }
+
+                // Update the item itself
+                installmentDao.insertInstallmentItem(oldItem.copy(
+                    amount = expense.amount,
+                    dueDate = expense.date,
+                    status = expense.status
+                ))
+            }
+            return
+        }
+
         val oldExpense = dao.getExpenseById(expense.id)?.expense
-        dao.updateExpense(expense.toEntity())
-        syncTags(expense.id, expense.tags)
 
         // Update account balance
         if (oldExpense != null) {
@@ -211,7 +262,29 @@ class ExpenseRepositoryImpl(
     }
 
     override suspend fun deleteExpense(expense: Expense) {
-        dao.deleteExpense(expense.toEntity())
+        if (expense.id >= INSTALLMENT_PAYMENT_ID_OFFSET) {
+            val itemId = expense.id - INSTALLMENT_PAYMENT_ID_OFFSET
+            installmentDao.getInstallmentItemById(itemId)?.let { item ->
+                // Mark as pending instead of deleting (since it's a scheduled payment)
+                installmentDao.updateInstallmentItemStatus(itemId, "Pending")
+
+                // Update installment remaining balance and status
+                val installment = installmentDao.getInstallmentById(item.installmentId)
+                if (installment != null) {
+                    val newRemaining = installment.remainingBalance + item.amount
+                    val nextDue = installmentDao.getNextDueDateForInstallment(item.installmentId) ?: item.dueDate
+                    installmentDao.updateInstallment(
+                        installment.copy(
+                            remainingBalance = newRemaining,
+                            nextDueDate = nextDue,
+                            status = "Active"
+                        )
+                    )
+                }
+            }
+        } else {
+            dao.deleteExpense(expense.toEntity())
+        }
 
         // Update account balance (reverse the transaction)
         if (expense.type == "TRANSFER") {
@@ -380,15 +453,20 @@ class ExpenseRepositoryImpl(
 
     private fun com.sans.finance.data.local.entity.InstallmentPaymentRow.toDomain(): Expense {
         return Expense(
-            id = id + INSTALLMENT_PAYMENT_ID_OFFSET,
-            date = date,
-            note = note,
-            amount = amount,
-            categoryId = categoryId,
+            id = this.id + INSTALLMENT_PAYMENT_ID_OFFSET,
+            amount = this.amount,
+            date = this.date,
+            note = this.note,
+            type = "EXPENSE",
+            categoryId = this.categoryId,
             isInstallmentPayment = true,
-            description = description,
-            currency = currency,
-            tags = tagsList?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+            installmentMonth = this.monthNumber,
+            installmentTotalMonths = this.totalMonths,
+            status = this.status,
+            description = this.description,
+            accountId = this.accountId,
+            currency = this.currency,
+            tags = this.tagsList?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
                 ?: emptyList()
         )
     }

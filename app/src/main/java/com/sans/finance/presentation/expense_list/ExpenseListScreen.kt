@@ -381,7 +381,19 @@ fun ExpenseListScreen(
                 expenseToDelete = null
             },
             title = { Text(stringResource(R.string.delete_confirmation_title)) },
-            text = { Text(stringResource(R.string.delete_confirmation_msg)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.delete_confirmation_msg))
+                    if (expenseToDelete?.isInstallmentPayment == true) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "This is an installment payment. Deleting it will mark it as unpaid in the plan.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(
                     onClick = {

@@ -23,10 +23,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -43,10 +48,11 @@ import com.sans.finance.presentation.components.ExpenseItem
 fun RecurringExpensesScreen(
     onNavigateBack: () -> Unit,
     onExpenseClick: (Long) -> Unit,
-    onInstallmentsClick: () -> Unit,
     viewModel: RecurringExpensesViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val expenseToDelete = remember { androidx.compose.runtime.mutableStateOf<com.sans.finance.domain.model.Expense?>(null) }
+    var showDeleteDialog by remember { androidx.compose.runtime.mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -68,6 +74,38 @@ fun RecurringExpensesScreen(
             )
         }
     ) { padding ->
+        if (showDeleteDialog && expenseToDelete.value != null) {
+            AlertDialog(
+                onDismissRequest = {
+                    showDeleteDialog = false
+                    expenseToDelete.value = null
+                },
+                title = { Text("Delete Recurring Expense") },
+                text = { Text("Are you sure you want to delete this recurring expense definition? Future transactions will no longer be tracked.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val exp: com.sans.finance.domain.model.Expense? = expenseToDelete.value
+                            if (exp != null) {
+                                viewModel.deleteExpense(exp)
+                            }
+                            showDeleteDialog = false
+                            expenseToDelete.value = null
+                        }
+                    ) {
+                        Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showDeleteDialog = false
+                        expenseToDelete.value = null
+                    }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -179,7 +217,10 @@ fun RecurringExpensesScreen(
                             overrideAmount = displayAmount,
                             overrideLabel = overrideLabel,
                             onClick = { onExpenseClick(expense.id) },
-                            onLongClick = {}
+                            onLongClick = {
+                                expenseToDelete.value = expense
+                                showDeleteDialog = true
+                            }
                         )
                     }
                     item {

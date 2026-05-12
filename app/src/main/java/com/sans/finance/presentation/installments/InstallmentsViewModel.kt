@@ -24,6 +24,7 @@ data class InstallmentsState(
 @HiltViewModel
 class InstallmentsViewModel @Inject constructor(
     private val installmentRepository: InstallmentRepository,
+    private val expenseRepository: com.sans.finance.domain.repository.ExpenseRepository,
     private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
@@ -64,4 +65,12 @@ class InstallmentsViewModel @Inject constructor(
 
     fun getItemsForInstallment(installmentId: Long) =
         installmentRepository.getInstallmentItems(installmentId)
+
+    fun deleteInstallmentPlan(installment: Installment) {
+        viewModelScope.launch {
+            expenseRepository.getExpenseById(installment.expenseId)?.let { expense ->
+                expenseRepository.deleteExpense(expense)
+            }
+        }
+    }
 }

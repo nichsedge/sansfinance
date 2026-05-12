@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -58,6 +59,12 @@ class RecurringExpensesViewModel @Inject constructor(
             "MONTHLY" -> expense.amount
             "YEARLY" -> expense.amount / 12
             else -> expense.amount
+        }
+    }
+
+    fun deleteExpense(expense: Expense) {
+        viewModelScope.launch {
+            expenseRepository.deleteExpense(expense)
         }
     }
 }

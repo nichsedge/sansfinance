@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -266,6 +267,12 @@ class SearchViewModel @Inject constructor(
                 _state.update { it.copy(isPrivacyModeEnabled = isEnabled) }
             }
             .launchIn(viewModelScope)
+    }
+
+    fun deleteExpense(expense: Expense) {
+        viewModelScope.launch {
+            repository.deleteExpense(expense)
+        }
     }
 
     private fun groupExpensesByDate(expenses: List<Expense>): Map<Long, List<Expense>> {

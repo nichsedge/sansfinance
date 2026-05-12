@@ -5,6 +5,7 @@ package com.sans.finance.presentation.add_transaction
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.SavedStateHandle
@@ -13,6 +14,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.usecase.AddTransactionUseCase
+import com.sans.finance.domain.usecase.DeleteExpenseUseCase
 import com.sans.finance.domain.usecase.GetExpenseByIdUseCase
 import com.sans.finance.domain.usecase.GetItemNameSuggestionsUseCase
 import com.sans.finance.domain.usecase.GetMerchantSuggestionsUseCase
@@ -35,6 +37,7 @@ import javax.inject.Inject
 class AddTransactionViewModel @Inject constructor(
     private val addTransactionUseCase: AddTransactionUseCase,
     private val updateExpenseUseCase: UpdateExpenseUseCase,
+    private val deleteExpenseUseCase: DeleteExpenseUseCase,
     private val getExpenseByIdUseCase: GetExpenseByIdUseCase,
     private val getCategoriesUseCase: com.sans.finance.domain.usecase.GetCategoriesUseCase,
     private val createInstallmentPlanUseCase: com.sans.finance.domain.usecase.CreateInstallmentPlanUseCase,
@@ -80,6 +83,14 @@ class AddTransactionViewModel @Inject constructor(
 
     // transactionType moved up
     var paymentType by mutableStateOf("ONE_TIME") // "ONE_TIME", "RECURRING", "INSTALLMENT"
+    var isInstallmentPayment by mutableStateOf(false)
+        private set
+    var installmentMonth by mutableIntStateOf(0)
+        private set
+    var installmentTotalMonths by mutableIntStateOf(0)
+        private set
+    var status by mutableStateOf("Paid")
+        private set
     val isInstallment get() = paymentType == "INSTALLMENT"
     val isRecurring get() = paymentType == "RECURRING"
     var recurrenceInterval by mutableStateOf("MONTHLY")
@@ -125,10 +136,13 @@ class AddTransactionViewModel @Inject constructor(
 
                     recurrenceInterval = expense.recurrenceInterval ?: "MONTHLY"
                     selectedDate = expense.date
-                    selectedTags = expense.tags
                     currency = expense.currency
-
-                    if (expense.isInstallment) {
+                    isInstallmentPayment = expense.isInstallmentPayment
+                    installmentMonth = expense.installmentMonth
+                    installmentTotalMonths = expense.installmentTotalMonths
+                    status = expense.status
+                    
+                    if (expense.isRecurring) {
                         installmentRepository.getInstallmentByExpenseId(id)?.let { installment ->
                             durationMonths = installment.durationMonths.toString()
                         }
@@ -189,6 +203,21 @@ class AddTransactionViewModel @Inject constructor(
         }
     }
 
+    fun onDeleteClick(deleteEntirePlan: Boolean, onSuccess: () -> Unit) {
+        editExpenseId?.let { id ->
+            viewModelScope.launch {
+                getExpenseByIdUseCase(id)?.let { expense ->
+                    deleteExpenseUseCase(expense, deleteEntirePlan)
+                    onSuccess()
+                }
+            }
+        }
+    }
+
+    fun onStatusChange(newStatus: String) {
+        status = newStatus
+    }
+
     fun onSaveClick(onSuccess: () -> Unit) {
         val amountInCents = amount.toSafeLongCents() ?: 0L
 
@@ -221,7 +250,11 @@ class AddTransactionViewModel @Inject constructor(
                 description = description.ifBlank { null },
                 tags = selectedTags,
                 quantity = 1,
-                currency = currency
+                currency = currency,
+                isInstallmentPayment = isInstallmentPayment,
+                installmentMonth = installmentMonth,
+                installmentTotalMonths = installmentTotalMonths,
+                status = status
             )
 
             if (editExpenseId == null) {
