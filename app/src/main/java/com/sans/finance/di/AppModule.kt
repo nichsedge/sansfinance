@@ -19,8 +19,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDatabase(
-        app: Application,
-        callback: AppDatabase.Callback
+        app: Application
     ): AppDatabase {
         return Room.databaseBuilder(
             app,
@@ -43,20 +42,9 @@ object AppModule {
                 AppDatabase.MIGRATION_17_18,
                 AppDatabase.MIGRATION_18_19
             )
-            .addCallback(callback)
             .build()
     }
 
-    @Provides
-    @Singleton
-    fun provideDatabaseCallback(
-        app: Application,
-        categoryDao: javax.inject.Provider<com.sans.finance.data.local.dao.CategoryDao>,
-        expenseDao: javax.inject.Provider<ExpenseDao>,
-        installmentDao: javax.inject.Provider<com.sans.finance.data.local.dao.InstallmentDao>
-    ): AppDatabase.Callback {
-        return AppDatabase.Callback(app, categoryDao, expenseDao, installmentDao)
-    }
 
     @Provides
     @Singleton
