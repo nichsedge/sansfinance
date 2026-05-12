@@ -83,6 +83,10 @@ interface ExpenseDao {
     @Query("DELETE FROM expense_tag_ref WHERE expenseId = :expenseId")
     suspend fun deleteExpenseTagRefs(expenseId: Long)
 
+    @Transaction
+    @Query("SELECT * FROM expenses WHERE note = :note AND final_price = :amount AND date BETWEEN :startTime AND :endTime AND account_id = :accountId LIMIT 1")
+    suspend fun findDuplicateExpense(note: String, amount: Long, startTime: Long, endTime: Long, accountId: Long): com.sans.finance.data.local.entity.ExpenseWithTags?
+
     @Query("SELECT COUNT(*) FROM expenses")
     suspend fun getExpenseCount(): Int
 

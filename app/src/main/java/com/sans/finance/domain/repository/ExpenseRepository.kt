@@ -22,6 +22,7 @@ interface ExpenseRepository {
     suspend fun getExpenseById(id: Long): Expense?
     suspend fun getNoteSuggestions(query: String): List<String>
     suspend fun getDescriptionSuggestions(query: String): List<String>
+    suspend fun findPotentialDuplicate(note: String, amount: Long, date: Long, accountId: Long): Expense?
     suspend fun insertExpense(expense: Expense): Long
     suspend fun updateExpense(expense: Expense)
     suspend fun deleteExpense(expense: Expense)

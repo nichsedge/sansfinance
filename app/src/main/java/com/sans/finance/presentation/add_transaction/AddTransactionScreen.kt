@@ -154,6 +154,30 @@ fun AddTransactionScreen(
                 }
             )
         }
+
+        if (viewModel.showDuplicateDialog) {
+            AlertDialog(
+                onDismissRequest = { viewModel.showDuplicateDialog = false },
+                title = { Text("Potential Duplicate") },
+                text = {
+                    Text("A similar transaction already exists: \"${viewModel.duplicateFound?.note}\" for ${viewModel.duplicateFound?.amount?.let { it / 100.0 }} ${viewModel.duplicateFound?.currency}.\n\nDo you want to add this as a new transaction anyway?")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.onSaveClick(onBack)
+                        }
+                    ) {
+                        Text("Add Anyway")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.showDuplicateDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
         Column(
             modifier = Modifier
                 .padding(paddingValues)
