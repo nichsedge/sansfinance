@@ -57,32 +57,5 @@
     <string name="no_data_available">此期间无可用数据</string>
     <string name="transactions">交易</string>
 
-    <!-- Scan Receipt feature -->
-    <string name="scan_receipt">扫描收据</string>
-    <string name="step1_select_model">第一步：选择AI模型</string>
-    <string name="step1_model_desc">选择要用于推理的LiteRT模型文件（.litertlm）。</string>
-    <string name="select_model">选择模型</string>
-    <string name="caching_model">正在将模型缓存到存储...</string>
-    <string name="step2_select_image">第二步：选择收据图片</string>
-    <string name="model_ready">模型就绪：%1$s</string>
-    <string name="select_image_gallery">从图库选择</string>
-    <string name="take_photo">拍照</string>
-    <string name="analyzing_receipt">正在使用AI分析收据...</string>
-    <string name="first_run_note">首次运行可能需要长达30秒</string>
-    <string name="found_transactions">找到 %1$d 笔交易：</string>
-    <string name="no_transactions_found">未找到项目</string>
-    <string name="no_transactions_desc">AI无法提取任何项目。请尝试更清晰的图片或其他收据。</string>
-    <string name="view_ai_thinking">查看AI思考过程</string>
-    <string name="hide_ai_thinking">隐藏AI思考过程</string>
-    <string name="save_selected">保存选定项</string>
-    <string name="saving">正在保存...</string>
-    <string name="inference_error">推理错误</string>
-    <string name="retry">重试</string>
-    <string name="new_image">新图片</string>
-    <string name="date_label">日期：%1$s</string>
-    <string name="edit_transaction_title">项目名称</string>
-    <string name="amount_label">金额</string>
-    <string name="date">日期</string>
-    <string name="ok">确定</string>
-    <string name="scan_another_receipt">扫描另一张收据</string>
+
 </resources>

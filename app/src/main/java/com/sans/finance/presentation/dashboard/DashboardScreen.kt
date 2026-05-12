@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -27,11 +29,14 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,9 +44,13 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -61,6 +70,7 @@ import com.sans.finance.core.util.CurrencyFormatter
 import com.sans.finance.presentation.components.PrivacyText
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import java.util.Locale
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,6 +79,7 @@ fun DashboardScreen(
     onTransactionClick: (Long) -> Unit,
     onPortfolioClick: () -> Unit,
     onRecurringExpensesClick: () -> Unit,
+    onWealthForecastingClick: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -142,6 +153,21 @@ fun DashboardScreen(
             }
 
             item {
+                FinancialFreedomCard(
+                    yearsOfCover = state.financialFreedomYears,
+                    freedomScore = state.financialFreedomScore,
+                    totalAssets = state.totalAssets,
+                    annualExpense = state.annualExpense,
+                    currencyCode = state.currentCurrency,
+                    isPrivacyModeEnabled = state.isPrivacyModeEnabled,
+                    isManualEnabled = state.isFireManualEnabled,
+                    manualAnnualExpense = state.manualFireAnnualExpense,
+                    onManualToggle = { viewModel.setFireManualEnabled(it) },
+                    onManualAmountChange = { viewModel.setManualFireAnnualExpense(it) }
+                )
+            }
+
+            item {
                 MonthlyCashFlowCard(
                     income = state.monthlyIncome,
                     expense = state.monthlyExpense,
@@ -168,7 +194,8 @@ fun DashboardScreen(
                     projectedBalance = state.projectedBalance30Days,
                     trendData = state.last30DaysTrend,
                     currencyCode = state.currentCurrency,
-                    isPrivacyModeEnabled = state.isPrivacyModeEnabled
+                    isPrivacyModeEnabled = state.isPrivacyModeEnabled,
+                    onClick = onWealthForecastingClick
                 )
             }
 
@@ -316,9 +343,17 @@ fun BreakdownItem(label: String, amount: Long, color: Color, currencyCode: Strin
 }
 
 @Composable
-fun ForecastCard(projectedBalance: Long, trendData: List<Long>, currencyCode: String, isPrivacyModeEnabled: Boolean) {
+fun ForecastCard(
+    projectedBalance: Long,
+    trendData: List<Long>,
+    currencyCode: String,
+    isPrivacyModeEnabled: Boolean,
+    onClick: () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer
@@ -669,8 +704,8 @@ fun AiAdvisorCard(suggestions: List<String>) {
 }
 
 @Composable
-fun DashboardGoalItem(goal: com.sans.finance.data.local.entity.GoalEntity, currencyCode: String, isPrivacyModeEnabled: Boolean) {
-    val progress = (goal.currentAmount.toFloat() / goal.targetAmount.toFloat()).coerceIn(0f, 1f)
+fun DashboardGoalItem(goal: DashboardGoal, currencyCode: String, isPrivacyModeEnabled: Boolean) {
+    val progress = goal.progress
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -837,6 +872,268 @@ fun GlobalBudgetCard(budget: Long, spent: Long, daysLeft: Int, currencyCode: Str
                         color = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun FinancialFreedomCard(
+    yearsOfCover: Double,
+    freedomScore: Float,
+    totalAssets: Long,
+    annualExpense: Long,
+    currencyCode: String,
+    isPrivacyModeEnabled: Boolean,
+    isManualEnabled: Boolean,
+    manualAnnualExpense: Long,
+    onManualToggle: (Boolean) -> Unit,
+    onManualAmountChange: (Long) -> Unit
+) {
+    var showHelp by remember { mutableStateOf(false) }
+    var manualInput by remember(manualAnnualExpense) { 
+        mutableStateOf((manualAnnualExpense / 100).toString()) 
+    }
+
+    if (showHelp) {
+        AlertDialog(
+            onDismissRequest = { showHelp = false },
+            title = {
+                Text(
+                    "Financial Freedom 101",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(
+                        "This score estimates how long your wealth lasts without a salary.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Years of Cover", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        val assetsFormatted = if (isPrivacyModeEnabled) "••••" else CurrencyFormatter.formatAmount(totalAssets, currencyCode)
+                        val expenseFormatted = if (isPrivacyModeEnabled) "••••" else CurrencyFormatter.formatAmount(annualExpense, currencyCode)
+                        Text(
+                            "$assetsFormatted ÷ $expenseFormatted (Annual Expense). Your wealth expressed in time.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Annual Expenses", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        val dailyFormatted = if (isPrivacyModeEnabled) "••••" else CurrencyFormatter.formatAmount(annualExpense / 365, currencyCode)
+                        Text(
+                            "Estimated at $dailyFormatted/day. We use your rolling 12-month spending to normalize this figure.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("FIRE Goal (25x)", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        val fireTarget = annualExpense * 25
+                        val targetFormatted = if (isPrivacyModeEnabled) "••••" else CurrencyFormatter.formatAmount(fireTarget, currencyCode)
+                        Text(
+                            "You are free when assets reach $targetFormatted. This allows for a safe 4% withdrawal rate.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Manual Expense Override",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Switch(
+                                checked = isManualEnabled,
+                                onCheckedChange = { onManualToggle(it) }
+                            )
+                        }
+                        
+                        if (isManualEnabled) {
+                            OutlinedTextField(
+                                value = manualInput,
+                                onValueChange = {
+                                    manualInput = it
+                                    it.toLongOrNull()?.let { amount ->
+                                        onManualAmountChange(amount * 100)
+                                    }
+                                },
+                                label = { Text("Annual Expense ($currencyCode)") },
+                                modifier = Modifier.fillMaxWidth(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true
+                            )
+                            Text(
+                                "Override auto-tracking to account for inflation or missing data.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { showHelp = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.tertiary)
+                ) {
+                    Text("Got it", fontWeight = FontWeight.Bold)
+                }
+            },
+            shape = MaterialTheme.shapes.extraLarge,
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
+        )
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f),
+                            MaterialTheme.colorScheme.surface
+                        )
+                    )
+                )
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        "FINANCIAL FREEDOM",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        letterSpacing = 1.2.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "Your wealth in time",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                IconButton(
+                    onClick = { showHelp = true },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+                            MaterialTheme.shapes.medium
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Help",
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                com.sans.finance.presentation.components.CircularGauge(
+                    progress = freedomScore,
+                    size = 90.dp,
+                    strokeWidth = 10.dp,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    trackColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+                )
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Years of Cover",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        if (isPrivacyModeEnabled) "••.• years" else String.format(Locale.US, "%.1f years", yearsOfCover),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    val statusText = when {
+                        yearsOfCover >= 25.0 -> "You are Financially Free!"
+                        yearsOfCover >= 10.0 -> "Decade of freedom secured."
+                        yearsOfCover >= 1.0 -> "Over a year of cushion."
+                        else -> "Building your foundation."
+                    }
+                    
+                    Text(
+                        statusText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Progress towards FIRE Target (25x)
+            val fireProgress = (yearsOfCover / 25.0).coerceIn(0.0, 1.0).toFloat()
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(
+                        "FIRE Progress (25x Expenses)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "${(fireProgress * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = { fireProgress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             }
         }
     }

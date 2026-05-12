@@ -24,6 +24,9 @@ interface PortfolioDao {
     """)
     fun getLatestSnapshot(): Flow<List<PortfolioHoldingEntity>>
 
+    @Query("SELECT * FROM portfolio_snapshot_headers ORDER BY snapshotDate DESC LIMIT 1")
+    fun getLatestSnapshotHeader(): Flow<PortfolioSnapshotHeaderEntity?>
+
     @Query("SELECT snapshotDate FROM portfolio_snapshot_headers ORDER BY snapshotDate DESC")
     fun getAllSnapshotDates(): Flow<List<Long>>
 
@@ -57,12 +60,26 @@ interface PortfolioDao {
 
     @Query("DELETE FROM portfolio_snapshot_headers")
     suspend fun deleteAll()
+
+    @Query("""
+        SELECT asset_class as assetClass, SUM(value_idr) as totalIdr
+        FROM portfolio_holdings
+        WHERE snapshot_date = :date
+        GROUP BY asset_class
+        ORDER BY totalIdr DESC
+    """)
+    suspend fun getAssetClassTotals(date: Long): List<AssetClassTotal>
 }
 
 data class CategoryTotal(
     val category: String,
     val totalIdr: Double,
     val totalUsd: Double
+)
+
+data class AssetClassTotal(
+    val assetClass: String,
+    val totalIdr: Double
 )
 
 data class SnapshotTotal(

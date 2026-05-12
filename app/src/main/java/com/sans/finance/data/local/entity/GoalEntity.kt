@@ -7,11 +7,11 @@ import androidx.room.PrimaryKey
 data class GoalEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val targetAmount: Long,
-    val currentAmount: Long = 0L,
+    val targetAmount: Double,
+    val targetType: String = "TOTAL", // TOTAL, CATEGORY, ASSET_CLASS
+    val targetName: String? = null,   // Specific category or asset class name
     val currency: String = "IDR",
     val deadline: Long? = null,
-    val accountId: Long? = null, // Optional: Link to a specific account
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

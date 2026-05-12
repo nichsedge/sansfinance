@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
         PortfolioSnapshotHeaderEntity::class,
         PortfolioHoldingEntity::class
     ],
-    version = 18,
+    version = 19,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -383,6 +383,38 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_17_18 = object : androidx.room.migration.Migration(17, 18) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE portfolio_holdings ADD COLUMN asset_class TEXT NOT NULL DEFAULT 'Other'")
+            }
+        }
+
+        val MIGRATION_18_19 = object : androidx.room.migration.Migration(18, 19) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // 1. Rename old table
+                db.execSQL("ALTER TABLE goals RENAME TO goals_old")
+                
+                // 2. Create new table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `goals` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                        `name` TEXT NOT NULL, 
+                        `targetAmount` REAL NOT NULL, 
+                        `targetType` TEXT NOT NULL, 
+                        `targetName` TEXT, 
+                        `currency` TEXT NOT NULL, 
+                        `deadline` INTEGER, 
+                        `createdAt` INTEGER NOT NULL, 
+                        `updatedAt` INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                
+                // 3. Copy data (defaulting targetType to 'TOTAL')
+                db.execSQL("""
+                    INSERT INTO goals (id, name, targetAmount, targetType, targetName, currency, deadline, createdAt, updatedAt)
+                    SELECT id, name, CAST(targetAmount AS REAL), 'TOTAL', NULL, currency, deadline, createdAt, updatedAt
+                    FROM goals_old
+                """.trimIndent())
+                
+                // 4. Drop old table
+                db.execSQL("DROP TABLE goals_old")
             }
         }
     }

@@ -119,7 +119,7 @@ fun AccountStatsScreen(
                 // Balance Section
                 Column {
                     Text(
-                        "Balance",
+                        "Cash Liquidity",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

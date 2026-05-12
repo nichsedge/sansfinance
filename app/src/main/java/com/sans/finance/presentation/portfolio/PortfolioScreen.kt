@@ -23,6 +23,7 @@ import com.sans.finance.presentation.components.PrivacyText
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import com.sans.finance.presentation.portfolio.components.AllocationDonutChart
 import com.sans.finance.presentation.portfolio.components.NetWorthTrendChart
+import com.sans.finance.presentation.portfolio.components.PortfolioHealthView
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -30,6 +31,7 @@ import java.util.*
 @Composable
 fun PortfolioScreen(
     onDashboardClick: () -> Unit,
+    onForecastingClick: () -> Unit,
     viewModel: PortfolioViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -136,101 +138,129 @@ fun PortfolioScreen(
                 }
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                item {
-                    PortfolioHeader(state)
+            Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                TabRow(
+                    selectedTabIndex = state.selectedTab,
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    divider = {}
+                ) {
+                    Tab(
+                        selected = state.selectedTab == 0,
+                        onClick = { viewModel.selectTab(0) },
+                        text = { Text("Overview") }
+                    )
+                    Tab(
+                        selected = state.selectedTab == 1,
+                        onClick = { viewModel.selectTab(1) },
+                        text = { Text("Health") }
+                    )
                 }
 
-                if (state.valueHistory.size >= 2) {
-                    item {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            shape = MaterialTheme.shapes.extraLarge,
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                            )
-                        ) {
-                            Column(modifier = Modifier.padding(20.dp)) {
-                                Text(
-                                    "Net Worth Trend",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(Modifier.height(16.dp))
-                                NetWorthTrendChart(
-                                    history = state.valueHistory,
+                if (state.selectedTab == 0) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 80.dp)
+                    ) {
+                        item {
+                            PortfolioHeader(state, onForecastingClick)
+                        }
+
+                        if (state.valueHistory.size >= 2) {
+                            item {
+                                Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(200.dp),
-                                    isPrivacyModeEnabled = state.isPrivacyModeEnabled
-                                )
+                                        .padding(16.dp),
+                                    shape = MaterialTheme.shapes.extraLarge,
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    )
+                                ) {
+                                    Column(modifier = Modifier.padding(20.dp)) {
+                                        Text(
+                                            "Net Worth Trend",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(Modifier.height(16.dp))
+                                        NetWorthTrendChart(
+                                            history = state.valueHistory,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(200.dp),
+                                            isPrivacyModeEnabled = state.isPrivacyModeEnabled
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        if (state.categoryTotals.isNotEmpty()) {
+                            item {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    shape = MaterialTheme.shapes.extraLarge,
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    )
+                                ) {
+                                    Column(modifier = Modifier.padding(20.dp)) {
+                                        Text(
+                                            "Asset Allocation",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(Modifier.height(16.dp))
+                                        AllocationDonutChart(
+                                            categories = state.categoryTotals,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 8.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        state.holdingsByCategory.forEach { (category, holdings) ->
+                            item {
+                                val categoryTotal = holdings.sumOf { it.valueIdr }
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(category, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    PrivacyText(
+                                        amount = (categoryTotal * 100).toLong(),
+                                        currencyCode = "IDR",
+                                        isVisible = !state.isPrivacyModeEnabled,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+
+                            items(holdings) { holding ->
+                                HoldingItem(holding, state.isPrivacyModeEnabled)
+                                Spacer(modifier = Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)))
                             }
                         }
                     }
-                }
-
-                if (state.categoryTotals.isNotEmpty()) {
-                    item {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            shape = MaterialTheme.shapes.extraLarge,
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                            )
-                        ) {
-                            Column(modifier = Modifier.padding(20.dp)) {
-                                Text(
-                                    "Asset Allocation",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(Modifier.height(16.dp))
-                                AllocationDonutChart(
-                                    categories = state.categoryTotals,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                state.holdingsByCategory.forEach { (category, holdings) ->
-                    item {
-                        val categoryTotal = holdings.sumOf { it.valueIdr }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(category, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            PrivacyText(
-                                amount = (categoryTotal * 100).toLong(),
-                                currencyCode = "IDR",
-                                isVisible = !state.isPrivacyModeEnabled,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-
-                    items(holdings) { holding ->
-                        HoldingItem(holding, state.isPrivacyModeEnabled)
-                        Spacer(modifier = Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)))
-                    }
+                } else {
+                    PortfolioHealthView(
+                        healthList = state.healthList,
+                        isPrivacyModeEnabled = state.isPrivacyModeEnabled,
+                        modifier = Modifier.padding(bottom = 80.dp)
+                    )
                 }
             }
         }
@@ -238,7 +268,7 @@ fun PortfolioScreen(
 }
 
 @Composable
-fun PortfolioHeader(state: PortfolioScreenState) {
+fun PortfolioHeader(state: PortfolioScreenState, onForecastingClick: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -283,6 +313,18 @@ fun PortfolioHeader(state: PortfolioScreenState) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
+        
+        Spacer(Modifier.height(16.dp))
+        Button(
+            onClick = onForecastingClick,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Icon(Icons.Default.TrendingUp, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Wealth Trajectory")
+        }
     }
 }
 
@@ -318,4 +360,3 @@ fun HoldingItem(holding: PortfolioHoldingEntity, isPrivacyModeEnabled: Boolean) 
         }
     }
 }
-

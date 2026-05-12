@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
@@ -66,6 +67,9 @@ fun MainScreen(
                     },
                     onRecurringExpensesClick = {
                         rootNavController.navigate(Screen.RecurringExpenses)
+                    },
+                    onWealthForecastingClick = {
+                        rootNavController.navigate(Screen.WealthForecasting)
                     }
                 )
             }
@@ -103,6 +107,9 @@ fun MainScreen(
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onForecastingClick = {
+                        rootNavController.navigate(Screen.WealthForecasting)
                     }
                 )
             }

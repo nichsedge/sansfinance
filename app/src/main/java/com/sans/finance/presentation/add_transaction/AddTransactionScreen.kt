@@ -485,7 +485,7 @@ fun AddTransactionScreen(
                     onExpandedChange = { recurrenceExpanded = !recurrenceExpanded }
                 ) {
                     OutlinedTextField(
-                        value = viewModel.recurrenceInterval,
+                        value = viewModel.recurrenceInterval.lowercase().replaceFirstChar { it.uppercase() },
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Recurrence Interval") },
@@ -501,7 +501,7 @@ fun AddTransactionScreen(
                     ) {
                         listOf("DAILY", "WEEKLY", "MONTHLY", "YEARLY").forEach { type ->
                             DropdownMenuItem(
-                                text = { Text(type) },
+                                text = { Text(type.lowercase().replaceFirstChar { it.uppercase() }) },
                                 onClick = {
                                     viewModel.recurrenceInterval = type
                                     recurrenceExpanded = false

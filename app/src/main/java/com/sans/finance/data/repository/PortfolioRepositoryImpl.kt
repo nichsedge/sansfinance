@@ -3,6 +3,7 @@ package com.sans.finance.data.repository
 import com.sans.finance.data.local.dao.CategoryTotal
 import com.sans.finance.data.local.dao.PortfolioDao
 import com.sans.finance.data.local.dao.SnapshotTotal
+import com.sans.finance.data.local.dao.AssetClassTotal
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import com.sans.finance.data.local.entity.PortfolioSnapshotHeaderEntity
 import com.sans.finance.domain.repository.PortfolioRepository
@@ -14,6 +15,9 @@ class PortfolioRepositoryImpl(
 
     override fun getLatestSnapshot(): Flow<List<PortfolioHoldingEntity>> =
         dao.getLatestSnapshot()
+
+    override fun getLatestSnapshotHeader(): Flow<PortfolioSnapshotHeaderEntity?> =
+        dao.getLatestSnapshotHeader()
 
     override fun getSnapshotByDate(date: Long): Flow<List<PortfolioHoldingEntity>> =
         dao.getSnapshotByDate(date)
@@ -32,6 +36,9 @@ class PortfolioRepositoryImpl(
 
     override suspend fun getCategoryTotals(date: Long): List<CategoryTotal> =
         dao.getCategoryTotals(date)
+
+    override suspend fun getAssetClassTotals(date: Long): List<AssetClassTotal> =
+        dao.getAssetClassTotals(date)
 
     override suspend fun importSnapshot(
         date: Long,

@@ -78,8 +78,7 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
-    // LiteRT-LM
-    implementation("com.google.ai.edge.litertlm:litertlm-android:0.11.0")
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

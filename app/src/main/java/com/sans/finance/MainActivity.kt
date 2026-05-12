@@ -133,7 +133,8 @@ fun AppNavigation(onLanguageToggle: () -> Unit) {
         }
         composable<Screen.Portfolio> {
             com.sans.finance.presentation.portfolio.PortfolioScreen(
-                onDashboardClick = { navController.popBackStack() }
+                onDashboardClick = { navController.popBackStack() },
+                onForecastingClick = { navController.navigate(Screen.WealthForecasting) }
             )
         }
         composable<Screen.AccountStats> {
@@ -146,6 +147,11 @@ fun AppNavigation(onLanguageToggle: () -> Unit) {
         }
         composable<Screen.Goals> {
             GoalScreen(onBack = { navController.popBackStack() })
+        }
+        composable<Screen.WealthForecasting> {
+            com.sans.finance.presentation.forecasting.WealthForecastingScreen(
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

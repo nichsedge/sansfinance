@@ -22,19 +22,19 @@ This is a single-module Android app (`app/`) following **Clean Architecture** wi
 **Domain** (`domain/`) — pure Kotlin, no Android dependencies.
 - `model/` — core data classes: `Expense`, `Installment`, `InstallmentItem`
 - `repository/` — interfaces: `ExpenseRepository`, `InstallmentRepository`
-- `preferences/` — interfaces: `BudgetPreferences`, `AiPreferences`
+- `preferences/` — interfaces: `BudgetPreferences`
 - `usecase/` — one use case per operation (e.g. `AddExpenseUseCase`, `GetExpensesUseCase`)
 
 **Data** (`data/`) — implements domain interfaces.
 - `local/entity/` — Room entities mapping to DB tables
 - `local/dao/` — DAOs; `ExpenseDao` has complex UNION queries combining regular expenses and installment items for budget aggregations and chart data
 - `repository/` — `ExpenseRepositoryImpl`, `InstallmentRepositoryImpl`; maps entities→domain models, handles tag syncing
-- `preferences/` — DataStore-backed `BudgetPreferencesImpl`, `AiPreferencesImpl`
+- `preferences/` — DataStore-backed `BudgetPreferencesImpl`
 - `util/` — `CsvParser`/`CsvExporter` for import/export, `LocaleManager` for runtime locale switching
 
 **Presentation** (`presentation/`) — Compose + ViewModel.
 - Each screen has a colocated `*Screen.kt` + `*ViewModel.kt`
-- Screens: `ExpenseList`, `AddExpense`, `EditExpense`, `ScanReceipt`, `Installments`, `Stats`, `Settings`, `RecurringExpenses`
+- Screens: `ExpenseList`, `AddExpense`, `EditExpense`, `Installments`, `Stats`, `Settings`, `RecurringExpenses`
 - `navigation/Screen.kt` — type-safe nav destinations using Kotlinx Serialization
 - `components/` — shared composables (e.g. `CategoryIcon`)
 
@@ -49,7 +49,7 @@ This is a single-module Android app (`app/`) following **Clean Architecture** wi
 ```
 Compose Screen → ViewModel (StateFlow) → Use Case → Repository interface
                                                           ↓
-                                              Room DAOs / DataStore / LiteRT-LM
+                                              Room DAOs / DataStore
 ```
 
 ViewModels use `MutableStateFlow` for state; repositories return `Flow<T>`. Complex filter combinations in `ExpenseListViewModel` use `flatMapLatest()` over 7 parameters; `StatsViewModel` aggregates across multiple time ranges.
@@ -58,9 +58,7 @@ ViewModels use `MutableStateFlow` for state; repositories return `Flow<T>`. Comp
 
 Room database at version 7 with migrations from 5→6 (tag system) and 6→7 (category/tag ordering). A `RoomDatabase.Callback` seeds default categories on first create; CSV seed data is injected if the database is empty. Do not edit `sans_finance_db_snapshot.sqlite` in-place (it is a reference snapshot).
 
-### Invoice Scanning
 
-`ScanReceiptScreen` + `ScanReceiptViewModel` use **LiteRT-LM** (Google Edge LM) for on-device OCR/parsing of receipt images. The AI model preference (selectable in Settings) is persisted via `AiPreferencesImpl`.
 
 ## Coding Conventions
 

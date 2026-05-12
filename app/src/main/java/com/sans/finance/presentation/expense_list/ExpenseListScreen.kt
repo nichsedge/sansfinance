@@ -26,7 +26,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material.icons.filled.Search
@@ -756,6 +756,8 @@ fun ExpenseItem(
     account: com.sans.finance.data.local.entity.AccountEntity? = null,
     showNextDueDate: Boolean = false,
     isPrivacyModeEnabled: Boolean = false,
+    overrideAmount: Long? = null,
+    overrideLabel: String? = null,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -820,7 +822,7 @@ fun ExpenseItem(
                         )
                         if (expense.isRecurring && expense.recurrenceInterval != null) {
                             Text(
-                                " • ${expense.recurrenceInterval}",
+                                " • ${expense.recurrenceInterval.lowercase().replaceFirstChar { it.uppercase() }}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -839,7 +841,7 @@ fun ExpenseItem(
                 }
 
                 Column(horizontalAlignment = Alignment.End) {
-                    val displayAmount =
+                    val displayAmount = overrideAmount ?:
                         if (expense.isInstallment && expense.monthlyPayment > 0) expense.monthlyPayment else expense.amount
                     val amountColor = when (expense.type) {
                         "INCOME" -> Color(0xFF4CAF50)
@@ -854,6 +856,13 @@ fun ExpenseItem(
                         style = MaterialTheme.typography.bodyMedium,
                         color = amountColor
                     )
+                    if (overrideLabel != null) {
+                        Text(
+                            text = overrideLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
             androidx.compose.material3.HorizontalDivider(

@@ -45,6 +45,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import com.sans.finance.domain.model.Expense
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,7 +113,7 @@ fun RecurringExpensesScreen(
                 .padding(horizontal = 16.dp)
         ) {
 
-            // Total monthly card
+            // Total card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -123,18 +126,62 @@ fun RecurringExpensesScreen(
                 Column(
                     modifier = Modifier.padding(24.dp)
                 ) {
+                    val totalLabel = when (state.viewMode) {
+                        RecurringViewMode.MONTHLY -> "Total Monthly Recurring"
+                        RecurringViewMode.ANNUAL -> "Total Annual Cost"
+                        RecurringViewMode.OPPORTUNITY_COST_10Y -> "10-Year Opportunity Cost"
+                    }
+                    val totalAmount = when (state.viewMode) {
+                        RecurringViewMode.MONTHLY -> state.totalMonthlyRecurring
+                        RecurringViewMode.ANNUAL -> state.totalMonthlyRecurring * 12
+                        RecurringViewMode.OPPORTUNITY_COST_10Y -> (state.totalMonthlyRecurring * 173.0848).toLong()
+                    }
+
                     Text(
-                        "Total Monthly Recurring",
+                        totalLabel,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        CurrencyFormatter.formatAmount(state.totalMonthlyRecurring, state.currentCurrency),
+                        CurrencyFormatter.formatAmount(totalAmount, state.currentCurrency),
                         style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black),
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
+                    
+                    if (state.viewMode == RecurringViewMode.OPPORTUNITY_COST_10Y) {
+                        Text(
+                            "Potential wealth if invested at 7% ROI",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
+            }
+
+            // View Mode Toggle
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = state.viewMode == RecurringViewMode.MONTHLY,
+                    onClick = { if (state.viewMode != RecurringViewMode.MONTHLY) viewModel.toggleViewMode() },
+                    label = { Text("Monthly") }
+                )
+                FilterChip(
+                    selected = state.viewMode == RecurringViewMode.ANNUAL,
+                    onClick = { if (state.viewMode != RecurringViewMode.ANNUAL) viewModel.toggleViewMode() },
+                    label = { Text("Annual") }
+                )
+                FilterChip(
+                    selected = state.viewMode == RecurringViewMode.OPPORTUNITY_COST_10Y,
+                    onClick = { if (state.viewMode != RecurringViewMode.OPPORTUNITY_COST_10Y) viewModel.toggleViewMode() },
+                    label = { Text("10-Year Wealth") }
+                )
             }
 
             if (state.recurringExpenses.isEmpty()) {
@@ -150,10 +197,24 @@ fun RecurringExpensesScreen(
                 ) {
                     items(state.recurringExpenses, key = { it.id }) { expense ->
                         val category = state.categories.find { it.id == expense.categoryId }
+                        val monthly = calculateMonthlyAmount(expense)
+                        val displayAmount = when (state.viewMode) {
+                            RecurringViewMode.MONTHLY -> null // Use default
+                            RecurringViewMode.ANNUAL -> monthly * 12
+                            RecurringViewMode.OPPORTUNITY_COST_10Y -> (monthly * 173.0848).toLong()
+                        }
+                        val overrideLabel = when (state.viewMode) {
+                            RecurringViewMode.MONTHLY -> null
+                            RecurringViewMode.ANNUAL -> "per year"
+                            RecurringViewMode.OPPORTUNITY_COST_10Y -> "10y impact"
+                        }
+
                         ExpenseItem(
                             expense = expense,
                             category = category,
                             showNextDueDate = true,
+                            overrideAmount = displayAmount,
+                            overrideLabel = overrideLabel,
                             onClick = { onExpenseClick(expense.id) },
                             onLongClick = {}
                         )
@@ -164,5 +225,15 @@ fun RecurringExpensesScreen(
                 }
             }
         }
+    }
+}
+
+private fun calculateMonthlyAmount(expense: Expense): Long {
+    return when (expense.recurrenceInterval) {
+        "DAILY" -> expense.amount * 30
+        "WEEKLY" -> expense.amount * 4
+        "MONTHLY" -> expense.amount
+        "YEARLY" -> expense.amount / 12
+        else -> expense.amount
     }
 }

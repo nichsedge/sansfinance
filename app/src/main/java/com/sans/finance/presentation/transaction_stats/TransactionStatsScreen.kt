@@ -885,7 +885,7 @@ fun CustomDateRangePickerDialog(
                     },
                     enabled = dateRangePickerState.selectedStartDateMillis != null && dateRangePickerState.selectedEndDateMillis != null
                 ) {
-                    Text(stringResource(R.string.ok))
+                    Text(stringResource(android.R.string.ok))
                 }
             }
 

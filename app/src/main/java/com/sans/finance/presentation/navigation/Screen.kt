@@ -55,6 +55,6 @@ sealed class Screen {
     @Serializable
     object Budgets : Screen()
 
-//    @Serializable
-//    object ScanReceipt : Screen()
+    @Serializable
+    object WealthForecasting : Screen()
 }

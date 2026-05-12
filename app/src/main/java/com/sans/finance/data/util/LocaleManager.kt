@@ -66,4 +66,29 @@ class LocaleManager @Inject constructor(
         prefs.edit().putBoolean("privacy_mode", enabled).apply()
         _privacyMode.value = enabled
     }
+
+    // FIRE Settings
+    private val _fireManualEnabled = kotlinx.coroutines.flow.MutableStateFlow(isFireManualEnabled())
+    val fireManualEnabled = _fireManualEnabled.asStateFlow()
+
+    private val _manualFireAnnualExpense = kotlinx.coroutines.flow.MutableStateFlow(getManualFireAnnualExpense())
+    val manualFireAnnualExpense = _manualFireAnnualExpense.asStateFlow()
+
+    fun isFireManualEnabled(): Boolean {
+        return prefs.getBoolean("fire_manual_enabled", false)
+    }
+
+    fun setFireManualEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("fire_manual_enabled", enabled).apply()
+        _fireManualEnabled.value = enabled
+    }
+
+    fun getManualFireAnnualExpense(): Long {
+        return prefs.getLong("fire_manual_annual_expense", 0L)
+    }
+
+    fun setManualFireAnnualExpense(amount: Long) {
+        prefs.edit().putLong("fire_manual_annual_expense", amount).apply()
+        _manualFireAnnualExpense.value = amount
+    }
 }

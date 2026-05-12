@@ -128,7 +128,6 @@ fun AccountScreen(
                                 "Bank" -> Icons.Default.AccountBalance
                                 "Credit Card" -> Icons.Default.CreditCard
                                 "Loan" -> Icons.Default.Payments
-                                "Investment" -> Icons.AutoMirrored.Filled.ShowChart
                                 else -> Icons.Default.AccountBalance
                             }
                             Icon(
@@ -167,7 +166,6 @@ fun AccountScreen(
                             "Bank" -> Icons.Default.AccountBalance
                             "Credit Card" -> Icons.Default.CreditCard
                             "Loan" -> Icons.Default.Payments
-                            "Investment" -> Icons.AutoMirrored.Filled.ShowChart
                             else -> Icons.Default.AccountBalance
                         }
                         
@@ -246,15 +244,13 @@ fun AccountScreen(
                                     "Cash",
                                     "Bank",
                                     "Credit Card",
-                                    "Loan",
-                                    "Investment"
+                                    "Loan"
                                 ).forEach { accountType ->
                                     val accountIcon = when (accountType) {
                                         "Cash" -> Icons.Default.AccountBalanceWallet
                                         "Bank" -> Icons.Default.AccountBalance
                                         "Credit Card" -> Icons.Default.CreditCard
                                         "Loan" -> Icons.Default.Payments
-                                        "Investment" -> Icons.AutoMirrored.Filled.ShowChart
                                         else -> Icons.Default.AccountBalance
                                     }
                                     DropdownMenuItem(
@@ -391,7 +387,7 @@ fun AccountHeaderStats(state: AccountScreenState) {
                     tint = if (state.total < 0) Color(0xFFE57373) else MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    "Total",
+                    "Cash Liquidity",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )

@@ -26,6 +26,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -78,12 +84,11 @@ fun GoalScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(state.goals) { goal ->
+            items(state.goals) { goalWithProgress ->
                 GoalItem(
-                    goal = goal,
-                    onEdit = { goalToEdit = goal },
-                    onDelete = { viewModel.deleteGoal(goal) },
-                    onAddContribution = { viewModel.updateProgress(goal, it) }
+                    goalWithProgress = goalWithProgress,
+                    onEdit = { goalToEdit = goalWithProgress.goal },
+                    onDelete = { viewModel.deleteGoal(goalWithProgress.goal) }
                 )
             }
         }
@@ -91,15 +96,17 @@ fun GoalScreen(
         if (showAddDialog || goalToEdit != null) {
             AddGoalDialog(
                 goalToEdit = goalToEdit,
+                categories = state.categories,
+                assetClasses = state.assetClasses,
                 onDismiss = {
                     showAddDialog = false
                     goalToEdit = null
                 },
-                onConfirm = { name, amount ->
+                onConfirm = { name, amount, type, targetName ->
                     if (goalToEdit != null) {
-                        viewModel.updateGoalDetails(goalToEdit!!, name, amount)
+                        viewModel.updateGoalDetails(goalToEdit!!, name, amount, type, targetName)
                     } else {
-                        viewModel.addGoal(name, amount)
+                        viewModel.addGoal(name, amount, type, targetName)
                     }
                     showAddDialog = false
                     goalToEdit = null
@@ -111,13 +118,12 @@ fun GoalScreen(
 
 @Composable
 fun GoalItem(
-    goal: GoalEntity,
+    goalWithProgress: GoalWithProgress,
     onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    onAddContribution: (Long) -> Unit
+    onDelete: () -> Unit
 ) {
-    val progress = (goal.currentAmount.toFloat() / goal.targetAmount.toFloat()).coerceIn(0f, 1f)
-    var showContributionDialog by remember { mutableStateOf(false) }
+    val goal = goalWithProgress.goal
+    val progress = (goalWithProgress.currentAmount.toFloat() / goal.targetAmount.toFloat()).coerceIn(0f, 1f)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -129,11 +135,23 @@ fun GoalItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    goal.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                Column {
+                    Text(
+                        goal.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = when (goal.targetType) {
+                            "TOTAL" -> "Total Portfolio"
+                            "CATEGORY" -> "Category: ${goal.targetName}"
+                            "ASSET_CLASS" -> "Asset Class: ${goal.targetName}"
+                            else -> "Portfolio"
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Row {
                     IconButton(onClick = onEdit) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit")
@@ -167,96 +185,125 @@ fun GoalItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    CurrencyFormatter.formatAmount(goal.currentAmount, goal.currency),
+                    CurrencyFormatter.formatAmount((goalWithProgress.currentAmount * 100).toLong(), goal.currency),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    "Target: ${CurrencyFormatter.formatAmount(goal.targetAmount, goal.currency)}",
+                    "Target: ${CurrencyFormatter.formatAmount((goal.targetAmount * 100).toLong(), goal.currency)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = { showContributionDialog = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Add Contribution")
-            }
         }
-    }
-
-    if (showContributionDialog) {
-        var amount by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showContributionDialog = false },
-            title = { Text("Contribute to Goal") },
-            text = {
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = { amount = it.filter { char -> char.isDigit() } },
-                    label = { Text("Amount") },
-                    visualTransformation = com.sans.finance.core.util.ThousandsSeparatorVisualTransformation(),
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
-                )
-            },
-            confirmButton = {
-                Button(onClick = {
-                    val contribution = amount.toLongOrNull() ?: 0L
-                    onAddContribution(contribution * 100) // Assuming user inputs in whole currency
-                    showContributionDialog = false
-                }) {
-                    Text("Add")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showContributionDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 }
 
 @Composable
 fun AddGoalDialog(
     goalToEdit: GoalEntity? = null,
+    categories: List<String> = emptyList(),
+    assetClasses: List<String> = emptyList(),
     onDismiss: () -> Unit,
-    onConfirm: (String, Long) -> Unit
+    onConfirm: (String, Double, String, String?) -> Unit
 ) {
     val isEditing = goalToEdit != null
     var name by remember(goalToEdit) { mutableStateOf(goalToEdit?.name ?: "") }
     var amount by remember(goalToEdit) {
-        mutableStateOf(goalToEdit?.targetAmount?.let { (it / 100).toString() } ?: "")
+        mutableStateOf(goalToEdit?.targetAmount?.toLong()?.toString() ?: "")
     }
+    var targetType by remember(goalToEdit) { mutableStateOf(goalToEdit?.targetType ?: "TOTAL") }
+    var targetName by remember(goalToEdit) { mutableStateOf(goalToEdit?.targetName ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (isEditing) "Edit Saving Goal" else "New Saving Goal") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Goal Name (e.g. Travel)") }
+                    label = { Text("Goal Name (e.g. Travel)") },
+                    modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it.filter { char -> char.isDigit() } },
                     label = { Text("Target Amount") },
                     visualTransformation = com.sans.finance.core.util.ThousandsSeparatorVisualTransformation(),
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
                 )
+                
+                Text("Track Progress From:", style = MaterialTheme.typography.labelMedium)
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("TOTAL", "CATEGORY", "ASSET_CLASS").forEach { type ->
+                        val isSelected = targetType == type
+                        androidx.compose.material3.FilterChip(
+                            selected = isSelected,
+                            onClick = { 
+                                targetType = type 
+                                if (type == "TOTAL") targetName = ""
+                                else if (type == "CATEGORY" && !categories.contains(targetName)) targetName = categories.firstOrNull() ?: ""
+                                else if (type == "ASSET_CLASS" && !assetClasses.contains(targetName)) targetName = assetClasses.firstOrNull() ?: ""
+                            },
+                            label = { 
+                                Text(when(type) {
+                                    "TOTAL" -> "Portfolio"
+                                    "CATEGORY" -> "Category"
+                                    "ASSET_CLASS" -> "Asset Class"
+                                    else -> type
+                                }) 
+                            }
+                        )
+                    }
+                }
+
+                if (targetType != "TOTAL") {
+                    val options = if (targetType == "CATEGORY") categories else assetClasses
+                    var expanded by remember { mutableStateOf(false) }
+                    
+                    Column {
+                        OutlinedTextField(
+                            value = targetName,
+                            onValueChange = { targetName = it },
+                            label = { Text(if (targetType == "CATEGORY") "Select Category" else "Select Asset Class") },
+                            modifier = Modifier.fillMaxWidth(),
+                            readOnly = true,
+                            trailingIcon = {
+                                IconButton(onClick = { expanded = !expanded }) {
+                                    Icon(
+                                        imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                        contentDescription = null
+                                    )
+                                }
+                            }
+                        )
+                        androidx.compose.material3.DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            modifier = Modifier.fillMaxWidth(0.8f)
+                        ) {
+                            options.forEach { option ->
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        targetName = option
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
             Button(onClick = {
-                val target = amount.toLongOrNull() ?: 0L
-                onConfirm(name, target * 100)
+                val target = amount.toDoubleOrNull() ?: 0.0
+                onConfirm(name, target, targetType, if (targetType == "TOTAL") null else targetName)
             }) {
                 Text(if (isEditing) "Save" else "Create")
             }
