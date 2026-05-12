@@ -18,6 +18,7 @@ import com.sans.finance.domain.usecase.DeleteExpenseUseCase
 import com.sans.finance.domain.usecase.GetExpenseByIdUseCase
 import com.sans.finance.domain.usecase.GetItemNameSuggestionsUseCase
 import com.sans.finance.domain.usecase.GetMerchantSuggestionsUseCase
+import com.sans.finance.domain.usecase.CheckDuplicateExpenseUseCase
 import com.sans.finance.domain.usecase.UpdateExpenseUseCase
 import com.sans.finance.presentation.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -46,6 +47,7 @@ class AddTransactionViewModel @Inject constructor(
     private val installmentRepository: com.sans.finance.domain.repository.InstallmentRepository,
     private val expenseRepository: com.sans.finance.domain.repository.ExpenseRepository,
     private val accountRepository: com.sans.finance.domain.repository.AccountRepository,
+    private val checkDuplicateExpenseUseCase: CheckDuplicateExpenseUseCase,
     private val localeManager: com.sans.finance.data.util.LocaleManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -102,6 +104,8 @@ class AddTransactionViewModel @Inject constructor(
 
     var noteSuggestions by mutableStateOf(emptyList<String>())
         private set
+    var duplicateFound by mutableStateOf<Expense?>(null)
+    var showDuplicateDialog by mutableStateOf(false)
     var descriptionSuggestions by mutableStateOf(emptyList<String>())
         private set
 
@@ -219,6 +223,29 @@ class AddTransactionViewModel @Inject constructor(
     }
 
     fun onSaveClick(onSuccess: () -> Unit) {
+        val amountInCents = amount.toSafeLongCents() ?: 0L
+
+        if (!isEditMode && !showDuplicateDialog) {
+            viewModelScope.launch {
+                val duplicate = checkDuplicateExpenseUseCase(
+                    note = note,
+                    amount = amountInCents,
+                    date = selectedDate,
+                    accountId = accountId
+                )
+                if (duplicate != null) {
+                    duplicateFound = duplicate
+                    showDuplicateDialog = true
+                    return@launch
+                }
+                saveTransaction(onSuccess)
+            }
+        } else {
+            saveTransaction(onSuccess)
+        }
+    }
+
+    private fun saveTransaction(onSuccess: () -> Unit) {
         val amountInCents = amount.toSafeLongCents() ?: 0L
 
         val nextDueDateVal = if (isRecurring) {

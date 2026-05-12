@@ -139,6 +139,17 @@ class ExpenseRepositoryImpl(
         return dao.getDescriptionSuggestions(query)
     }
 
+    override suspend fun findPotentialDuplicate(note: String, amount: Long, date: Long, accountId: Long): Expense? {
+        val window = 5 * 60 * 1000 // 5 minutes
+        return dao.findDuplicateExpense(
+            note = note,
+            amount = amount,
+            startTime = date - window,
+            endTime = date + window,
+            accountId = accountId
+        )?.toDomain()
+    }
+
     override suspend fun insertExpense(expense: Expense): Long = db.withTransaction {
         val expenseId = dao.insertExpense(expense.toEntity())
         syncTags(expenseId, expense.tags)
