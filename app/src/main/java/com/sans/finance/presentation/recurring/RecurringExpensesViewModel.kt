@@ -26,10 +26,10 @@ class RecurringExpensesViewModel @Inject constructor(
         _viewMode
     ) { expenses, categories, viewMode ->
         val recurringExpenses = expenses.filter { it.isRecurring }
-        val totalMonthly = recurringExpenses.sumOf { 
+        val totalMonthly = recurringExpenses.sumOf {
             calculateMonthlyAmount(it)
         }
-        
+
         RecurringExpensesState(
             recurringExpenses = recurringExpenses,
             categories = categories,

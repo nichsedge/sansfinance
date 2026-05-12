@@ -32,7 +32,11 @@ class MainActivity : ComponentActivity() {
             SansFinanceTheme {
                 AppNavigation(onLanguageToggle = {
                     val current = localeManager.getLocale()
-                    val next = when { current.startsWith("en") -> "id"; current.startsWith("id") -> "zh"; current.startsWith("zh") -> "en"; else -> "en" }
+                    val next = when {
+                        current.startsWith("en") -> "id"; current.startsWith("id") -> "zh"; current.startsWith(
+                            "zh"
+                        ) -> "en"; else -> "en"
+                    }
                     localeManager.setLocale(next)
                     // android.app.LocaleManager.applicationLocales already triggers
                     // a system-level activity recreation automatically — no need to

@@ -52,7 +52,9 @@ class SettingsViewModel @Inject constructor(
     fun toggleCurrency() {
         val enabled = _enabledCurrencies.value
         val currentIndex = enabled.indexOf(_currentCurrency.value)
-        val next = if (currentIndex != -1 && currentIndex + 1 < enabled.size) enabled[currentIndex + 1] else enabled.firstOrNull() ?: "USD"
+        val next =
+            if (currentIndex != -1 && currentIndex + 1 < enabled.size) enabled[currentIndex + 1] else enabled.firstOrNull()
+                ?: "USD"
         localeManager.setCurrency(next)
         _currentCurrency.value = next
     }

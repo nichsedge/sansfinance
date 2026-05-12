@@ -3,19 +3,19 @@ package com.sans.finance.presentation.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.core.util.CalendarUtils
+import com.sans.finance.data.local.dao.SnapshotTotal
+import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import com.sans.finance.domain.repository.AccountRepository
 import com.sans.finance.domain.repository.BudgetRepository
 import com.sans.finance.domain.repository.ExpenseRepository
 import com.sans.finance.domain.repository.GoalRepository
+import com.sans.finance.domain.repository.PortfolioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import com.sans.finance.domain.repository.PortfolioRepository
-import com.sans.finance.data.local.dao.SnapshotTotal
 import java.util.Calendar
 import javax.inject.Inject
-import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 
 data class DashboardState(
     val netWorth: Long = 0L,
@@ -62,7 +62,8 @@ class DashboardViewModel @Inject constructor(
     private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
-    private val _wealthDistributionTab = kotlinx.coroutines.flow.MutableStateFlow(WealthDistributionTab.CATEGORY)
+    private val _wealthDistributionTab =
+        kotlinx.coroutines.flow.MutableStateFlow(WealthDistributionTab.CATEGORY)
 
     // Intermediate Contexts for better type safety and modularity
     private val financeContext = combine(
@@ -99,10 +100,10 @@ class DashboardViewModel @Inject constructor(
         val recurring = finance.recurring
         val goals = finance.goals
         val budgets = finance.budgets
-        
+
         val portfolioHistory = portfolio.history
         val latestHoldings = portfolio.holdings
-        
+
         val privacyMode = settings.isPrivacyModeEnabled
         val selectedTab = settings.wealthDistributionTab
         val isFireManual = settings.isFireManualEnabled
@@ -112,7 +113,7 @@ class DashboardViewModel @Inject constructor(
         val portfolioAssets = (latestPortfolioIdr * 100).toLong()
 
         val assets = portfolioAssets
-        val liabilities = 0L 
+        val liabilities = 0L
 
         val recurringNet = recurring.sumOf {
             if (it.type == "INCOME") it.amount else -it.amount
@@ -123,10 +124,12 @@ class DashboardViewModel @Inject constructor(
                 latestHoldings.groupBy { it.currency }
                     .mapValues { entry -> (entry.value.sumOf { it.valueIdr } * 100).toLong() }
             }
+
             WealthDistributionTab.ASSET_CLASS -> {
                 latestHoldings.groupBy { it.assetClass }
                     .mapValues { entry -> (entry.value.sumOf { it.valueIdr } * 100).toLong() }
             }
+
             WealthDistributionTab.CATEGORY -> {
                 latestHoldings.groupBy { it.category }
                     .mapValues { entry -> (entry.value.sumOf { it.valueIdr } * 100).toLong() }
@@ -151,7 +154,10 @@ class DashboardViewModel @Inject constructor(
         val monthlyIncome = monthlyTxns.filter { it.type == "INCOME" }.sumOf { it.amount }
         val monthlyExpense = monthlyTxns.filter { it.type == "EXPENSE" }.sumOf { it.amount }
         val savingsRate =
-            if (monthlyIncome > 0) ((monthlyIncome - monthlyExpense).toFloat() / monthlyIncome.toFloat()).coerceIn(0f, 1f) 
+            if (monthlyIncome > 0) ((monthlyIncome - monthlyExpense).toFloat() / monthlyIncome.toFloat()).coerceIn(
+                0f,
+                1f
+            )
             else 0f
 
         val now = System.currentTimeMillis()
@@ -159,8 +165,9 @@ class DashboardViewModel @Inject constructor(
         val annualExpense = transactions.filter {
             it.date >= yearAgo && it.date <= now && it.type == "EXPENSE" && (!it.isInstallment || it.isInstallmentPayment)
         }.sumOf { it.amount }
-        
-        val firstTxnDate = transactions.filter { it.type == "EXPENSE" }.minOfOrNull { it.date } ?: now
+
+        val firstTxnDate =
+            transactions.filter { it.type == "EXPENSE" }.minOfOrNull { it.date } ?: now
         val daysOfData = ((now - firstTxnDate) / (24 * 60 * 60 * 1000)).coerceAtLeast(1L)
         val effectiveAnnualExpense = if (isFireManual) {
             manualFireExpense
@@ -175,9 +182,10 @@ class DashboardViewModel @Inject constructor(
         } else {
             0.0
         }
-        
+
         val freedomScore = if (effectiveAnnualExpense > 0) {
-            (assets.toDouble() / (effectiveAnnualExpense.toDouble() * 25.0)).toFloat().coerceIn(0f, 1f)
+            (assets.toDouble() / (effectiveAnnualExpense.toDouble() * 25.0)).toFloat()
+                .coerceIn(0f, 1f)
         } else {
             0f
         }
@@ -191,7 +199,7 @@ class DashboardViewModel @Inject constructor(
         if (assets > 0 && goals.isEmpty()) suggestions.add("You have healthy assets but no active goals. Why not set a new savings target?")
         if (monthlyIncome > 0 && savingsRate < 0.1f) suggestions.add("You're saving less than 10% of your income this month. Try to reduce discretionary spending.")
         if (monthlyExpense > monthlyIncome && monthlyIncome > 0) suggestions.add("⚠️ You're spending more than you earn this month. Review your expenses.")
-        
+
         if (daysOfData < 30 && annualExpense > 0) {
             suggestions.add("💡 Tracking more expenses will improve the accuracy of your Financial Freedom score.")
         } else if (annualExpense == 0L && assets > 0) {
@@ -208,7 +216,8 @@ class DashboardViewModel @Inject constructor(
         }
 
         val todayCal = CalendarUtils.getInstance()
-        val daysLeft = todayCal.getActualMaximum(Calendar.DAY_OF_MONTH) - todayCal.get(Calendar.DAY_OF_MONTH)
+        val daysLeft =
+            todayCal.getActualMaximum(Calendar.DAY_OF_MONTH) - todayCal.get(Calendar.DAY_OF_MONTH)
 
         DashboardState(
             netWorth = assets - liabilities,
@@ -218,8 +227,12 @@ class DashboardViewModel @Inject constructor(
             goals = goals.map { goal ->
                 val currentAmountIdr = when (goal.targetType) {
                     "TOTAL" -> latestPortfolioIdr
-                    "CATEGORY" -> latestHoldings.filter { it.category == goal.targetName }.sumOf { it.valueIdr }
-                    "ASSET_CLASS" -> latestHoldings.filter { it.assetClass == goal.targetName }.sumOf { it.valueIdr }
+                    "CATEGORY" -> latestHoldings.filter { it.category == goal.targetName }
+                        .sumOf { it.valueIdr }
+
+                    "ASSET_CLASS" -> latestHoldings.filter { it.assetClass == goal.targetName }
+                        .sumOf { it.valueIdr }
+
                     else -> 0.0
                 }
                 DashboardGoal(

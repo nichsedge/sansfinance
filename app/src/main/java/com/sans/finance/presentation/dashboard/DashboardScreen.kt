@@ -1,5 +1,4 @@
 package com.sans.finance.presentation.dashboard
-import com.sans.finance.presentation.dashboard.WealthDistributionTab
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -21,36 +20,36 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Switch
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -63,13 +62,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.core.util.CurrencyFormatter
 import com.sans.finance.presentation.components.PrivacyText
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import java.util.Locale
 
 
@@ -107,7 +105,12 @@ fun DashboardScreen(
                             DropdownMenuItem(
                                 text = { Text("Dashboard") },
                                 onClick = { showViewMenu = false },
-                                leadingIcon = { Icon(Icons.Default.Dashboard, contentDescription = null) }
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Dashboard,
+                                        contentDescription = null
+                                    )
+                                }
                             )
                             DropdownMenuItem(
                                 text = { Text("Portfolio") },
@@ -115,7 +118,12 @@ fun DashboardScreen(
                                     showViewMenu = false
                                     onPortfolioClick()
                                 },
-                                leadingIcon = { Icon(Icons.Default.PieChart, contentDescription = null) }
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.PieChart,
+                                        contentDescription = null
+                                    )
+                                }
                             )
                         }
                     }
@@ -201,13 +209,13 @@ fun DashboardScreen(
 
             if (state.wealthDistribution.isNotEmpty()) {
                 item {
-                WealthDistributionCard(
-                    distribution = state.wealthDistribution,
-                    selectedTab = state.wealthDistributionTab,
-                    onTabSelected = viewModel::setWealthDistributionTab,
-                    currencyCode = state.currentCurrency,
-                    isPrivacyModeEnabled = state.isPrivacyModeEnabled
-                )
+                    WealthDistributionCard(
+                        distribution = state.wealthDistribution,
+                        selectedTab = state.wealthDistributionTab,
+                        onTabSelected = viewModel::setWealthDistributionTab,
+                        currencyCode = state.currentCurrency,
+                        isPrivacyModeEnabled = state.isPrivacyModeEnabled
+                    )
                 }
             }
 
@@ -315,16 +323,34 @@ fun NetWorthCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                BreakdownItem("Assets", assets, Color(0xFF4CAF50), currencyCode, isPrivacyModeEnabled)
+                BreakdownItem(
+                    "Assets",
+                    assets,
+                    Color(0xFF4CAF50),
+                    currencyCode,
+                    isPrivacyModeEnabled
+                )
                 VerticalDivider(modifier = Modifier.height(40.dp))
-                BreakdownItem("Liabilities", liabilities, Color(0xFFF44336), currencyCode, isPrivacyModeEnabled)
+                BreakdownItem(
+                    "Liabilities",
+                    liabilities,
+                    Color(0xFFF44336),
+                    currencyCode,
+                    isPrivacyModeEnabled
+                )
             }
         }
     }
 }
 
 @Composable
-fun BreakdownItem(label: String, amount: Long, color: Color, currencyCode: String, isPrivacyModeEnabled: Boolean) {
+fun BreakdownItem(
+    label: String,
+    amount: Long,
+    color: Color,
+    currencyCode: String,
+    isPrivacyModeEnabled: Boolean
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             label.uppercase(),
@@ -422,14 +448,17 @@ fun WealthDistributionCard(
                     fontWeight = FontWeight.Bold
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // Tabs
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant,
+                        MaterialTheme.shapes.small
+                    )
                     .padding(4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -440,7 +469,7 @@ fun WealthDistributionCard(
                             .weight(1f)
                             .clip(MaterialTheme.shapes.small)
                             .background(
-                                if (isSelected) MaterialTheme.colorScheme.primary 
+                                if (isSelected) MaterialTheme.colorScheme.primary
                                 else Color.Transparent
                             )
                             .clickable { onTabSelected(tab) }
@@ -448,15 +477,15 @@ fun WealthDistributionCard(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = when(tab) {
+                            text = when (tab) {
                                 WealthDistributionTab.CURRENCY -> "Currency"
                                 WealthDistributionTab.ASSET_CLASS -> "Asset Class"
                                 WealthDistributionTab.CATEGORY -> "Category"
                             },
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary 
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -482,10 +511,12 @@ fun WealthDistributionCard(
                         2 -> MaterialTheme.colorScheme.tertiary
                         else -> MaterialTheme.colorScheme.error
                     }
-                    Box(modifier = Modifier
-                        .weight(weight)
-                        .fillMaxHeight()
-                        .background(color))
+                    Box(
+                        modifier = Modifier
+                            .weight(weight)
+                            .fillMaxHeight()
+                            .background(color)
+                    )
                 }
             }
 
@@ -496,7 +527,7 @@ fun WealthDistributionCard(
                 distribution.entries.forEachIndexed { index, entry ->
                     val entryValue = kotlin.math.abs(entry.value)
                     val percentage = (entryValue.toFloat() / total.toFloat() * 100).toInt()
-                    
+
                     val color = when (index % 4) {
                         0 -> MaterialTheme.colorScheme.primary
                         1 -> MaterialTheme.colorScheme.secondary
@@ -537,7 +568,13 @@ fun WealthDistributionCard(
 }
 
 @Composable
-fun MonthlyCashFlowCard(income: Long, expense: Long, savingsRate: Float, currencyCode: String, isPrivacyModeEnabled: Boolean) {
+fun MonthlyCashFlowCard(
+    income: Long,
+    expense: Long,
+    savingsRate: Float,
+    currencyCode: String,
+    isPrivacyModeEnabled: Boolean
+) {
     val animatedSavings by animateFloatAsState(
         targetValue = savingsRate,
         animationSpec = tween(800),
@@ -643,7 +680,7 @@ fun MonthlyCashFlowCard(income: Long, expense: Long, savingsRate: Float, currenc
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            if (savingsRate >= 0.2f) "Excellent progress!" 
+                            if (savingsRate >= 0.2f) "Excellent progress!"
                             else if (savingsRate >= 0.1f) "Good, keep it up."
                             else "Try to save more.",
                             style = MaterialTheme.typography.labelSmall,
@@ -653,9 +690,9 @@ fun MonthlyCashFlowCard(income: Long, expense: Long, savingsRate: Float, currenc
                     com.sans.finance.presentation.components.CircularGauge(
                         progress = savingsRate,
                         size = 64.dp,
-                        color = if (savingsRate >= 0.2f) Color(0xFF4CAF50) 
-                                else if (savingsRate >= 0.1f) Color(0xFFFFC107) 
-                                else Color(0xFFF44336)
+                        color = if (savingsRate >= 0.2f) Color(0xFF4CAF50)
+                        else if (savingsRate >= 0.1f) Color(0xFFFFC107)
+                        else Color(0xFFF44336)
                     )
                 }
             }
@@ -739,7 +776,11 @@ fun DashboardGoalItem(goal: DashboardGoal, currencyCode: String, isPrivacyModeEn
 }
 
 @Composable
-fun DashboardBillItem(bill: com.sans.finance.domain.model.Expense, currencyCode: String, isPrivacyModeEnabled: Boolean) {
+fun DashboardBillItem(
+    bill: com.sans.finance.domain.model.Expense,
+    currencyCode: String,
+    isPrivacyModeEnabled: Boolean
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -776,9 +817,14 @@ fun DashboardBillItem(bill: com.sans.finance.domain.model.Expense, currencyCode:
 }
 
 
-
 @Composable
-fun GlobalBudgetCard(budget: Long, spent: Long, daysLeft: Int, currencyCode: String, isPrivacyModeEnabled: Boolean) {
+fun GlobalBudgetCard(
+    budget: Long,
+    spent: Long,
+    daysLeft: Int,
+    currencyCode: String,
+    isPrivacyModeEnabled: Boolean
+) {
     val progress = (spent.toFloat() / budget.toFloat()).coerceIn(0f, 1f)
     val isOverBudget = spent > budget
     val remaining = (budget - spent).coerceAtLeast(0L)
@@ -814,7 +860,9 @@ fun GlobalBudgetCard(budget: Long, spent: Long, daysLeft: Int, currencyCode: Str
                     Text(
                         if (isOverBudget) "OVER BUDGET" else "ON TRACK",
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (isOverBudget) MaterialTheme.colorScheme.error else Color(0xFF4CAF50),
+                        color = if (isOverBudget) MaterialTheme.colorScheme.error else Color(
+                            0xFF4CAF50
+                        ),
                         fontWeight = FontWeight.Black
                     )
                     Text(
@@ -891,8 +939,8 @@ fun FinancialFreedomCard(
     onManualAmountChange: (Long) -> Unit
 ) {
     var showHelp by remember { mutableStateOf(false) }
-    var manualInput by remember(manualAnnualExpense) { 
-        mutableStateOf((manualAnnualExpense / 100).toString()) 
+    var manualInput by remember(manualAnnualExpense) {
+        mutableStateOf((manualAnnualExpense / 100).toString())
     }
 
     if (showHelp) {
@@ -913,11 +961,24 @@ fun FinancialFreedomCard(
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
                     )
-                    
+
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Years of Cover", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        val assetsFormatted = if (isPrivacyModeEnabled) "••••" else CurrencyFormatter.formatAmount(totalAssets, currencyCode)
-                        val expenseFormatted = if (isPrivacyModeEnabled) "••••" else CurrencyFormatter.formatAmount(annualExpense, currencyCode)
+                        Text(
+                            "Years of Cover",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        val assetsFormatted =
+                            if (isPrivacyModeEnabled) "••••" else CurrencyFormatter.formatAmount(
+                                totalAssets,
+                                currencyCode
+                            )
+                        val expenseFormatted =
+                            if (isPrivacyModeEnabled) "••••" else CurrencyFormatter.formatAmount(
+                                annualExpense,
+                                currencyCode
+                            )
                         Text(
                             "$assetsFormatted ÷ $expenseFormatted (Annual Expense). Your wealth expressed in time.",
                             style = MaterialTheme.typography.bodySmall,
@@ -926,8 +987,17 @@ fun FinancialFreedomCard(
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Annual Expenses", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        val dailyFormatted = if (isPrivacyModeEnabled) "••••" else CurrencyFormatter.formatAmount(annualExpense / 365, currencyCode)
+                        Text(
+                            "Annual Expenses",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        val dailyFormatted =
+                            if (isPrivacyModeEnabled) "••••" else CurrencyFormatter.formatAmount(
+                                annualExpense / 365,
+                                currencyCode
+                            )
                         Text(
                             "Estimated at $dailyFormatted/day. We use your rolling 12-month spending to normalize this figure.",
                             style = MaterialTheme.typography.bodySmall,
@@ -936,9 +1006,18 @@ fun FinancialFreedomCard(
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("FIRE Goal (25x)", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "FIRE Goal (25x)",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                         val fireTarget = annualExpense * 25
-                        val targetFormatted = if (isPrivacyModeEnabled) "••••" else CurrencyFormatter.formatAmount(fireTarget, currencyCode)
+                        val targetFormatted =
+                            if (isPrivacyModeEnabled) "••••" else CurrencyFormatter.formatAmount(
+                                fireTarget,
+                                currencyCode
+                            )
                         Text(
                             "You are free when assets reach $targetFormatted. This allows for a safe 4% withdrawal rate.",
                             style = MaterialTheme.typography.bodySmall,
@@ -964,7 +1043,7 @@ fun FinancialFreedomCard(
                                 onCheckedChange = { onManualToggle(it) }
                             )
                         }
-                        
+
                         if (isManualEnabled) {
                             OutlinedTextField(
                                 value = manualInput,
@@ -1083,21 +1162,25 @@ fun FinancialFreedomCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        if (isPrivacyModeEnabled) "••.• years" else String.format(Locale.US, "%.1f years", yearsOfCover),
+                        if (isPrivacyModeEnabled) "••.• years" else String.format(
+                            Locale.US,
+                            "%.1f years",
+                            yearsOfCover
+                        ),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Black,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    
+
                     Spacer(modifier = Modifier.height(8.dp))
-                    
+
                     val statusText = when {
                         yearsOfCover >= 25.0 -> "You are Financially Free!"
                         yearsOfCover >= 10.0 -> "Decade of freedom secured."
                         yearsOfCover >= 1.0 -> "Over a year of cushion."
                         else -> "Building your foundation."
                     }
-                    
+
                     Text(
                         statusText,
                         style = MaterialTheme.typography.labelSmall,
@@ -1108,11 +1191,14 @@ fun FinancialFreedomCard(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Progress towards FIRE Target (25x)
             val fireProgress = (yearsOfCover / 25.0).coerceIn(0.0, 1.0).toFloat()
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Text(
                         "FIRE Progress (25x Expenses)",
                         style = MaterialTheme.typography.labelSmall,

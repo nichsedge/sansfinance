@@ -1,7 +1,6 @@
 package com.sans.finance.presentation.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -23,26 +22,26 @@ fun Sparkline(
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
-        
+
         val minData = data.minOrNull() ?: 0L
         val maxData = data.maxOrNull() ?: 1L
         val range = (maxData - minData).coerceAtLeast(1L)
-        
+
         val stepX = width / (data.size - 1)
         val path = Path()
-        
+
         data.forEachIndexed { index, value ->
             val x = index * stepX
             val fractionY = (value - minData).toFloat() / range.toFloat()
             val y = height - (fractionY * height)
-            
+
             if (index == 0) {
                 path.moveTo(x, y)
             } else {
                 path.lineTo(x, y)
             }
         }
-        
+
         if (showFill) {
             val fillPath = Path().apply {
                 addPath(path)
@@ -57,7 +56,7 @@ fun Sparkline(
                 )
             )
         }
-        
+
         drawPath(
             path = path,
             color = color,

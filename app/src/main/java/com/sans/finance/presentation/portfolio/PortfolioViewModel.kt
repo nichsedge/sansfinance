@@ -3,13 +3,13 @@ package com.sans.finance.presentation.portfolio
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sans.finance.data.local.dao.AssetClassTotal
 import com.sans.finance.data.local.dao.CategoryTotal
 import com.sans.finance.data.local.dao.SnapshotTotal
-import com.sans.finance.data.local.dao.AssetClassTotal
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
-import com.sans.finance.domain.model.AssetClassHealth
 import com.sans.finance.data.util.LocaleManager
 import com.sans.finance.data.util.PortfolioJsonImporter
+import com.sans.finance.domain.model.AssetClassHealth
 import com.sans.finance.domain.repository.PortfolioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -45,7 +45,7 @@ data class PortfolioScreenState(
 class PortfolioViewModel @Inject constructor(
     private val repository: PortfolioRepository,
     private val localeManager: LocaleManager,
-    @ApplicationContext private val context: android.content.Context
+    @param:ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
     private val _selectedDateIndex = MutableStateFlow(0)
@@ -61,7 +61,7 @@ class PortfolioViewModel @Inject constructor(
             localeManager.privacyMode
         ) { dates, history, dateIndex, importMsg, privacyMode ->
             val currency = localeManager.getCurrency()
-            
+
             if (dates.isEmpty()) {
                 return@combine PortfolioScreenState(
                     currentCurrency = currency,
@@ -75,9 +75,11 @@ class PortfolioViewModel @Inject constructor(
             val selectedDate = dates[validIndex]
 
             val holdings = repository.getSnapshotByDateSync(selectedDate)
-            val categoryTotals = repository.getCategoryTotals(selectedDate).sortedByDescending { it.totalIdr }
-            val assetClassTotals = repository.getAssetClassTotals(selectedDate).sortedByDescending { it.totalIdr }
-            
+            val categoryTotals =
+                repository.getCategoryTotals(selectedDate).sortedByDescending { it.totalIdr }
+            val assetClassTotals =
+                repository.getAssetClassTotals(selectedDate).sortedByDescending { it.totalIdr }
+
             val totalValueIdr = assetClassTotals.sumOf { it.totalIdr }
             val healthList = calculateHealth(assetClassTotals, totalValueIdr)
 
@@ -150,14 +152,13 @@ class PortfolioViewModel @Inject constructor(
                     return@launch
                 }
                 repository.importSnapshot(date, items, exchangeRate)
-                _selectedDateIndex.value = 0 
+                _selectedDateIndex.value = 0
                 _importMessage.value = "Imported ${items.size} holdings"
             } catch (e: Exception) {
                 _importMessage.value = "Import failed: ${e.message}"
             }
         }
     }
-
 
 
     fun clearImportMessage() {
@@ -175,13 +176,15 @@ class PortfolioViewModel @Inject constructor(
         if (totalValue <= 0) return emptyList()
 
         val targets = com.sans.finance.domain.model.PortfolioHealthDefaults.targets
-        
+
         // Calculate health for targeted asset classes
         val targetedHealth = targets.map { target ->
-            val currentTotal = totals.find { it.assetClass.equals(target.assetClass, ignoreCase = true) }?.totalIdr ?: 0.0
+            val currentTotal =
+                totals.find { it.assetClass.equals(target.assetClass, ignoreCase = true) }?.totalIdr
+                    ?: 0.0
             val currentPercentage = (currentTotal / totalValue) * 100.0
             val diff = currentPercentage - target.targetPercentage
-            
+
             val status = when {
                 diff > 5.0 -> com.sans.finance.domain.model.HealthStatus.OVERWEIGHT
                 diff < -5.0 -> com.sans.finance.domain.model.HealthStatus.UNDERWEIGHT

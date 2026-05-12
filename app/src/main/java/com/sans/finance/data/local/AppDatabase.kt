@@ -302,7 +302,8 @@ abstract class AppDatabase : RoomDatabase() {
 
         val MIGRATION_15_16 = object : androidx.room.migration.Migration(15, 16) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-                db.execSQL("""
+                db.execSQL(
+                    """
                     CREATE TABLE IF NOT EXISTS `portfolio_snapshots` (
                         `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         `snapshot_date` INTEGER NOT NULL,
@@ -318,7 +319,8 @@ abstract class AppDatabase : RoomDatabase() {
                         `details` TEXT,
                         `created_at` INTEGER NOT NULL
                     )
-                """.trimIndent())
+                """.trimIndent()
+                )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_portfolio_snapshots_snapshot_date` ON `portfolio_snapshots` (`snapshot_date`)")
             }
         }
@@ -326,7 +328,8 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_16_17 = object : androidx.room.migration.Migration(16, 17) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 // 1. Create new header table
-                db.execSQL("""
+                db.execSQL(
+                    """
                     CREATE TABLE IF NOT EXISTS `portfolio_snapshot_headers` (
                         `snapshotDate` INTEGER PRIMARY KEY NOT NULL,
                         `exchangeRateUsd` REAL NOT NULL,
@@ -334,10 +337,12 @@ abstract class AppDatabase : RoomDatabase() {
                         `totalValueUsd` REAL NOT NULL,
                         `createdAt` INTEGER NOT NULL
                     )
-                """.trimIndent())
+                """.trimIndent()
+                )
 
                 // 2. Create new holdings table
-                db.execSQL("""
+                db.execSQL(
+                    """
                     CREATE TABLE IF NOT EXISTS `portfolio_holdings` (
                         `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         `snapshot_date` INTEGER NOT NULL,
@@ -352,12 +357,14 @@ abstract class AppDatabase : RoomDatabase() {
                         `details` TEXT,
                         FOREIGN KEY(`snapshot_date`) REFERENCES `portfolio_snapshot_headers`(`snapshotDate`) ON UPDATE NO ACTION ON DELETE CASCADE
                     )
-                """.trimIndent())
+                """.trimIndent()
+                )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_portfolio_holdings_snapshot_date` ON `portfolio_holdings` (`snapshot_date`)")
 
                 // 3. Migrate data from old flat table
                 // Estimate exchange rate from existing data (value_idr / value_usd)
-                db.execSQL("""
+                db.execSQL(
+                    """
                     INSERT OR IGNORE INTO portfolio_snapshot_headers (snapshotDate, exchangeRateUsd, totalValueIdr, totalValueUsd, createdAt)
                     SELECT 
                         snapshot_date, 
@@ -367,13 +374,16 @@ abstract class AppDatabase : RoomDatabase() {
                         MIN(created_at)
                     FROM portfolio_snapshots
                     GROUP BY snapshot_date
-                """.trimIndent())
+                """.trimIndent()
+                )
 
-                db.execSQL("""
+                db.execSQL(
+                    """
                     INSERT INTO portfolio_holdings (snapshot_date, source, category, asset, currency, amount, price, value_idr, account, details)
                     SELECT snapshot_date, source, category, asset, currency, amount, price, value_idr, account, details
                     FROM portfolio_snapshots
-                """.trimIndent())
+                """.trimIndent()
+                )
 
                 // 4. Drop old table
                 db.execSQL("DROP TABLE portfolio_snapshots")
@@ -390,9 +400,10 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 // 1. Rename old table
                 db.execSQL("ALTER TABLE goals RENAME TO goals_old")
-                
+
                 // 2. Create new table
-                db.execSQL("""
+                db.execSQL(
+                    """
                     CREATE TABLE IF NOT EXISTS `goals` (
                         `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
                         `name` TEXT NOT NULL, 
@@ -404,15 +415,18 @@ abstract class AppDatabase : RoomDatabase() {
                         `createdAt` INTEGER NOT NULL, 
                         `updatedAt` INTEGER NOT NULL
                     )
-                """.trimIndent())
-                
+                """.trimIndent()
+                )
+
                 // 3. Copy data (defaulting targetType to 'TOTAL')
-                db.execSQL("""
+                db.execSQL(
+                    """
                     INSERT INTO goals (id, name, targetAmount, targetType, targetName, currency, deadline, createdAt, updatedAt)
                     SELECT id, name, CAST(targetAmount AS REAL), 'TOTAL', NULL, currency, deadline, createdAt, updatedAt
                     FROM goals_old
-                """.trimIndent())
-                
+                """.trimIndent()
+                )
+
                 // 4. Drop old table
                 db.execSQL("DROP TABLE goals_old")
             }

@@ -1,9 +1,8 @@
 package com.sans.finance.presentation.accounts
 
-import androidx.compose.ui.res.stringResource
-import com.sans.finance.R
-
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,14 +30,20 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -46,6 +51,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.sans.finance.R
 import com.sans.finance.core.util.CurrencyFormatter
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -136,7 +142,16 @@ fun AccountStatsScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        TotalStatsLineChart(history = state.balanceHistory, currencyCode = state.currentCurrency)
+                        Text(
+                            "Balance History",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        TotalStatsLineChart(
+                            history = state.balanceHistory,
+                            currencyCode = state.currentCurrency
+                        )
                     }
                 }
 
@@ -146,7 +161,16 @@ fun AccountStatsScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        TotalStatsBarChart(history = state.incomeExpenseHistory, currencyCode = state.currentCurrency)
+                        Text(
+                            "Income vs Expenses",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        TotalStatsBarChart(
+                            history = state.incomeExpenseHistory,
+                            currencyCode = state.currentCurrency
+                        )
                     }
                 }
             }
@@ -156,20 +180,76 @@ fun AccountStatsScreen(
 
 @Composable
 fun TotalStatsLineChart(history: List<Pair<String, Long>>, currencyCode: String) {
+    if (history.isEmpty()) return
+
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(
         fontSize = 9.sp,
         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
     )
-    val lineColor = Color(0xFFFF6B6B) // Salmon/Red from screenshot
+    val lineColor = Color(0xFFFF6B6B) // Salmon/Red
     val gridColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+
+    var selectedIndex by remember { mutableStateOf<Int?>(null) }
+    val tooltipStyle = MaterialTheme.typography.labelMedium.copy(
+        color = MaterialTheme.colorScheme.onPrimary,
+        fontWeight = FontWeight.Bold
+    )
+    val tooltipDateStyle = MaterialTheme.typography.labelSmall.copy(
+        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+    )
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(220.dp)
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(history.size) {
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            val chartLeft = 100f
+                            val chartRight = size.width - 40f
+                            val chartWidth = chartRight - chartLeft
+                            val stepX = chartWidth / (history.size - 1).coerceAtLeast(1)
+
+                            val index = ((offset.x - chartLeft) / stepX).toInt()
+                                .coerceIn(0, history.size - 1)
+                            selectedIndex = index
+                        },
+                        onDrag = { change, _ ->
+                            val chartLeft = 100f
+                            val chartRight = size.width - 40f
+                            val chartWidth = chartRight - chartLeft
+                            val stepX = chartWidth / (history.size - 1).coerceAtLeast(1)
+
+                            val index = ((change.position.x - chartLeft) / stepX).toInt()
+                                .coerceIn(0, history.size - 1)
+                            selectedIndex = index
+                        },
+                        onDragEnd = { selectedIndex = null },
+                        onDragCancel = { selectedIndex = null }
+                    )
+                }
+                .pointerInput(history.size) {
+                    detectTapGestures(
+                        onPress = { offset ->
+                            val chartLeft = 100f
+                            val chartRight = size.width - 40f
+                            val chartWidth = chartRight - chartLeft
+                            val stepX = chartWidth / (history.size - 1).coerceAtLeast(1)
+
+                            val index = ((offset.x - chartLeft) / stepX).toInt()
+                                .coerceIn(0, history.size - 1)
+                            selectedIndex = index
+                            tryAwaitRelease()
+                            selectedIndex = null
+                        }
+                    )
+                }
+        ) {
             val chartTop = 40f
             val chartBottom = size.height - 60f
             val chartLeft = 100f
@@ -178,7 +258,7 @@ fun TotalStatsLineChart(history: List<Pair<String, Long>>, currencyCode: String)
             val chartWidth = chartRight - chartLeft
 
             val minVal = history.minOf { it.second }.coerceAtMost(0L)
-            val maxVal = history.maxOf { it.second }.coerceAtLeast(0L)
+            val maxVal = history.maxOf { it.second }.coerceAtLeast(1L)
             val range = (maxVal - minVal).toFloat().takeIf { it > 0 } ?: 1f
 
             // Draw Y-axis labels and grid lines
@@ -210,10 +290,12 @@ fun TotalStatsLineChart(history: List<Pair<String, Long>>, currencyCode: String)
             if (history.size > 1) {
                 val stepX = chartWidth / (history.size - 1)
                 val path = Path()
+                val points = mutableListOf<Offset>()
 
                 history.forEachIndexed { index, data ->
                     val x = chartLeft + index * stepX
                     val y = chartBottom - ((data.second - minVal) / range) * chartHeight
+                    points.add(Offset(x, y))
 
                     if (index == 0) {
                         path.moveTo(x, y)
@@ -229,34 +311,84 @@ fun TotalStatsLineChart(history: List<Pair<String, Long>>, currencyCode: String)
                 )
 
                 // Draw points and labels
-                history.forEachIndexed { index, data ->
-                    val x = chartLeft + index * stepX
-                    val y = chartBottom - ((data.second - minVal) / range) * chartHeight
-
+                points.forEachIndexed { index, point ->
                     drawCircle(
                         color = lineColor,
+                        radius = 4f,
+                        center = point
+                    )
+
+                    // Month Label (Always show first and last, and some in between)
+                    if (index == 0 || index == history.size - 1 || history.size < 6) {
+                        val monthLayout =
+                            textMeasurer.measure(history[index].first, style = labelStyle)
+                        drawText(
+                            textLayoutResult = monthLayout,
+                            topLeft = Offset(
+                                point.x - monthLayout.size.width / 2f,
+                                chartBottom + 8f
+                            )
+                        )
+                    }
+                }
+
+                // Draw Tooltip if selected
+                selectedIndex?.let { index ->
+                    val point = points[index]
+                    val data = history[index]
+
+                    // Vertical guide line
+                    drawLine(
+                        color = lineColor.copy(alpha = 0.4f),
+                        start = Offset(point.x, chartTop),
+                        end = Offset(point.x, chartBottom),
+                        strokeWidth = 2f,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                    )
+
+                    // Highlight circle
+                    drawCircle(
+                        color = lineColor,
+                        radius = 12f,
+                        center = point
+                    )
+                    drawCircle(
+                        color = Color.White,
                         radius = 6f,
-                        center = Offset(x, y)
+                        center = point
                     )
 
-                    // Month Label
-                    val monthLayout = textMeasurer.measure(data.first, style = labelStyle)
+                    // Tooltip box
+                    val valueStr = CurrencyFormatter.formatAmountCompact(data.second, currencyCode)
+                    val dateStr = data.first
+
+                    val valueLayout = textMeasurer.measure(valueStr, tooltipStyle)
+                    val dateLayout = textMeasurer.measure(dateStr, tooltipDateStyle)
+
+                    val tooltipWidth = maxOf(valueLayout.size.width, dateLayout.size.width) + 48f
+                    val tooltipHeight = valueLayout.size.height + dateLayout.size.height + 32f
+
+                    var tooltipX = point.x - tooltipWidth / 2f
+                    if (tooltipX < chartLeft) tooltipX = chartLeft + 16f
+                    if (tooltipX + tooltipWidth > chartRight) tooltipX =
+                        chartRight - tooltipWidth - 16f
+
+                    val tooltipY = (point.y - tooltipHeight - 32f).coerceAtLeast(chartTop + 16f)
+
+                    drawRoundRect(
+                        color = lineColor,
+                        topLeft = Offset(tooltipX, tooltipY),
+                        size = Size(tooltipWidth, tooltipHeight),
+                        cornerRadius = CornerRadius(16f, 16f)
+                    )
+
                     drawText(
-                        textLayoutResult = monthLayout,
-                        topLeft = Offset(x - monthLayout.size.width / 2f, chartBottom + 4f)
-                    )
-
-                    // Value Label
-                    val valueLayout = textMeasurer.measure(
-                        CurrencyFormatter.formatAmountCompact(data.second, currencyCode),
-                        style = labelStyle
+                        textLayoutResult = dateLayout,
+                        topLeft = Offset(tooltipX + 24f, tooltipY + 16f)
                     )
                     drawText(
                         textLayoutResult = valueLayout,
-                        topLeft = Offset(
-                            x - valueLayout.size.width / 2f,
-                            chartBottom + 4f + monthLayout.size.height
-                        )
+                        topLeft = Offset(tooltipX + 24f, tooltipY + 16f + dateLayout.size.height)
                     )
                 }
             }
@@ -266,6 +398,8 @@ fun TotalStatsLineChart(history: List<Pair<String, Long>>, currencyCode: String)
 
 @Composable
 fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>, currencyCode: String) {
+    if (history.isEmpty()) return
+
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(
         fontSize = 9.sp,
@@ -275,12 +409,63 @@ fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>, currencyCode: 
     val expenseColor = Color(0xFFFF8A65) // Red/Orange
     val gridColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
 
+    var selectedIndex by remember { mutableStateOf<Int?>(null) }
+    val tooltipStyle = MaterialTheme.typography.labelMedium.copy(
+        color = MaterialTheme.colorScheme.onSurface,
+        fontWeight = FontWeight.Bold
+    )
+
+    val highlightColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+    val surfaceColor = MaterialTheme.colorScheme.surface
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(240.dp)
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(history.size) {
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            val chartLeft = 100f
+                            val chartRight = size.width - 40f
+                            val chartWidth = chartRight - chartLeft
+                            val barGroupWidth = chartWidth / history.size
+                            val index = ((offset.x - chartLeft) / barGroupWidth).toInt()
+                                .coerceIn(0, history.size - 1)
+                            selectedIndex = index
+                        },
+                        onDrag = { change, _ ->
+                            val chartLeft = 100f
+                            val chartRight = size.width - 40f
+                            val chartWidth = chartRight - chartLeft
+                            val barGroupWidth = chartWidth / history.size
+                            val index = ((change.position.x - chartLeft) / barGroupWidth).toInt()
+                                .coerceIn(0, history.size - 1)
+                            selectedIndex = index
+                        },
+                        onDragEnd = { selectedIndex = null },
+                        onDragCancel = { selectedIndex = null }
+                    )
+                }
+                .pointerInput(history.size) {
+                    detectTapGestures(
+                        onPress = { offset ->
+                            val chartLeft = 100f
+                            val chartRight = size.width - 40f
+                            val chartWidth = chartRight - chartLeft
+                            val barGroupWidth = chartWidth / history.size
+                            val index = ((offset.x - chartLeft) / barGroupWidth).toInt()
+                                .coerceIn(0, history.size - 1)
+                            selectedIndex = index
+                            tryAwaitRelease()
+                            selectedIndex = null
+                        }
+                    )
+                }
+        ) {
             val chartTop = 40f
             val chartBottom = size.height - 80f
             val chartLeft = 100f
@@ -325,10 +510,21 @@ fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>, currencyCode: 
                 history.forEachIndexed { index, data ->
                     val groupCenterX = chartLeft + index * barGroupWidth + barGroupWidth / 2f
 
+                    // Highlight background for selected group
+                    if (selectedIndex == index) {
+                        drawRect(
+                            color = highlightColor,
+                            topLeft = Offset(chartLeft + index * barGroupWidth, chartTop),
+                            size = Size(barGroupWidth, chartBottom - chartTop)
+                        )
+                    }
+
                     // Income Bar (Blue)
                     val incomeHeight = (data.second / range) * chartHeight
                     drawRect(
-                        color = incomeColor.copy(alpha = 0.7f),
+                        color = if (selectedIndex == null || selectedIndex == index) incomeColor else incomeColor.copy(
+                            alpha = 0.3f
+                        ),
                         topLeft = Offset(
                             groupCenterX - barWidth - spacing / 2f,
                             chartBottom - incomeHeight
@@ -339,7 +535,9 @@ fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>, currencyCode: 
                     // Expense Bar (Red)
                     val expenseHeight = (data.third / range) * chartHeight
                     drawRect(
-                        color = expenseColor.copy(alpha = 0.7f),
+                        color = if (selectedIndex == null || selectedIndex == index) expenseColor else expenseColor.copy(
+                            alpha = 0.3f
+                        ),
                         topLeft = Offset(groupCenterX + spacing / 2f, chartBottom - expenseHeight),
                         size = Size(barWidth, expenseHeight)
                     )
@@ -354,31 +552,55 @@ fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>, currencyCode: 
                         )
                     )
 
-                    // Income Value Label (Blue)
-                    val incomeLayout = textMeasurer.measure(
-                        CurrencyFormatter.formatAmountCompact(data.second, currencyCode),
-                        style = labelStyle.copy(color = incomeColor)
-                    )
-                    drawText(
-                        textLayoutResult = incomeLayout,
-                        topLeft = Offset(
-                            groupCenterX - incomeLayout.size.width / 2f,
-                            chartBottom + 4f + monthLayout.size.height
-                        )
-                    )
+                    // Tooltip for Bar Chart
+                    if (selectedIndex == index) {
+                        val incStr = "In: ${
+                            CurrencyFormatter.formatAmountCompact(
+                                data.second,
+                                currencyCode
+                            )
+                        }"
+                        val expStr = "Out: ${
+                            CurrencyFormatter.formatAmountCompact(
+                                data.third,
+                                currencyCode
+                            )
+                        }"
 
-                    // Expense Value Label (Red)
-                    val expenseLayout = textMeasurer.measure(
-                        CurrencyFormatter.formatAmountCompact(data.third, currencyCode),
-                        style = labelStyle.copy(color = expenseColor)
-                    )
-                    drawText(
-                        textLayoutResult = expenseLayout,
-                        topLeft = Offset(
-                            groupCenterX - expenseLayout.size.width / 2f,
-                            chartBottom + 4f + monthLayout.size.height + incomeLayout.size.height
+                        val incLayout =
+                            textMeasurer.measure(incStr, tooltipStyle.copy(color = incomeColor))
+                        val expLayout =
+                            textMeasurer.measure(expStr, tooltipStyle.copy(color = expenseColor))
+
+                        val tWidth = maxOf(incLayout.size.width, expLayout.size.width) + 48f
+                        val tHeight = incLayout.size.height + expLayout.size.height + 32f
+
+                        var tX = groupCenterX - tWidth / 2f
+                        if (tX < chartLeft) tX = chartLeft + 16f
+                        if (tX + tWidth > chartRight) tX = chartRight - tWidth - 16f
+
+                        val tY = chartTop - 10f
+
+                        drawRoundRect(
+                            color = surfaceColor,
+                            topLeft = Offset(tX, tY),
+                            size = Size(tWidth, tHeight),
+                            cornerRadius = CornerRadius(16f, 16f),
+                            style = Stroke(width = 2f)
                         )
-                    )
+                        drawRoundRect(
+                            color = surfaceColor,
+                            topLeft = Offset(tX, tY),
+                            size = Size(tWidth, tHeight),
+                            cornerRadius = CornerRadius(16f, 16f)
+                        )
+
+                        drawText(textLayoutResult = incLayout, topLeft = Offset(tX + 24f, tY + 16f))
+                        drawText(
+                            textLayoutResult = expLayout,
+                            topLeft = Offset(tX + 24f, tY + 16f + incLayout.size.height)
+                        )
+                    }
                 }
             }
         }

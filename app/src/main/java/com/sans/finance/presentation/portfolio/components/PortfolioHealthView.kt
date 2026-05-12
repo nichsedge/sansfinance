@@ -1,26 +1,42 @@
 package com.sans.finance.presentation.portfolio.components
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sans.finance.domain.model.AssetClassHealth
 import com.sans.finance.domain.model.HealthStatus
 import com.sans.finance.domain.model.RiskLevel
-import com.sans.finance.presentation.components.PrivacyText
 
 @Composable
 fun PortfolioHealthView(
@@ -150,7 +166,7 @@ fun AssetHealthCard(health: AssetClassHealth, isPrivacyModeEnabled: Boolean) {
                         fontWeight = FontWeight.Bold
                     )
                 }
-                
+
                 RiskBadge(health.riskLevel)
             }
 
@@ -161,15 +177,35 @@ fun AssetHealthCard(health: AssetClassHealth, isPrivacyModeEnabled: Boolean) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("Current", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("${String.format("%.1f", health.currentPercentage)}%", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Current",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "${String.format("%.1f", health.currentPercentage)}%",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Target", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("${String.format("%.1f", health.targetPercentage)}%", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Target",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "${String.format("%.1f", health.targetPercentage)}%",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Status", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "Status",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Text(
                         text = health.status.name,
                         style = MaterialTheme.typography.bodyLarge,
@@ -183,7 +219,10 @@ fun AssetHealthCard(health: AssetClassHealth, isPrivacyModeEnabled: Boolean) {
 
             LinearProgressIndicator(
                 progress = { (health.currentPercentage / 100f).toFloat() },
-                modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(CircleShape),
                 color = statusColor,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
@@ -193,7 +232,12 @@ fun AssetHealthCard(health: AssetClassHealth, isPrivacyModeEnabled: Boolean) {
                 val action = if (health.status == HealthStatus.OVERWEIGHT) "Reduce" else "Increase"
                 val diff = Math.abs(health.diffPercentage)
                 Text(
-                    text = "$action this asset class by ≈${String.format("%.1f", diff)}% to reach target.",
+                    text = "$action this asset class by ≈${
+                        String.format(
+                            "%.1f",
+                            diff
+                        )
+                    }% to reach target.",
                     style = MaterialTheme.typography.bodySmall,
                     color = statusColor.copy(alpha = 0.8f),
                     fontWeight = FontWeight.Medium

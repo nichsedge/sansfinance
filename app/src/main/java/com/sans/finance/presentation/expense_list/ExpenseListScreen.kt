@@ -2,7 +2,6 @@ package com.sans.finance.presentation.expense_list
 
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,15 +17,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material.icons.filled.Search
@@ -67,7 +63,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -81,8 +76,8 @@ import com.sans.finance.R
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.presentation.components.CategoryIcon
 import com.sans.finance.presentation.components.PrivacyText
-import java.util.Locale
 import java.text.SimpleDateFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,10 +109,18 @@ fun ExpenseListScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.transactions), fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        stringResource(R.string.transactions),
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 actions = {
                     IconButton(onClick = onStatsClick) {
-                        Icon(Icons.Default.QueryStats, contentDescription = "Transaction Statistics")
+                        Icon(
+                            Icons.Default.QueryStats,
+                            contentDescription = "Transaction Statistics"
+                        )
                     }
                     IconButton(onClick = onRecurringExpensesClick) {
                         Icon(
@@ -199,7 +202,12 @@ fun ExpenseListScreen(
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 80.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    top = 16.dp,
+                    end = 16.dp,
+                    bottom = 80.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 state.groupedExpenses.forEach { (date, expenses) ->
@@ -822,15 +830,19 @@ fun ExpenseItem(
                         )
                         if (expense.isRecurring && expense.recurrenceInterval != null) {
                             Text(
-                                " • ${expense.recurrenceInterval.lowercase().replaceFirstChar { it.uppercase() }}",
+                                " • ${
+                                    expense.recurrenceInterval.lowercase()
+                                        .replaceFirstChar { it.uppercase() }
+                                }",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
                     if (showNextDueDate && expense.nextDueDate != null) {
-                        val dateStr = com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter()
-                            .format(java.util.Date(expense.nextDueDate))
+                        val dateStr =
+                            com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter()
+                                .format(java.util.Date(expense.nextDueDate))
                         Text(
                             "Next: $dateStr",
                             style = MaterialTheme.typography.labelSmall,
@@ -841,8 +853,8 @@ fun ExpenseItem(
                 }
 
                 Column(horizontalAlignment = Alignment.End) {
-                    val displayAmount = overrideAmount ?:
-                        if (expense.isInstallment && expense.monthlyPayment > 0) expense.monthlyPayment else expense.amount
+                    val displayAmount = overrideAmount
+                        ?: if (expense.isInstallment && expense.monthlyPayment > 0) expense.monthlyPayment else expense.amount
                     val amountColor = when (expense.type) {
                         "INCOME" -> Color(0xFF4CAF50)
                         "EXPENSE" -> Color(0xFFE53935)

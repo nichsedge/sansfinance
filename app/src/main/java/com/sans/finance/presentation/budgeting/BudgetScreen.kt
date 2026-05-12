@@ -56,9 +56,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.sans.finance.core.util.CurrencyFormatter
-import com.sans.finance.presentation.components.PrivacyText
 import com.sans.finance.data.local.entity.CategoryEntity
+import com.sans.finance.presentation.components.PrivacyText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

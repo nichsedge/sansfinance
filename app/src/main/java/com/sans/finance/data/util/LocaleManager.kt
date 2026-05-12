@@ -2,10 +2,10 @@ package com.sans.finance.data.util
 
 import android.content.Context
 import android.content.SharedPreferences
+import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.flow.asStateFlow
 
 @Singleton
 class LocaleManager @Inject constructor(
@@ -71,7 +71,8 @@ class LocaleManager @Inject constructor(
     private val _fireManualEnabled = kotlinx.coroutines.flow.MutableStateFlow(isFireManualEnabled())
     val fireManualEnabled = _fireManualEnabled.asStateFlow()
 
-    private val _manualFireAnnualExpense = kotlinx.coroutines.flow.MutableStateFlow(getManualFireAnnualExpense())
+    private val _manualFireAnnualExpense =
+        kotlinx.coroutines.flow.MutableStateFlow(getManualFireAnnualExpense())
     val manualFireAnnualExpense = _manualFireAnnualExpense.asStateFlow()
 
     fun isFireManualEnabled(): Boolean {

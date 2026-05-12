@@ -17,11 +17,13 @@ interface PortfolioDao {
     @Query("SELECT * FROM portfolio_holdings WHERE snapshot_date = :date ORDER BY category, asset")
     suspend fun getSnapshotByDateSync(date: Long): List<PortfolioHoldingEntity>
 
-    @Query("""
+    @Query(
+        """
         SELECT * FROM portfolio_holdings 
         WHERE snapshot_date = (SELECT MAX(snapshotDate) FROM portfolio_snapshot_headers) 
         ORDER BY category, asset
-    """)
+    """
+    )
     fun getLatestSnapshot(): Flow<List<PortfolioHoldingEntity>>
 
     @Query("SELECT * FROM portfolio_snapshot_headers ORDER BY snapshotDate DESC LIMIT 1")
@@ -33,20 +35,24 @@ interface PortfolioDao {
     @Query("SELECT COUNT(*) FROM portfolio_snapshot_headers")
     suspend fun getSnapshotCount(): Int
 
-    @Query("""
+    @Query(
+        """
         SELECT category, SUM(value_idr) as totalIdr, 0.0 as totalUsd
         FROM portfolio_holdings
         WHERE snapshot_date = :date
         GROUP BY category
         ORDER BY totalIdr DESC
-    """)
+    """
+    )
     suspend fun getCategoryTotals(date: Long): List<CategoryTotal>
 
-    @Query("""
+    @Query(
+        """
         SELECT snapshotDate as snapshot_date, totalValueIdr as totalIdr, totalValueUsd as totalUsd
         FROM portfolio_snapshot_headers
         ORDER BY snapshotDate ASC
-    """)
+    """
+    )
     fun getTotalValueOverTime(): Flow<List<SnapshotTotal>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -61,13 +67,15 @@ interface PortfolioDao {
     @Query("DELETE FROM portfolio_snapshot_headers")
     suspend fun deleteAll()
 
-    @Query("""
+    @Query(
+        """
         SELECT asset_class as assetClass, SUM(value_idr) as totalIdr
         FROM portfolio_holdings
         WHERE snapshot_date = :date
         GROUP BY asset_class
         ORDER BY totalIdr DESC
-    """)
+    """
+    )
     suspend fun getAssetClassTotals(date: Long): List<AssetClassTotal>
 }
 

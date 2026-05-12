@@ -1,7 +1,7 @@
 package com.sans.finance.domain.repository
 
-import com.sans.finance.data.local.dao.CategoryTotal
 import com.sans.finance.data.local.dao.AssetClassTotal
+import com.sans.finance.data.local.dao.CategoryTotal
 import com.sans.finance.data.local.dao.SnapshotTotal
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +16,12 @@ interface PortfolioRepository {
     suspend fun getSnapshotCount(): Int
     suspend fun getCategoryTotals(date: Long): List<CategoryTotal>
     suspend fun getAssetClassTotals(date: Long): List<AssetClassTotal>
-    suspend fun importSnapshot(date: Long, items: List<PortfolioHoldingEntity>, exchangeRate: Double? = null)
+    suspend fun importSnapshot(
+        date: Long,
+        items: List<PortfolioHoldingEntity>,
+        exchangeRate: Double? = null
+    )
+
     suspend fun deleteByDate(date: Long)
     suspend fun deleteAll()
 }

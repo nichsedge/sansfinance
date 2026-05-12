@@ -16,6 +16,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -26,12 +28,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -123,7 +119,8 @@ fun GoalItem(
     onDelete: () -> Unit
 ) {
     val goal = goalWithProgress.goal
-    val progress = (goalWithProgress.currentAmount.toFloat() / goal.targetAmount.toFloat()).coerceIn(0f, 1f)
+    val progress =
+        (goalWithProgress.currentAmount.toFloat() / goal.targetAmount.toFloat()).coerceIn(0f, 1f)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -185,13 +182,21 @@ fun GoalItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    CurrencyFormatter.formatAmount((goalWithProgress.currentAmount * 100).toLong(), goal.currency),
+                    CurrencyFormatter.formatAmount(
+                        (goalWithProgress.currentAmount * 100).toLong(),
+                        goal.currency
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    "Target: ${CurrencyFormatter.formatAmount((goal.targetAmount * 100).toLong(), goal.currency)}",
+                    "Target: ${
+                        CurrencyFormatter.formatAmount(
+                            (goal.targetAmount * 100).toLong(),
+                            goal.currency
+                        )
+                    }",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -235,27 +240,34 @@ fun AddGoalDialog(
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
-                
+
                 Text("Track Progress From:", style = MaterialTheme.typography.labelMedium)
-                
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     listOf("TOTAL", "CATEGORY", "ASSET_CLASS").forEach { type ->
                         val isSelected = targetType == type
                         androidx.compose.material3.FilterChip(
                             selected = isSelected,
-                            onClick = { 
-                                targetType = type 
+                            onClick = {
+                                targetType = type
                                 if (type == "TOTAL") targetName = ""
-                                else if (type == "CATEGORY" && !categories.contains(targetName)) targetName = categories.firstOrNull() ?: ""
-                                else if (type == "ASSET_CLASS" && !assetClasses.contains(targetName)) targetName = assetClasses.firstOrNull() ?: ""
+                                else if (type == "CATEGORY" && !categories.contains(targetName)) targetName =
+                                    categories.firstOrNull() ?: ""
+                                else if (type == "ASSET_CLASS" && !assetClasses.contains(targetName)) targetName =
+                                    assetClasses.firstOrNull() ?: ""
                             },
-                            label = { 
-                                Text(when(type) {
-                                    "TOTAL" -> "Portfolio"
-                                    "CATEGORY" -> "Category"
-                                    "ASSET_CLASS" -> "Asset Class"
-                                    else -> type
-                                }) 
+                            label = {
+                                Text(
+                                    when (type) {
+                                        "TOTAL" -> "Portfolio"
+                                        "CATEGORY" -> "Category"
+                                        "ASSET_CLASS" -> "Asset Class"
+                                        else -> type
+                                    }
+                                )
                             }
                         )
                     }
@@ -264,7 +276,7 @@ fun AddGoalDialog(
                 if (targetType != "TOTAL") {
                     val options = if (targetType == "CATEGORY") categories else assetClasses
                     var expanded by remember { mutableStateOf(false) }
-                    
+
                     Column {
                         OutlinedTextField(
                             value = targetName,

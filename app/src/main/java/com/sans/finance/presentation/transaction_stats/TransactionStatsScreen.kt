@@ -3,6 +3,8 @@ package com.sans.finance.presentation.transaction_stats
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,12 +56,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -292,7 +298,10 @@ fun DateNavigator(
             }
         }
 
-        IconButton(onClick = onNext, enabled = state.selectedPeriodType != TransactionStatsPeriodType.CUSTOM) {
+        IconButton(
+            onClick = onNext,
+            enabled = state.selectedPeriodType != TransactionStatsPeriodType.CUSTOM
+        ) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next")
         }
     }
@@ -588,6 +597,9 @@ fun TrendChart(
 ) {
     SectionTitle(title, icon = Icons.Default.Insights)
 
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val gridColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -608,16 +620,84 @@ fun TrendChart(
                 )
             } else {
                 val sortedSpending = remember(trendData) { trendData.sortedBy { it.day } }
-
                 val dateFormat = remember { DateFormatterUtils.getMonthYearFormatter() }
-
-                val primaryColor = MaterialTheme.colorScheme.primary
                 val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-                val gridColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
                 val textMeasurer = rememberTextMeasurer()
                 val labelStyle = MaterialTheme.typography.labelSmall.copy(color = onSurfaceColor)
 
-                Canvas(modifier = Modifier.fillMaxSize()) {
+                var selectedIndex by remember { mutableStateOf<Int?>(null) }
+                val tooltipStyle = MaterialTheme.typography.labelMedium.copy(
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+                val tooltipDateStyle = MaterialTheme.typography.labelSmall.copy(
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                )
+
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(sortedSpending.size) {
+                            detectDragGestures(
+                                onDragStart = { offset ->
+                                    val yAxisLabelWidth = textMeasurer.measure(
+                                        CurrencyFormatter.formatAmountCompact(
+                                            sortedSpending.maxOf { it.amount },
+                                            currencyCode
+                                        ), style = labelStyle
+                                    ).size.width.toFloat() + 16f
+                                    val chartLeft = yAxisLabelWidth
+                                    val chartRight = size.width
+                                    val chartWidth = chartRight - chartLeft
+                                    val stepX =
+                                        chartWidth / (sortedSpending.size - 1).coerceAtLeast(1)
+                                    val index = ((offset.x - chartLeft) / stepX).toInt()
+                                        .coerceIn(0, sortedSpending.size - 1)
+                                    selectedIndex = index
+                                },
+                                onDrag = { change, _ ->
+                                    val yAxisLabelWidth = textMeasurer.measure(
+                                        CurrencyFormatter.formatAmountCompact(
+                                            sortedSpending.maxOf { it.amount },
+                                            currencyCode
+                                        ), style = labelStyle
+                                    ).size.width.toFloat() + 16f
+                                    val chartLeft = yAxisLabelWidth
+                                    val chartRight = size.width
+                                    val chartWidth = chartRight - chartLeft
+                                    val stepX =
+                                        chartWidth / (sortedSpending.size - 1).coerceAtLeast(1)
+                                    val index = ((change.position.x - chartLeft) / stepX).toInt()
+                                        .coerceIn(0, sortedSpending.size - 1)
+                                    selectedIndex = index
+                                },
+                                onDragEnd = { selectedIndex = null },
+                                onDragCancel = { selectedIndex = null }
+                            )
+                        }
+                        .pointerInput(sortedSpending.size) {
+                            detectTapGestures(
+                                onPress = { offset ->
+                                    val yAxisLabelWidth = textMeasurer.measure(
+                                        CurrencyFormatter.formatAmountCompact(
+                                            sortedSpending.maxOf { it.amount },
+                                            currencyCode
+                                        ), style = labelStyle
+                                    ).size.width.toFloat() + 16f
+                                    val chartLeft = yAxisLabelWidth
+                                    val chartRight = size.width
+                                    val chartWidth = chartRight - chartLeft
+                                    val stepX =
+                                        chartWidth / (sortedSpending.size - 1).coerceAtLeast(1)
+                                    val index = ((offset.x - chartLeft) / stepX).toInt()
+                                        .coerceIn(0, sortedSpending.size - 1)
+                                    selectedIndex = index
+                                    tryAwaitRelease()
+                                    selectedIndex = null
+                                }
+                            )
+                        }
+                ) {
                     val maxAmount = sortedSpending.maxOfOrNull { it.amount } ?: 1L
                     val minAmount = 0L
                     val amountRange = (maxAmount - minAmount).coerceAtLeast(1L)
@@ -629,7 +709,8 @@ fun TrendChart(
                         textLayoutResults.maxOfOrNull { it.size.height }?.toFloat() ?: 40f
                     val yAxisLabels = 5
                     val yAxisLabelWidth = textMeasurer.measure(
-                        CurrencyFormatter.formatAmountCompact(maxAmount, currencyCode), style = labelStyle
+                        CurrencyFormatter.formatAmountCompact(maxAmount, currencyCode),
+                        style = labelStyle
                     ).size.width.toFloat() + 16f
 
                     val chartLeft = yAxisLabelWidth
@@ -710,6 +791,58 @@ fun TrendChart(
                             )
                         )
                         drawPath(path = path, color = primaryColor, style = Stroke(width = 6f))
+
+                        // Tooltip
+                        selectedIndex?.let { index ->
+                            val point = points[index]
+                            val data = sortedSpending[index]
+
+                            drawLine(
+                                color = primaryColor.copy(alpha = 0.5f),
+                                start = Offset(point.x, chartTop),
+                                end = Offset(point.x, chartBottom),
+                                strokeWidth = 2f,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                            )
+
+                            drawCircle(color = primaryColor, radius = 12f, center = point)
+                            drawCircle(color = Color.White, radius = 6f, center = point)
+
+                            val valStr =
+                                CurrencyFormatter.formatAmountCompact(data.amount, currencyCode)
+                            val dateStr = SimpleDateFormat(
+                                "dd MMM",
+                                Locale.getDefault()
+                            ).format(Date(data.day))
+
+                            val valLayout = textMeasurer.measure(valStr, tooltipStyle)
+                            val dateLayout = textMeasurer.measure(dateStr, tooltipDateStyle)
+
+                            val tWidth = maxOf(valLayout.size.width, dateLayout.size.width) + 48f
+                            val tHeight = valLayout.size.height + dateLayout.size.height + 32f
+
+                            var tX = point.x - tWidth / 2f
+                            if (tX < chartLeft) tX = chartLeft + 16f
+                            if (tX + tWidth > chartRight) tX = chartRight - tWidth - 16f
+
+                            val tY = (point.y - tHeight - 32f).coerceAtLeast(chartTop + 16f)
+
+                            drawRoundRect(
+                                color = primaryColor,
+                                topLeft = Offset(tX, tY),
+                                size = Size(tWidth, tHeight),
+                                cornerRadius = CornerRadius(16f, 16f)
+                            )
+
+                            drawText(
+                                textLayoutResult = dateLayout,
+                                topLeft = Offset(tX + 24f, tY + 16f)
+                            )
+                            drawText(
+                                textLayoutResult = valLayout,
+                                topLeft = Offset(tX + 24f, tY + 16f + dateLayout.size.height)
+                            )
+                        }
 
                         // X-axis labels
                         val labelsToDraw = Math.min(sortedSpending.size, 5)
@@ -802,43 +935,26 @@ fun PieChartWithLabels(
                         }
                         drawPath(
                             path = path,
-                            color = color,
+                            color = color.copy(alpha = 0.5f),
                             style = Stroke(width = 2f)
                         )
 
-                        // Draw text
-                        val percentage = (category.totalAmount.toFloat() / totalAmount) * 100
-                        val percentageText = String.format(Locale.US, "%.1f %%", percentage)
-
-                        val nameLayoutResult = textMeasurer.measure(
-                            text = category.categoryName,
+                        // Draw text label
+                        val label = String.format(Locale.US, "%.0f%%", (sweepAngle / 360f) * 100)
+                        val textLayoutResult = textMeasurer.measure(
+                            text = label,
                             style = TextStyle(
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp,
                                 color = onSurfaceColor
                             )
                         )
-                        val percentLayoutResult = textMeasurer.measure(
-                            text = percentageText,
-                            style = TextStyle(
-                                fontSize = 12.sp,
-                                color = onSurfaceColor
+                        drawText(
+                            textLayoutResult = textLayoutResult,
+                            topLeft = Offset(
+                                x = textEnd.x + (if (isRightSide) 4f else -textLayoutResult.size.width - 4f),
+                                y = textEnd.y - textLayoutResult.size.height / 2f
                             )
-                        )
-
-                        val textX = if (isRightSide) textEnd.x + 4f else textEnd.x - Math.max(
-                            nameLayoutResult.size.width,
-                            percentLayoutResult.size.width
-                        ) - 4f
-                        val textY = textEnd.y - nameLayoutResult.size.height
-
-                        drawText(
-                            textLayoutResult = nameLayoutResult,
-                            topLeft = Offset(textX, textY)
-                        )
-                        drawText(
-                            textLayoutResult = percentLayoutResult,
-                            topLeft = Offset(textX, textY + nameLayoutResult.size.height)
                         )
                     }
 

@@ -56,7 +56,7 @@ object PortfolioJsonImporter {
         } ?: throw Exception("Failed to open input stream")
 
         val snapshot = json.decodeFromString<PortfolioSnapshotJson>(jsonString)
-        
+
         val snapshotDate = try {
             DATE_FORMAT.parse(snapshot.metadata.date)?.time ?: System.currentTimeMillis()
         } catch (e: Exception) {

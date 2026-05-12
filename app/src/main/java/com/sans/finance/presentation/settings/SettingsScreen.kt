@@ -199,7 +199,11 @@ fun SettingsContent(
                         Icon(Icons.Default.Translate, contentDescription = null)
                         Spacer(Modifier.width(16.dp))
                         Text(
-                            when { currentLanguage.startsWith("en") -> "English"; currentLanguage.startsWith("id") -> "Indonesia"; else -> "中文 (Chinese)" },
+                            when {
+                                currentLanguage.startsWith("en") -> "English"; currentLanguage.startsWith(
+                                "id"
+                            ) -> "Indonesia"; else -> "中文 (Chinese)"
+                            },
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -225,10 +229,15 @@ fun SettingsContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.ShoppingCart, contentDescription = null) // Using ShoppingCart as placeholder or find a better one
+                        Icon(
+                            Icons.Default.ShoppingCart,
+                            contentDescription = null
+                        ) // Using ShoppingCart as placeholder or find a better one
                         Spacer(Modifier.width(16.dp))
                         Text(
-                            when(currentCurrency) { "USD" -> "US Dollar (USD)"; "IDR" -> "Indonesian Rupiah (IDR)"; "CNY" -> "Chinese Yuan (CNY)"; else -> currentCurrency },
+                            when (currentCurrency) {
+                                "USD" -> "US Dollar (USD)"; "IDR" -> "Indonesian Rupiah (IDR)"; "CNY" -> "Chinese Yuan (CNY)"; else -> currentCurrency
+                            },
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -244,7 +253,9 @@ fun SettingsContent(
                 modifier = Modifier.padding(start = 8.dp)
             )
             FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 val allOptions = listOf("USD", "IDR", "EUR", "GBP", "JPY", "SGD")

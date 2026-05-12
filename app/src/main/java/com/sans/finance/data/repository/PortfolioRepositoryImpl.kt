@@ -1,9 +1,9 @@
 package com.sans.finance.data.repository
 
+import com.sans.finance.data.local.dao.AssetClassTotal
 import com.sans.finance.data.local.dao.CategoryTotal
 import com.sans.finance.data.local.dao.PortfolioDao
 import com.sans.finance.data.local.dao.SnapshotTotal
-import com.sans.finance.data.local.dao.AssetClassTotal
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import com.sans.finance.data.local.entity.PortfolioSnapshotHeaderEntity
 import com.sans.finance.domain.repository.PortfolioRepository
@@ -46,7 +46,7 @@ class PortfolioRepositoryImpl(
         exchangeRate: Double?
     ) {
         val totalIdr = items.sumOf { it.valueIdr }
-        
+
         // Estimate exchange rate if not provided (fallback to a reasonable default or calculate from items)
         val rate = exchangeRate ?: items.filter { it.currency == "USD" && it.amount > 0 }
             .map { it.valueIdr / it.amount }

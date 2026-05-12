@@ -1,5 +1,6 @@
 package com.sans.finance.presentation.installments
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,18 +10,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -50,14 +57,6 @@ import com.sans.finance.core.util.DateFormatterUtils
 import com.sans.finance.domain.model.Installment
 import java.util.Date
 import java.util.Locale
-
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.size
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,12 +96,22 @@ fun InstallmentsScreen(
                                     showViewMenu = false
                                     onRecurringExpensesClick()
                                 },
-                                leadingIcon = { Icon(Icons.Default.Sync, contentDescription = null) }
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Sync,
+                                        contentDescription = null
+                                    )
+                                }
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.active_installments)) },
                                 onClick = { showViewMenu = false },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null) }
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ReceiptLong,
+                                        contentDescription = null
+                                    )
+                                }
                             )
                         }
                     }
@@ -134,7 +143,10 @@ fun InstallmentsScreen(
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                     )
                     Text(
-                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(state.totalMonthlyDue, state.currentCurrency),
+                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(
+                            state.totalMonthlyDue,
+                            state.currentCurrency
+                        ),
                         style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Black),
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
@@ -226,7 +238,10 @@ fun ExpandableInstallment(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(installment.monthlyPayment, currencyCode) + "/mo",
+                        com.sans.finance.core.util.CurrencyFormatter.formatAmount(
+                            installment.monthlyPayment,
+                            currencyCode
+                        ) + "/mo",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.ExtraBold

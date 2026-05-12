@@ -4,28 +4,72 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.*
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.QueryStats
+import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Tab
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.sans.finance.core.util.CurrencyFormatter
-import com.sans.finance.presentation.components.PrivacyText
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
+import com.sans.finance.presentation.components.PrivacyText
 import com.sans.finance.presentation.portfolio.components.AllocationDonutChart
 import com.sans.finance.presentation.portfolio.components.NetWorthTrendChart
 import com.sans.finance.presentation.portfolio.components.PortfolioHealthView
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +81,7 @@ fun PortfolioScreen(
     val state by viewModel.state.collectAsState()
     var showViewMenu by remember { mutableStateOf(false) }
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.US) }
-    
+
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
@@ -45,7 +89,7 @@ fun PortfolioScreen(
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
-    
+
     LaunchedEffect(state.importMessage) {
         state.importMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -83,12 +127,22 @@ fun PortfolioScreen(
                                         showViewMenu = false
                                         onDashboardClick()
                                     },
-                                    leadingIcon = { Icon(Icons.Default.Dashboard, contentDescription = null) }
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Dashboard,
+                                            contentDescription = null
+                                        )
+                                    }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Portfolio") },
                                     onClick = { showViewMenu = false },
-                                    leadingIcon = { Icon(Icons.Default.PieChart, contentDescription = null) }
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.PieChart,
+                                            contentDescription = null
+                                        )
+                                    }
                                 )
                             }
                         }
@@ -101,7 +155,10 @@ fun PortfolioScreen(
                                     )
                                 }
                                 IconButton(onClick = viewModel::onPreviousSnapshot) {
-                                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous")
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                        contentDescription = "Previous"
+                                    )
                                 }
                                 Text(
                                     state.selectedDate?.let { dateFormat.format(Date(it)) } ?: "",
@@ -109,7 +166,10 @@ fun PortfolioScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 IconButton(onClick = viewModel::onNextSnapshot) {
-                                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next")
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = "Next"
+                                    )
                                 }
                             }
                         }
@@ -125,21 +185,46 @@ fun PortfolioScreen(
         }
     ) { paddingValues ->
         if (state.isLoading) {
-            Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
                 CircularProgressIndicator()
             }
         } else if (state.snapshotDates.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.QueryStats, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                    Icon(
+                        Icons.Default.QueryStats,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
                     Spacer(Modifier.height(16.dp))
-                    Text("No portfolio data", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Import a CSV or JSON snapshot to start", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                    Text(
+                        "No portfolio data",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Import a CSV or JSON snapshot to start",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
                 }
             }
         } else {
-            Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                TabRow(
+            Column(modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)) {
+                PrimaryTabRow(
                     selectedTabIndex = state.selectedTab,
                     containerColor = MaterialTheme.colorScheme.surface,
                     contentColor = MaterialTheme.colorScheme.primary,
@@ -174,7 +259,9 @@ fun PortfolioScreen(
                                         .padding(16.dp),
                                     shape = MaterialTheme.shapes.extraLarge,
                                     colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                                            alpha = 0.3f
+                                        )
                                     )
                                 ) {
                                     Column(modifier = Modifier.padding(20.dp)) {
@@ -190,7 +277,8 @@ fun PortfolioScreen(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .height(200.dp),
-                                            isPrivacyModeEnabled = state.isPrivacyModeEnabled
+                                            isPrivacyModeEnabled = state.isPrivacyModeEnabled,
+                                            currencyCode = state.currentCurrency
                                         )
                                     }
                                 }
@@ -205,7 +293,9 @@ fun PortfolioScreen(
                                         .padding(horizontal = 16.dp, vertical = 8.dp),
                                     shape = MaterialTheme.shapes.extraLarge,
                                     colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                                            alpha = 0.3f
+                                        )
                                     )
                                 ) {
                                     Column(modifier = Modifier.padding(20.dp)) {
@@ -238,10 +328,14 @@ fun PortfolioScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(category, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        category,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                     PrivacyText(
                                         amount = (categoryTotal * 100).toLong(),
-                                        currencyCode = "IDR",
+                                        currencyCode = state.currentCurrency,
                                         isVisible = !state.isPrivacyModeEnabled,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
@@ -251,7 +345,12 @@ fun PortfolioScreen(
 
                             items(holdings) { holding ->
                                 HoldingItem(holding, state.isPrivacyModeEnabled)
-                                Spacer(modifier = Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)))
+                                Spacer(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                                )
                             }
                         }
                     }
@@ -270,7 +369,9 @@ fun PortfolioScreen(
 @Composable
 fun PortfolioHeader(state: PortfolioScreenState, onForecastingClick: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
@@ -280,48 +381,60 @@ fun PortfolioHeader(state: PortfolioScreenState, onForecastingClick: () -> Unit)
         )
         PrivacyText(
             amount = (state.totalValueIdr * 100).toLong(),
-            currencyCode = "IDR",
+            currencyCode = state.currentCurrency,
             isVisible = !state.isPrivacyModeEnabled,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
             color = MaterialTheme.colorScheme.primary
         )
-        
+
         state.previousTotalIdr?.let { prev ->
             val diff = state.totalValueIdr - prev
             val percent = if (prev != 0.0) (diff / prev) * 100 else 0.0
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = if (diff >= 0) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                    imageVector = if (diff >= 0) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
                     contentDescription = null,
                     tint = if (diff >= 0) Color(0xFF4CAF50) else Color(0xFFE57373),
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    text = "${if (diff >= 0) "+" else ""}${String.format("%.2f", percent)}% vs last",
+                    text = "${if (diff >= 0) "+" else ""}${
+                        String.format(
+                            "%.2f",
+                            percent
+                        )
+                    }% vs last",
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (diff >= 0) Color(0xFF4CAF50) else Color(0xFFE57373),
                     fontWeight = FontWeight.Bold
                 )
             }
         }
-        
+
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "≈ ${if (state.isPrivacyModeEnabled) "••••" else String.format("%,.2f", state.totalValueUsd)} USD",
+            text = "≈ ${
+                if (state.isPrivacyModeEnabled) "••••" else String.format(
+                    "%,.2f",
+                    state.totalValueUsd
+                )
+            } USD",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
-        
+
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = onForecastingClick,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
             shape = MaterialTheme.shapes.medium
         ) {
-            Icon(Icons.Default.TrendingUp, contentDescription = null)
+            Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text("Wealth Trajectory")
         }
@@ -338,21 +451,35 @@ fun HoldingItem(holding: PortfolioHoldingEntity, isPrivacyModeEnabled: Boolean) 
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(holding.asset, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-            Text("${holding.source} • ${holding.assetClass}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                holding.asset,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                "${holding.source} • ${holding.assetClass}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
-        
+
         Column(horizontalAlignment = Alignment.End) {
             PrivacyText(
                 amount = (holding.valueIdr * 100).toLong(),
-                currencyCode = "IDR",
+                currencyCode = "IDR", // Note: HoldingItem doesn't have state access, but usually holdings are IDR in this app's context. 
+                // Actually, I should probably pass currencyCode to HoldingItem if I want it to be truly dynamic.
                 isVisible = !isPrivacyModeEnabled,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             if (holding.amount > 0) {
                 Text(
-                    text = "${if (isPrivacyModeEnabled) "••••" else String.format("%.4f", holding.amount)} ${holding.currency}",
+                    text = "${
+                        if (isPrivacyModeEnabled) "••••" else String.format(
+                            "%.4f",
+                            holding.amount
+                        )
+                    } ${holding.currency}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

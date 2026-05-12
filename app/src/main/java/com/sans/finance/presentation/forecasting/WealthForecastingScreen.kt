@@ -1,23 +1,52 @@
 package com.sans.finance.presentation.forecasting
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -26,7 +55,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.core.util.CurrencyFormatter
-import com.sans.finance.presentation.components.PrivacyText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,7 +122,11 @@ fun WealthForecastingScreen(
             // Controls
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                        alpha = 0.3f
+                    )
+                )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -118,15 +150,27 @@ fun WealthForecastingScreen(
                         valueRange = 0f..0.20f,
                         steps = 19
                     )
-                    
+
                     Spacer(modifier = Modifier.height(8.dp))
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        InfoItem("Monthly Savings", CurrencyFormatter.formatAmount(state.monthlySavings, state.currentCurrency))
-                        InfoItem("Current Wealth", CurrencyFormatter.formatAmount(state.currentNetWorth, state.currentCurrency))
+                        InfoItem(
+                            "Monthly Savings",
+                            CurrencyFormatter.formatAmount(
+                                state.monthlySavings,
+                                state.currentCurrency
+                            )
+                        )
+                        InfoItem(
+                            "Current Wealth",
+                            CurrencyFormatter.formatAmount(
+                                state.currentNetWorth,
+                                state.currentCurrency
+                            )
+                        )
                     }
                 }
             }
@@ -157,14 +201,14 @@ fun WealthForecastingScreen(
                 color = MaterialTheme.colorScheme.secondary,
                 letterSpacing = 1.5.sp
             )
-            
+
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 listOf(5, 10, 20).forEach { year ->
                     val value = state.projections.find { it.year == year }?.value ?: 0L
                     MilestoneItem(year, value, state.currentCurrency)
                 }
             }
-            
+
             // Educational Note
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -196,7 +240,11 @@ fun WealthForecastingScreen(
 @Composable
 fun InfoItem(label: String, value: String) {
     Column {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
     }
 }
@@ -241,7 +289,7 @@ fun MilestoneItem(years: Int, amount: Long, currencyCode: String) {
 @Composable
 fun TrajectoryChart(projections: List<ProjectionPoint>, currencyCode: String) {
     if (projections.isEmpty()) return
-    
+
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(
         fontSize = 10.sp,
@@ -249,13 +297,69 @@ fun TrajectoryChart(projections: List<ProjectionPoint>, currencyCode: String) {
     )
     val primaryColor = MaterialTheme.colorScheme.primary
     val gridColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+    var selectedIndex by remember { mutableStateOf<Int?>(null) }
+    val tooltipStyle = MaterialTheme.typography.labelMedium.copy(
+        color = MaterialTheme.colorScheme.onPrimary,
+        fontWeight = FontWeight.Bold
+    )
+    val tooltipYearStyle = MaterialTheme.typography.labelSmall.copy(
+        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+    )
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(250.dp)
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(projections.size) {
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            val padding = 60f
+                            val chartLeft = 80f
+                            val chartRight = size.width - 20f
+                            val chartWidth = chartRight - chartLeft
+
+                            val xFraction = (offset.x - chartLeft) / chartWidth
+                            val index = (xFraction * (projections.size - 1)).toInt()
+                                .coerceIn(0, projections.size - 1)
+                            selectedIndex = index
+                        },
+                        onDrag = { change, _ ->
+                            val padding = 60f
+                            val chartLeft = 80f
+                            val chartRight = size.width - 20f
+                            val chartWidth = chartRight - chartLeft
+
+                            val xFraction = (change.position.x - chartLeft) / chartWidth
+                            val index = (xFraction * (projections.size - 1)).toInt()
+                                .coerceIn(0, projections.size - 1)
+                            selectedIndex = index
+                        },
+                        onDragEnd = { selectedIndex = null },
+                        onDragCancel = { selectedIndex = null }
+                    )
+                }
+                .pointerInput(projections.size) {
+                    detectTapGestures(
+                        onPress = { offset ->
+                            val padding = 60f
+                            val chartLeft = 80f
+                            val chartRight = size.width - 20f
+                            val chartWidth = chartRight - chartLeft
+
+                            val xFraction = (offset.x - chartLeft) / chartWidth
+                            val index = (xFraction * (projections.size - 1)).toInt()
+                                .coerceIn(0, projections.size - 1)
+                            selectedIndex = index
+                            tryAwaitRelease()
+                            selectedIndex = null
+                        }
+                    )
+                }
+        ) {
             val padding = 60f
             val chartTop = 20f
             val chartBottom = size.height - padding
@@ -297,7 +401,7 @@ fun TrajectoryChart(projections: List<ProjectionPoint>, currencyCode: String) {
             xSteps.forEach { year ->
                 val xFraction = year.toFloat() / projections.last().year.toFloat()
                 val x = chartLeft + (xFraction * chartWidth)
-                
+
                 val label = "${year}y"
                 val layout = textMeasurer.measure(label, style = labelStyle)
                 drawText(
@@ -309,14 +413,14 @@ fun TrajectoryChart(projections: List<ProjectionPoint>, currencyCode: String) {
             // Draw Trajectory Path
             val path = Path()
             val fillPath = Path()
-            
+
             projections.forEachIndexed { index, point ->
                 val xFraction = point.year.toFloat() / projections.last().year.toFloat()
                 val yFraction = point.value.toFloat() / range
-                
+
                 val x = chartLeft + (xFraction * chartWidth)
                 val y = chartBottom - (yFraction * chartHeight)
-                
+
                 if (index == 0) {
                     path.moveTo(x, y)
                     fillPath.moveTo(x, y)
@@ -325,23 +429,92 @@ fun TrajectoryChart(projections: List<ProjectionPoint>, currencyCode: String) {
                     fillPath.lineTo(x, y)
                 }
             }
-            
+
             fillPath.lineTo(chartLeft + chartWidth, chartBottom)
             fillPath.lineTo(chartLeft, chartBottom)
             fillPath.close()
-            
+
             drawPath(
                 path = fillPath,
                 brush = Brush.verticalGradient(
                     colors = listOf(primaryColor.copy(alpha = 0.3f), Color.Transparent)
                 )
             )
-            
+
             drawPath(
                 path = path,
                 color = primaryColor,
                 style = Stroke(width = 6f)
             )
+
+            // Draw Tooltip if selected
+            selectedIndex?.let { index ->
+                val point = projections[index]
+                val xFraction = point.year.toFloat() / projections.last().year.toFloat()
+                val yFraction = point.value.toFloat() / range
+
+                val x = chartLeft + (xFraction * chartWidth)
+                val y = chartBottom - (yFraction * chartHeight)
+
+                // Draw Vertical Line
+                drawLine(
+                    color = primaryColor.copy(alpha = 0.5f),
+                    start = Offset(x, chartTop),
+                    end = Offset(x, chartBottom),
+                    strokeWidth = 2.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                )
+
+                // Draw Highlight Dot
+                drawCircle(
+                    color = primaryColor,
+                    radius = 6.dp.toPx(),
+                    center = Offset(x, y)
+                )
+                drawCircle(
+                    color = Color.White,
+                    radius = 3.dp.toPx(),
+                    center = Offset(x, y)
+                )
+
+                // Tooltip Content
+                val yearStr = "Year ${point.year}"
+                val valueStr = CurrencyFormatter.formatAmountCompact(point.value, currencyCode)
+
+                val valueLayout = textMeasurer.measure(valueStr, tooltipStyle)
+                val yearLayout = textMeasurer.measure(yearStr, tooltipYearStyle)
+
+                val tooltipWidth =
+                    maxOf(valueLayout.size.width, yearLayout.size.width) + 24.dp.toPx()
+                val tooltipHeight = valueLayout.size.height + yearLayout.size.height + 16.dp.toPx()
+
+                var tooltipX = x - tooltipWidth / 2f
+                if (tooltipX < chartLeft) tooltipX = chartLeft + 8.dp.toPx()
+                if (tooltipX + tooltipWidth > chartRight) tooltipX =
+                    chartRight - tooltipWidth - 8.dp.toPx()
+
+                val tooltipY =
+                    (y - tooltipHeight - 16.dp.toPx()).coerceAtLeast(chartTop + 8.dp.toPx())
+
+                drawRoundRect(
+                    color = primaryColor,
+                    topLeft = Offset(tooltipX, tooltipY),
+                    size = Size(tooltipWidth, tooltipHeight),
+                    cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx())
+                )
+
+                drawText(
+                    textLayoutResult = yearLayout,
+                    topLeft = Offset(tooltipX + 12.dp.toPx(), tooltipY + 8.dp.toPx())
+                )
+                drawText(
+                    textLayoutResult = valueLayout,
+                    topLeft = Offset(
+                        tooltipX + 12.dp.toPx(),
+                        tooltipY + 8.dp.toPx() + yearLayout.size.height
+                    )
+                )
+            }
         }
     }
 }

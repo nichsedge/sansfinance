@@ -42,7 +42,7 @@ fun CircularGauge(
                 radius = (size.toPx() - strokeWidth.toPx()) / 2,
                 style = Stroke(width = strokeWidth.toPx())
             )
-            
+
             // Progress
             drawArc(
                 color = color,
@@ -52,7 +52,7 @@ fun CircularGauge(
                 style = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
             )
         }
-        
+
         Text(
             text = "${(progress * 100).toInt()}%",
             style = MaterialTheme.typography.labelLarge,

@@ -34,7 +34,14 @@ object CurrencyFormatter {
         val formatter = getFormatter(currencyCode)
 
         // This will include the currency symbol and thousands separator but NO decimal part.
-        return formatter.format(amount)
+        var formatted = formatter.format(amount)
+
+        // Ensure IDR uses Rp
+        if (currencyCode == "IDR" && formatted.contains("IDR")) {
+            formatted = formatted.replace("IDR", "Rp")
+        }
+
+        return formatted
     }
 
     /**
@@ -42,10 +49,14 @@ object CurrencyFormatter {
      */
     fun formatAmountCompact(amountInCents: Long, currencyCode: String = "USD"): String {
         val amount = ceil(amountInCents / 100.0).toLong()
-        val symbol = try {
-            java.util.Currency.getInstance(currencyCode).getSymbol(Locale.getDefault())
-        } catch (e: Exception) {
-            "Rp"
+        val symbol = when (currencyCode) {
+            "IDR" -> "Rp"
+            "USD" -> "$"
+            else -> try {
+                java.util.Currency.getInstance(currencyCode).getSymbol(Locale.getDefault())
+            } catch (e: Exception) {
+                currencyCode
+            }
         }
 
         if (amount == 0L) return "${symbol}0"

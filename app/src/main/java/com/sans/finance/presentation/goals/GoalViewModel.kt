@@ -7,9 +7,9 @@ import com.sans.finance.domain.repository.GoalRepository
 import com.sans.finance.domain.repository.PortfolioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.combine
 import javax.inject.Inject
 
 data class GoalWithProgress(
@@ -40,12 +40,16 @@ class GoalViewModel @Inject constructor(
         val categories = latestHoldings.map { it.category }.distinct().sorted()
         val assetClasses = latestHoldings.map { it.assetClass }.distinct().sorted()
         val exchangeRate = latestHeader?.exchangeRateUsd ?: 16000.0
-        
+
         val goalsWithProgress = goals.map { goal ->
             val currentAmountIdr = when (goal.targetType) {
                 "TOTAL" -> latestHoldings.sumOf { it.valueIdr }
-                "CATEGORY" -> latestHoldings.filter { it.category == goal.targetName }.sumOf { it.valueIdr }
-                "ASSET_CLASS" -> latestHoldings.filter { it.assetClass == goal.targetName }.sumOf { it.valueIdr }
+                "CATEGORY" -> latestHoldings.filter { it.category == goal.targetName }
+                    .sumOf { it.valueIdr }
+
+                "ASSET_CLASS" -> latestHoldings.filter { it.assetClass == goal.targetName }
+                    .sumOf { it.valueIdr }
+
                 else -> 0.0
             }
 
