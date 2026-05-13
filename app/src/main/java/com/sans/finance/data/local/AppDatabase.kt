@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
         GoalEntity::class,
         BudgetEntity::class
     ],
-    version = 24,
+    version = 25,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -73,10 +73,10 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS `expense_tag_ref` (
-                        `expenseId` INTEGER NOT NULL, 
-                        `tagId` INTEGER NOT NULL, 
-                        PRIMARY KEY(`expenseId`, `tagId`), 
-                        FOREIGN KEY(`expenseId`) REFERENCES `expenses`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE, 
+                        `expenseId` INTEGER NOT NULL,
+                        `tagId` INTEGER NOT NULL,
+                        PRIMARY KEY(`expenseId`, `tagId`),
+                        FOREIGN KEY(`expenseId`) REFERENCES `expenses`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
                         FOREIGN KEY(`tagId`) REFERENCES `tags`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
                     )
                 """.trimIndent()
@@ -251,10 +251,10 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL(
                     """
                     INSERT OR IGNORE INTO portfolio_snapshot_headers (snapshotDate, exchangeRateUsd, totalValueIdr, totalValueUsd, createdAt)
-                    SELECT 
-                        snapshot_date, 
-                        AVG(value_idr / NULLIF(value_usd, 0)), 
-                        SUM(value_idr), 
+                    SELECT
+                        snapshot_date,
+                        AVG(value_idr / NULLIF(value_usd, 0)),
+                        SUM(value_idr),
                         SUM(value_usd),
                         MIN(created_at)
                     FROM portfolio_snapshots
@@ -290,14 +290,14 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS `goals` (
-                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
-                        `name` TEXT NOT NULL, 
-                        `targetAmount` REAL NOT NULL, 
-                        `targetType` TEXT NOT NULL, 
-                        `targetName` TEXT, 
-                        `currency` TEXT NOT NULL, 
-                        `deadline` INTEGER, 
-                        `createdAt` INTEGER NOT NULL, 
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `targetAmount` REAL NOT NULL,
+                        `targetType` TEXT NOT NULL,
+                        `targetName` TEXT,
+                        `currency` TEXT NOT NULL,
+                        `deadline` INTEGER,
+                        `createdAt` INTEGER NOT NULL,
                         `updatedAt` INTEGER NOT NULL
                     )
                 """.trimIndent()
@@ -362,10 +362,10 @@ abstract class AppDatabase : RoomDatabase() {
                 // 3. Refactor installments table (remove redundant columns)
                 db.execSQL("""
                     CREATE TABLE IF NOT EXISTS `installments_new` (
-                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
-                        `expense_id` INTEGER NOT NULL, 
-                        `status` TEXT NOT NULL, 
-                        `duration_months` INTEGER NOT NULL, 
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `expense_id` INTEGER NOT NULL,
+                        `status` TEXT NOT NULL,
+                        `duration_months` INTEGER NOT NULL,
                         `created_at` INTEGER NOT NULL,
                         FOREIGN KEY(`expense_id`) REFERENCES `expenses`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
                     )
@@ -388,6 +388,14 @@ abstract class AppDatabase : RoomDatabase() {
                 """.trimIndent())
                 db.execSQL("DROP TABLE goals")
                 db.execSQL("ALTER TABLE goals_new RENAME TO goals")
+            }
+        }
+
+        val MIGRATION_24_25 = object : androidx.room.migration.Migration(24, 25) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_expenses_date` ON `expenses` (`date`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_expenses_category_id` ON `expenses` (`category_id`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_expenses_account_id` ON `expenses` (`account_id`)")
             }
         }
     }

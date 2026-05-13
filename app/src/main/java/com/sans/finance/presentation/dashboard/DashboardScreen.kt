@@ -425,6 +425,8 @@ fun ForecastCard(
     isPrivacyModeEnabled: Boolean,
     onClick: () -> Unit
 ) {
+    var selectedIndex by remember { mutableStateOf(-1) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -444,13 +446,13 @@ fun ForecastCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "30-Day Forecast",
+                    if (selectedIndex == -1) "30-Day Forecast" else "Historical Point ${30 - selectedIndex}d ago",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
                     fontWeight = FontWeight.Bold
                 )
                 PrivacyText(
-                    amount = projectedBalance,
+                    amount = if (selectedIndex == -1) projectedBalance else trendData[selectedIndex],
                     currencyCode = currencyCode,
                     isVisible = !isPrivacyModeEnabled,
                     style = MaterialTheme.typography.titleMedium,
@@ -464,7 +466,8 @@ fun ForecastCard(
                     .width(100.dp)
                     .height(40.dp),
                 color = MaterialTheme.colorScheme.secondary,
-                lineWidth = 3f
+                lineWidth = 3f,
+                onValueSelected = { selectedIndex = it }
             )
         }
     }

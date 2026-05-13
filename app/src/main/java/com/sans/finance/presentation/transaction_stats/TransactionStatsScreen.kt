@@ -64,7 +64,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -394,7 +397,8 @@ fun CategoryBreakdown(
             if (categories.isNotEmpty() && totalInCategories > 0) {
                 PieChartWithLabels(
                     categories = categories,
-                    totalAmount = totalInCategories
+                    totalAmount = totalInCategories,
+                    currencyCode = currencyCode
                 )
 
                 categories.sortedByDescending { it.totalAmount }.forEachIndexed { index, category ->
@@ -874,20 +878,69 @@ fun TrendChart(
 @Composable
 fun PieChartWithLabels(
     categories: List<CategorySpent>,
-    totalAmount: Long
+    totalAmount: Long,
+    currencyCode: String
 ) {
     if (categories.isEmpty() || totalAmount == 0L) return
 
     val textMeasurer = rememberTextMeasurer()
     val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val haptic = LocalHapticFeedback.current
+    var selectedIndex by remember { mutableStateOf(-1) }
+
+    val sortedCategories = remember(categories) {
+        categories.sortedByDescending { it.totalAmount }.take(12)
+    }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(300.dp)
-            .padding(16.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(sortedCategories) {
+                    detectTapGestures { offset ->
+                        val canvasWidth = size.width
+                        val canvasHeight = size.height
+                        val center = Offset(canvasWidth / 2f, canvasHeight / 2f)
+                        val radius = Math.min(canvasWidth, canvasHeight) / 3f
+
+                        val dx = offset.x - center.x
+                        val dy = offset.y - center.y
+                        val distance = Math.sqrt((dx * dx + dy * dy).toDouble())
+
+                        if (distance <= radius && distance >= radius * 0.5f) {
+                            var angle =
+                                Math.toDegrees(Math.atan2(dy.toDouble(), dx.toDouble())).toFloat()
+                            if (angle < 0) angle += 360f
+
+                            // Adjust for -90 start angle
+                            val adjustedAngle = (angle + 90f) % 360f
+
+                            var currentStartAngle = 0f
+                            sortedCategories.forEachIndexed { index, category ->
+                                val sweep = (category.totalAmount.toFloat() / totalAmount) * 360f
+                                if (adjustedAngle >= currentStartAngle && adjustedAngle <= currentStartAngle + sweep) {
+                                    if (selectedIndex != index) {
+                                        selectedIndex = index
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    } else {
+                                        selectedIndex = -1
+                                    }
+                                    return@detectTapGestures
+                                }
+                                currentStartAngle += sweep
+                            }
+                        } else {
+                            selectedIndex = -1
+                        }
+                    }
+                }
+        ) {
             val canvasWidth = size.width
             val canvasHeight = size.height
             val radius = Math.min(canvasWidth, canvasHeight) / 3f
@@ -895,72 +948,147 @@ fun PieChartWithLabels(
 
             var startAngle = -90f
 
-            categories.sortedByDescending { it.totalAmount }.take(12)
-                .forEachIndexed { index, category ->
-                    val sweepAngle = (category.totalAmount.toFloat() / totalAmount) * 360f
-                    val color = pieChartColors[index % pieChartColors.size]
+            sortedCategories.forEachIndexed { index, category ->
+                val sweepAngle = (category.totalAmount.toFloat() / totalAmount) * 360f
+                val color = pieChartColors[index % pieChartColors.size]
+                val isSelected = selectedIndex == index
 
-                    // Draw pie slice
-                    drawArc(
-                        color = color,
-                        startAngle = startAngle,
-                        sweepAngle = sweepAngle,
-                        useCenter = true,
-                        topLeft = Offset(center.x - radius, center.y - radius),
-                        size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
+                // Draw pie slice (Donut style)
+                val slicePath = Path().apply {
+                    moveTo(center.x, center.y)
+                    arcTo(
+                        rect = androidx.compose.ui.geometry.Rect(
+                            center.x - radius,
+                            center.y - radius,
+                            center.x + radius,
+                            center.y + radius
+                        ),
+                        startAngleDegrees = startAngle,
+                        sweepAngleDegrees = sweepAngle,
+                        forceMoveTo = false
                     )
+                    close()
+                }
 
-                    // Only draw labels for slices > 3% to avoid clutter
-                    if (sweepAngle > 10f) {
-                        // Calculate label position
-                        val angleInRadians = (startAngle + sweepAngle / 2) * (Math.PI / 180f)
-                        val lineStart = Offset(
-                            x = center.x + (radius * 0.9f) * cos(angleInRadians).toFloat(),
-                            y = center.y + (radius * 0.9f) * sin(angleInRadians).toFloat()
+                val innerRadius = radius * 0.6f
+                val innerPath = Path().apply {
+                    addOval(
+                        androidx.compose.ui.geometry.Rect(
+                            center.x - innerRadius,
+                            center.y - innerRadius,
+                            center.x + innerRadius,
+                            center.y + innerRadius
                         )
-                        val lineEnd = Offset(
-                            x = center.x + (radius * 1.2f) * cos(angleInRadians).toFloat(),
-                            y = center.y + (radius * 1.2f) * sin(angleInRadians).toFloat()
-                        )
-                        val isRightSide = cos(angleInRadians) > 0
-                        val textEnd = Offset(
-                            x = lineEnd.x + (if (isRightSide) 20f else -20f),
-                            y = lineEnd.y
-                        )
+                    )
+                }
 
-                        // Draw connecting line
-                        val path = Path().apply {
-                            moveTo(lineStart.x, lineStart.y)
-                            lineTo(lineEnd.x, lineEnd.y)
-                            lineTo(textEnd.x, textEnd.y)
-                        }
+                clipPath(innerPath, clipOp = androidx.compose.ui.graphics.ClipOp.Difference) {
+                    drawPath(
+                        path = slicePath,
+                        color = if (isSelected) color else color.copy(alpha = 0.8f)
+                    )
+                    if (isSelected) {
                         drawPath(
-                            path = path,
-                            color = color.copy(alpha = 0.5f),
-                            style = Stroke(width = 2f)
-                        )
-
-                        // Draw text label
-                        val label = String.format(Locale.US, "%.0f%%", (sweepAngle / 360f) * 100)
-                        val textLayoutResult = textMeasurer.measure(
-                            text = label,
-                            style = TextStyle(
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = onSurfaceColor
-                            )
-                        )
-                        drawText(
-                            textLayoutResult = textLayoutResult,
-                            topLeft = Offset(
-                                x = textEnd.x + (if (isRightSide) 4f else -textLayoutResult.size.width - 4f),
-                                y = textEnd.y - textLayoutResult.size.height / 2f
-                            )
+                            path = slicePath,
+                            color = Color.White.copy(alpha = 0.3f),
+                            style = Stroke(width = 4f)
                         )
                     }
-
-                    startAngle += sweepAngle
                 }
+
+                // Only draw labels for slices > 3% to avoid clutter
+                if (sweepAngle > 10f) {
+                    // Calculate label position
+                    val angleInRadians = (startAngle + sweepAngle / 2) * (Math.PI / 180f)
+                    val lineStart = Offset(
+                        x = center.x + (radius * 0.9f) * cos(angleInRadians).toFloat(),
+                        y = center.y + (radius * 0.9f) * sin(angleInRadians).toFloat()
+                    )
+                    val lineEnd = Offset(
+                        x = center.x + (radius * 1.2f) * cos(angleInRadians).toFloat(),
+                        y = center.y + (radius * 1.2f) * sin(angleInRadians).toFloat()
+                    )
+                    val isRightSide = cos(angleInRadians) > 0
+                    val textEnd = Offset(
+                        x = lineEnd.x + (if (isRightSide) 20f else -20f),
+                        y = lineEnd.y
+                    )
+
+                    // Draw connecting line
+                    val path = Path().apply {
+                        moveTo(lineStart.x, lineStart.y)
+                        lineTo(lineEnd.x, lineEnd.y)
+                        lineTo(textEnd.x, textEnd.y)
+                    }
+                    drawPath(
+                        path = path,
+                        color = color.copy(alpha = 0.5f),
+                        style = Stroke(width = 2f)
+                    )
+
+                    // Draw text label
+                    val label = String.format(Locale.US, "%.0f%%", (sweepAngle / 360f) * 100)
+                    val textLayoutResult = textMeasurer.measure(
+                        text = label,
+                        style = TextStyle(
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = onSurfaceColor
+                        )
+                    )
+                    drawText(
+                        textLayoutResult = textLayoutResult,
+                        topLeft = Offset(
+                            x = textEnd.x + (if (isRightSide) 4f else -textLayoutResult.size.width - 4f),
+                            y = textEnd.y - textLayoutResult.size.height / 2f
+                        )
+                    )
+                }
+
+                startAngle += sweepAngle
+            }
+        }
+
+        // Center Info
+        if (selectedIndex != -1) {
+            val selected = sortedCategories[selectedIndex]
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    selected.categoryName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    CurrencyFormatter.formatAmount(selected.totalAmount, currencyCode),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black
+                )
+                Text(
+                    String.format(
+                        Locale.US,
+                        "%.1f%%",
+                        (selected.totalAmount.toFloat() / totalAmount) * 100
+                    ),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = pieChartColors[selectedIndex % pieChartColors.size],
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "TOTAL",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    CurrencyFormatter.formatAmount(totalAmount, currencyCode),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black
+                )
+            }
         }
     }
 }

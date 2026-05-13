@@ -2,6 +2,7 @@ package com.sans.finance.presentation.portfolio.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -38,13 +40,17 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.sans.finance.core.util.CurrencyFormatter
 import com.sans.finance.data.local.dao.CategoryTotal
 import com.sans.finance.data.local.dao.SnapshotTotal
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 @Composable
 fun NetWorthTrendChart(
@@ -297,7 +303,9 @@ fun NetWorthTrendChart(
 @Composable
 fun AllocationDonutChart(
     categories: List<CategoryTotal>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    currencyCode: String = "IDR",
+    isPrivacyModeEnabled: Boolean = false
 ) {
     if (categories.isEmpty()) return
 
@@ -313,24 +321,126 @@ fun AllocationDonutChart(
         Color(0xFFF44336)  // Red
     )
 
+    val haptic = LocalHapticFeedback.current
+    var selectedIndex by remember { mutableStateOf(-1) }
+
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Canvas(modifier = Modifier.size(160.dp)) {
-            var startAngle = -90f
-            categories.forEachIndexed { index, category ->
-                val sweepAngle = (category.totalIdr / total).toFloat() * 360f
-                val color = colors[index % colors.size]
+        Box(
+            modifier = Modifier.size(160.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(categories) {
+                        detectTapGestures { offset ->
+                            val canvasWidth = size.width
+                            val canvasHeight = size.height
+                            val center = Offset(canvasWidth / 2f, canvasHeight / 2f)
+                            val radius = Math.min(canvasWidth, canvasHeight) / 2f
 
-                drawArc(
-                    color = color,
-                    startAngle = startAngle,
-                    sweepAngle = sweepAngle,
-                    useCenter = false,
-                    style = Stroke(width = 32.dp.toPx(), cap = StrokeCap.Butt)
-                )
-                startAngle += sweepAngle
+                            val dx = offset.x - center.x
+                            val dy = offset.y - center.y
+                            val distance = Math.sqrt((dx * dx + dy * dy).toDouble())
+
+                            // Check if tap is within the donut ring
+                            if (distance <= radius && distance >= radius * 0.5f) {
+                                var angle =
+                                    Math.toDegrees(Math.atan2(dy.toDouble(), dx.toDouble()))
+                                        .toFloat()
+                                if (angle < 0) angle += 360f
+
+                                // Adjust for -90 start angle
+                                val adjustedAngle = (angle + 90f) % 360f
+
+                                var currentStartAngle = 0f
+                                categories.forEachIndexed { index, category ->
+                                    val sweep = (category.totalIdr / total).toFloat() * 360f
+                                    if (adjustedAngle >= currentStartAngle && adjustedAngle <= currentStartAngle + sweep) {
+                                        if (selectedIndex != index) {
+                                            selectedIndex = index
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        } else {
+                                            selectedIndex = -1
+                                        }
+                                        return@detectTapGestures
+                                    }
+                                    currentStartAngle += sweep
+                                }
+                            } else {
+                                selectedIndex = -1
+                            }
+                        }
+                    }
+            ) {
+                val canvasWidth = size.width
+                val canvasHeight = size.height
+                val center = Offset(canvasWidth / 2f, canvasHeight / 2f)
+                val radius = Math.min(canvasWidth, canvasHeight) / 2f
+                val strokeWidth = 32.dp.toPx()
+
+                var startAngle = -90f
+                categories.forEachIndexed { index, category ->
+                    val sweepAngle = (category.totalIdr / total).toFloat() * 360f
+                    val color = colors[index % colors.size]
+                    val isSelected = selectedIndex == index
+
+                    drawArc(
+                        color = if (isSelected) color else color.copy(alpha = 0.8f),
+                        startAngle = startAngle,
+                        sweepAngle = sweepAngle,
+                        useCenter = false,
+                        style = Stroke(
+                            width = if (isSelected) strokeWidth * 1.2f else strokeWidth,
+                            cap = StrokeCap.Butt
+                        )
+                    )
+
+                    if (isSelected) {
+                        // Draw a subtle border around selected slice
+                        drawArc(
+                            color = Color.White.copy(alpha = 0.5f),
+                            startAngle = startAngle,
+                            sweepAngle = sweepAngle,
+                            useCenter = false,
+                            style = Stroke(width = 2.dp.toPx())
+                        )
+                    }
+
+                    startAngle += sweepAngle
+                }
+            }
+
+            // Center Info
+            if (selectedIndex != -1) {
+                val selected = categories[selectedIndex]
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        selected.category,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold
+                    )
+                    val amountText = if (isPrivacyModeEnabled) "••••" else
+                        CurrencyFormatter.formatAmountCompact(
+                            (selected.totalIdr * 100).toLong(),
+                            currencyCode
+                        )
+                    Text(
+                        amountText,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        String.format(Locale.US, "%.1f%%", (selected.totalIdr / total) * 100),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors[selectedIndex % colors.size],
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
             }
         }
 
@@ -340,18 +450,35 @@ fun AllocationDonutChart(
             categories.take(5).forEachIndexed { index, category ->
                 val color = colors[index % colors.size]
                 val percent = (category.totalIdr / total * 100).toInt()
+                val isSelected = selectedIndex == index
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.small)
+                        .background(
+                            if (isSelected) color.copy(alpha = 0.1f) else Color.Transparent
+                        )
+                        .clickable {
+                            if (selectedIndex == index) selectedIndex = -1
+                            else {
+                                selectedIndex = index
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
+                        }
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                ) {
                     Box(
                         modifier = Modifier
-                            .size(10.dp)
+                            .size(if (isSelected) 12.dp else 10.dp)
                             .background(color, shape = CircleShape)
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "${category.category} ($percent%)",
                         style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = if (isSelected) FontWeight.Black else FontWeight.Medium,
+                        color = if (isSelected) color else MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -359,7 +486,8 @@ fun AllocationDonutChart(
                 Text(
                     text = "+ ${categories.size - 5} more",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 18.dp)
                 )
             }
         }

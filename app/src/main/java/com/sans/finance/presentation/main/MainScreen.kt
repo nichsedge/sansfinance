@@ -47,7 +47,7 @@ fun MainScreen(
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = Screen.ExpenseList,
+            startDestination = Screen.Dashboard,
             modifier = Modifier.padding(paddingValues)
         ) {
             composable<Screen.Dashboard> {
@@ -106,7 +106,9 @@ fun MainScreen(
                 PortfolioScreen(
                     onDashboardClick = {
                         navController.navigate(Screen.Dashboard) {
-                            popUpTo(Screen.Dashboard) { inclusive = true }
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
                             launchSingleTop = true
                             restoreState = true
                         }

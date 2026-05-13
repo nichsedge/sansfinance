@@ -2,9 +2,17 @@ package com.sans.finance.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "expenses")
+@Entity(
+    tableName = "expenses",
+    indices = [
+        Index(value = ["date"]),
+        Index(value = ["category_id"]),
+        Index(value = ["account_id"])
+    ]
+)
 data class ExpenseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val date: Long, // timestamp
