@@ -161,11 +161,11 @@ fun BottomNavigationBar(navController: NavHostController) {
         items.forEach { (screen, label, icon) ->
             val isSelected =
                 currentDestination?.hierarchy?.any { it.hasRoute(screen::class) } == true ||
-                        (screen is Screen.Dashboard && currentDestination?.hierarchy?.any {
-                            it.hasRoute(
-                                Screen.Portfolio::class
-                            )
-                        } == true)
+                    (screen is Screen.Dashboard && currentDestination?.hierarchy?.any {
+                        it.hasRoute(
+                            Screen.Portfolio::class
+                        )
+                    } == true)
 
             NavigationBarItem(
                 icon = { Icon(icon, contentDescription = label) },

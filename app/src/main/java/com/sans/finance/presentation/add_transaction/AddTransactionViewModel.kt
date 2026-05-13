@@ -1,9 +1,9 @@
 package com.sans.finance.presentation.add_transaction
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.SavedStateHandle
@@ -12,11 +12,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.usecase.AddTransactionUseCase
+import com.sans.finance.domain.usecase.CheckDuplicateExpenseUseCase
 import com.sans.finance.domain.usecase.DeleteExpenseUseCase
 import com.sans.finance.domain.usecase.GetDetailsSuggestionsUseCase
 import com.sans.finance.domain.usecase.GetExpenseByIdUseCase
 import com.sans.finance.domain.usecase.GetTitleSuggestionsUseCase
-import com.sans.finance.domain.usecase.CheckDuplicateExpenseUseCase
 import com.sans.finance.domain.usecase.UpdateExpenseUseCase
 import com.sans.finance.presentation.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -145,7 +145,7 @@ class AddTransactionViewModel @Inject constructor(
                     installmentMonth = expense.installmentMonth
                     installmentTotalMonths = expense.installmentTotalMonths
                     status = expense.status
-                    
+
                     if (expense.isRecurring) {
                         installmentRepository.getInstallmentByExpenseId(id)?.let { installment ->
                             durationMonths = installment.durationMonths.toString()

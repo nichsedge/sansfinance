@@ -144,7 +144,10 @@ fun AddTransactionScreen(
                             showDeleteDialog = false
                         }
                     ) {
-                        Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+                        Text(
+                            stringResource(R.string.delete),
+                            color = MaterialTheme.colorScheme.error
+                        )
                     }
                 },
                 dismissButton = {

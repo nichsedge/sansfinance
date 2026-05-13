@@ -66,7 +66,7 @@ class SearchViewModel @Inject constructor(
         loadTags()
         observePrivacyMode()
         observeFilters()
-        
+
         _state.update { it.copy(currentCurrency = localeManager.getCurrency()) }
     }
 
@@ -209,12 +209,14 @@ class SearchViewModel @Inject constructor(
                 endCal.add(Calendar.WEEK_OF_YEAR, 1)
                 Pair(calendar.timeInMillis, endCal.timeInMillis)
             }
+
             DateRangeFilter.THIS_MONTH -> {
                 calendar.set(Calendar.DAY_OF_MONTH, 1)
                 val endCal = calendar.clone() as Calendar
                 endCal.add(Calendar.MONTH, 1)
                 Pair(calendar.timeInMillis, endCal.timeInMillis)
             }
+
             DateRangeFilter.LAST_MONTH -> {
                 calendar.add(Calendar.MONTH, -1)
                 calendar.set(Calendar.DAY_OF_MONTH, 1)
@@ -222,12 +224,14 @@ class SearchViewModel @Inject constructor(
                 endCal.add(Calendar.MONTH, 1)
                 Pair(calendar.timeInMillis, endCal.timeInMillis)
             }
+
             DateRangeFilter.THIS_YEAR -> {
                 calendar.set(Calendar.DAY_OF_YEAR, 1)
                 val endCal = calendar.clone() as Calendar
                 endCal.add(Calendar.YEAR, 1)
                 Pair(calendar.timeInMillis, endCal.timeInMillis)
             }
+
             DateRangeFilter.ALL_TIME -> Pair(0L, Long.MAX_VALUE)
             DateRangeFilter.CUSTOM -> Pair(start, end)
         }

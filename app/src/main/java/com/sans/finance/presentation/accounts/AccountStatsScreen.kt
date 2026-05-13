@@ -82,9 +82,18 @@ fun AccountStatsScreen(
                         Text(stringResource(R.string.account_stats), fontWeight = FontWeight.Black)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape).padding(horizontal = 4.dp)
+                            modifier = Modifier
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(
+                                        alpha = 0.5f
+                                    ), CircleShape
+                                )
+                                .padding(horizontal = 4.dp)
                         ) {
-                            IconButton(onClick = viewModel::onPreviousMonth, modifier = Modifier.size(32.dp)) {
+                            IconButton(
+                                onClick = viewModel::onPreviousMonth,
+                                modifier = Modifier.size(32.dp)
+                            ) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                                     contentDescription = "Previous",
@@ -97,7 +106,10 @@ fun AccountStatsScreen(
                                 fontWeight = FontWeight.Black,
                                 modifier = Modifier.padding(horizontal = 8.dp)
                             )
-                            IconButton(onClick = viewModel::onNextMonth, modifier = Modifier.size(32.dp)) {
+                            IconButton(
+                                onClick = viewModel::onNextMonth,
+                                modifier = Modifier.size(32.dp)
+                            ) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = "Next",
@@ -139,7 +151,10 @@ fun AccountStatsScreen(
                     containerColor = MaterialTheme.colorScheme.primary,
                     alpha = 0.1f
                 ) {
-                    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Text(
                             "Cash Liquidity",
                             style = MaterialTheme.typography.labelLarge,
@@ -147,7 +162,10 @@ fun AccountStatsScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            CurrencyFormatter.formatAmount(state.totalBalance, state.currentCurrency),
+                            CurrencyFormatter.formatAmount(
+                                state.totalBalance,
+                                state.currentCurrency
+                            ),
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.onSurface
@@ -160,7 +178,10 @@ fun AccountStatsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.extraLarge,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text(
@@ -182,7 +203,10 @@ fun AccountStatsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.extraLarge,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text(
@@ -336,7 +360,11 @@ fun TotalStatsLineChart(history: List<Pair<String, Long>>, currencyCode: String)
                 drawPath(
                     path = path,
                     color = lineColor,
-                    style = Stroke(width = 6f, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+                    style = Stroke(
+                        width = 6f,
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                        join = androidx.compose.ui.graphics.StrokeJoin.Round
+                    )
                 )
 
                 // Draw points and labels
@@ -355,7 +383,10 @@ fun TotalStatsLineChart(history: List<Pair<String, Long>>, currencyCode: String)
                     }
 
                     // Month Label
-                    if (index == 0 || index == history.size - 1 || index % (history.size / 4).coerceAtLeast(1) == 0) {
+                    if (index == 0 || index == history.size - 1 || index % (history.size / 4).coerceAtLeast(
+                            1
+                        ) == 0
+                    ) {
                         val monthLayout =
                             textMeasurer.measure(history[index].first, style = labelStyle)
                         drawText(
@@ -582,7 +613,10 @@ fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>, currencyCode: 
                     )
 
                     // Month Label
-                    if (index == 0 || index == history.size - 1 || index % (history.size / 4).coerceAtLeast(1) == 0) {
+                    if (index == 0 || index == history.size - 1 || index % (history.size / 4).coerceAtLeast(
+                            1
+                        ) == 0
+                    ) {
                         val monthLayout = textMeasurer.measure(data.first, style = labelStyle)
                         drawText(
                             textLayoutResult = monthLayout,

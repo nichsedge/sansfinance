@@ -1,11 +1,9 @@
 package com.sans.finance.presentation.dashboard
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +28,6 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.SmartToy
-
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -242,7 +239,11 @@ fun DashboardScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         state.goals.forEach { goal ->
-                            DashboardGoalItem(goal, state.currentCurrency, state.isPrivacyModeEnabled)
+                            DashboardGoalItem(
+                                goal,
+                                state.currentCurrency,
+                                state.isPrivacyModeEnabled
+                            )
                         }
                     }
                 }
@@ -292,7 +293,11 @@ fun DashboardScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         state.upcomingBills.forEach { bill ->
-                            DashboardBillItem(bill, state.currentCurrency, state.isPrivacyModeEnabled)
+                            DashboardBillItem(
+                                bill,
+                                state.currentCurrency,
+                                state.isPrivacyModeEnabled
+                            )
                         }
                     }
                 }
@@ -629,7 +634,10 @@ fun MonthlyCashFlowCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             Text(
                 "Monthly Cash Flow",
                 style = MaterialTheme.typography.titleSmall,
@@ -911,7 +919,8 @@ fun GlobalBudgetCard(
     val progress = (spent.toFloat() / budget.toFloat()).coerceIn(0f, 1f)
     val isOverBudget = spent > budget
     val remaining = (budget - spent).coerceAtLeast(0L)
-    val color = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+    val color =
+        if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -921,7 +930,9 @@ fun GlobalBudgetCard(
         ),
         border = BorderStroke(
             1.dp,
-            if (isOverBudget) color.copy(alpha = 0.3f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            if (isOverBudget) color.copy(alpha = 0.3f) else MaterialTheme.colorScheme.outlineVariant.copy(
+                alpha = 0.5f
+            )
         )
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -1338,7 +1349,8 @@ fun RecentTransactionItem(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             val isIncome = transaction.type == "INCOME"
-            val statusColor = if (isIncome) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
+            val statusColor =
+                if (isIncome) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
 
             Box(
                 modifier = Modifier

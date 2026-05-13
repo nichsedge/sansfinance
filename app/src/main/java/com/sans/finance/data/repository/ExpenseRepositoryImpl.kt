@@ -1,12 +1,16 @@
 package com.sans.finance.data.repository
 
-import com.sans.finance.domain.model.*
+import androidx.room.withTransaction
+import com.sans.finance.domain.model.Category
+import com.sans.finance.domain.model.CategorySpent
+import com.sans.finance.domain.model.DaySpent
+import com.sans.finance.domain.model.Expense
+import com.sans.finance.domain.model.Tag
 import com.sans.finance.domain.repository.ExpenseRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
-import androidx.room.withTransaction
+import kotlinx.coroutines.flow.map
 
 class ExpenseRepositoryImpl(
     private val db: com.sans.finance.data.local.AppDatabase,
@@ -159,7 +163,7 @@ class ExpenseRepositoryImpl(
     override suspend fun getDetailsSuggestions(query: String): List<String> {
         return dao.getDetailsSuggestions(query)
     }
-    
+
     override suspend fun getPredictionForTitle(title: String): Expense? {
         return dao.getLastExpenseByTitle(title)?.let {
             val items = installmentDao.getItemsByInstallmentIdForId(it.installment?.id ?: -1)
@@ -167,7 +171,12 @@ class ExpenseRepositoryImpl(
         }
     }
 
-    override suspend fun findPotentialDuplicate(title: String, amount: Long, date: Long, accountId: Long): Expense? {
+    override suspend fun findPotentialDuplicate(
+        title: String,
+        amount: Long,
+        date: Long,
+        accountId: Long
+    ): Expense? {
         val window = 5 * 60 * 1000 // 5 minutes
         return dao.findDuplicateExpense(
             title = title,
@@ -199,10 +208,10 @@ class ExpenseRepositoryImpl(
         if (oldExpense != null) {
             // Reverse old balance effect
             adjustAccountBalance(oldExpense, isReverse = true)
-            
+
             // Apply new balance effect
             adjustAccountBalance(expense, isReverse = false)
-            
+
             // Update expense and tags
             dao.updateExpense(expense.toEntity())
             syncTags(expense.id, expense.tags)
@@ -476,9 +485,10 @@ class ExpenseRepositoryImpl(
         categoryId: Long,
         type: String
     ): Flow<List<DaySpent>> {
-        return dao.getDailyBreakdownByCategoryBetween(since, until, categoryId, type).map { entities ->
-            entities.map { it.toDomain() }
-        }
+        return dao.getDailyBreakdownByCategoryBetween(since, until, categoryId, type)
+            .map { entities ->
+                entities.map { it.toDomain() }
+            }
     }
 
     override fun getMonthlyBreakdownByCategory(
@@ -499,7 +509,8 @@ class ExpenseRepositoryImpl(
         val remainingBalance = items?.filter { it.status == "Pending" }?.sumOf { it.amount } ?: 0L
         val totalAmount = items?.sumOf { it.amount } ?: 0L
         val inst = installment
-        val monthlyPayment = if (inst != null && inst.durationMonths > 0) totalAmount / inst.durationMonths else 0L
+        val monthlyPayment =
+            if (inst != null && inst.durationMonths > 0) totalAmount / inst.durationMonths else 0L
 
         return Expense(
             id = expense.id,

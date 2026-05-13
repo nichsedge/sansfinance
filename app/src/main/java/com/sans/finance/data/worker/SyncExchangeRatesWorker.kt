@@ -22,20 +22,20 @@ class SyncExchangeRatesWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val client = OkHttpClient()
         // Using a free API (v6.exchangerate-api.com has a free tier, but requires key)
-        // For demonstration, we'll use a public one that doesn't need key if available, 
+        // For demonstration, we'll use a public one that doesn't need key if available,
         // or just fallback to hardcoded rates if it fails.
         val url = "https://open.er-api.com/v6/latest/IDR"
-        
+
         return try {
             val request = Request.Builder().url(url).build()
             val response = client.newCall(request).execute()
-            
+
             if (response.isSuccessful) {
                 val body = response.body.string()
                 val json = JSONObject(body)
                 val rates = json.getJSONObject("rates")
                 val exchangeRates = mutableListOf<ExchangeRateEntity>()
-                
+
                 val keys = rates.keys()
                 while (keys.hasNext()) {
                     val code = keys.next()

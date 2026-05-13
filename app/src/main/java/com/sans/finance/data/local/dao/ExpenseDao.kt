@@ -62,12 +62,14 @@ interface ExpenseDao {
     ): Flow<List<com.sans.finance.data.local.entity.ExpenseWithTags>>
 
     @Transaction
-    @Query("""
+    @Query(
+        """
         SELECT e.* FROM expenses e
         JOIN expenses_fts fts ON e.id = fts.rowid
         WHERE expenses_fts MATCH :query
         ORDER BY e.date DESC
-    """)
+    """
+    )
     fun searchExpensesFts(query: String): Flow<List<com.sans.finance.data.local.entity.ExpenseWithTags>>
 
     @Transaction
@@ -97,7 +99,13 @@ interface ExpenseDao {
 
     @Transaction
     @Query("SELECT * FROM expenses WHERE title = :title AND amount = :amount AND date BETWEEN :startTime AND :endTime AND account_id = :accountId LIMIT 1")
-    suspend fun findDuplicateExpense(title: String, amount: Long, startTime: Long, endTime: Long, accountId: Long): com.sans.finance.data.local.entity.ExpenseWithTags?
+    suspend fun findDuplicateExpense(
+        title: String,
+        amount: Long,
+        startTime: Long,
+        endTime: Long,
+        accountId: Long
+    ): com.sans.finance.data.local.entity.ExpenseWithTags?
 
     @Query("SELECT COUNT(*) FROM expenses")
     suspend fun getExpenseCount(): Int
@@ -115,13 +123,15 @@ interface ExpenseDao {
     @Query("SELECT title FROM expenses GROUP BY title ORDER BY COUNT(*) DESC LIMIT :limit")
     suspend fun getTopFrequentTitles(limit: Int): List<String>
 
-    @Query("""
-        SELECT title FROM expenses 
+    @Query(
+        """
+        SELECT title FROM expenses
         WHERE strftime('%w', date / 1000, 'unixepoch') = :dayOfWeek
-        GROUP BY title 
-        ORDER BY COUNT(*) DESC 
+        GROUP BY title
+        ORDER BY COUNT(*) DESC
         LIMIT :limit
-    """)
+    """
+    )
     suspend fun getTopFrequentTitlesByDay(dayOfWeek: String, limit: Int): List<String>
 
     @Query("SELECT SUM(amount * COALESCE((SELECT rateToIdr FROM exchange_rates WHERE code = expenses.currency), 1.0)) FROM expenses WHERE type = 'EXPENSE' AND date >= :since AND is_installment = 0")
@@ -137,7 +147,7 @@ interface ExpenseDao {
         """
         SELECT categoryId, categoryName, categoryIcon, SUM(amount) as totalAmount
         FROM (
-            SELECT c.id as categoryId, c.name as categoryName, c.icon as categoryIcon, 
+            SELECT c.id as categoryId, c.name as categoryName, c.icon as categoryIcon,
                    SUM(e.amount * COALESCE(er.rateToIdr, 1.0)) as amount
             FROM expenses e
             JOIN categories c ON e.category_id = c.id
@@ -145,7 +155,7 @@ interface ExpenseDao {
             WHERE e.date >= :since AND e.date < :until AND e.type = 'EXPENSE' AND e.is_installment = 0
             GROUP BY c.id
             UNION ALL
-            SELECT c.id as categoryId, c.name as categoryName, c.icon as categoryIcon, 
+            SELECT c.id as categoryId, c.name as categoryName, c.icon as categoryIcon,
                    SUM(ii.amount * COALESCE(er.rateToIdr, 1.0)) as amount
             FROM installment_items ii
             JOIN installments i ON ii.installment_id = i.id
@@ -167,7 +177,7 @@ interface ExpenseDao {
         """
         SELECT categoryId, categoryName, categoryIcon, SUM(amount) as totalAmount
         FROM (
-            SELECT c.id as categoryId, c.name as categoryName, c.icon as categoryIcon, 
+            SELECT c.id as categoryId, c.name as categoryName, c.icon as categoryIcon,
                    SUM(e.amount * COALESCE(er.rateToIdr, 1.0)) as amount
             FROM expenses e
             JOIN categories c ON e.category_id = c.id
@@ -175,7 +185,7 @@ interface ExpenseDao {
             WHERE e.date >= :since AND e.date < :until AND e.type = :type AND e.is_installment = 0
             GROUP BY c.id
             UNION ALL
-            SELECT c.id as categoryId, c.name as categoryName, c.icon as categoryIcon, 
+            SELECT c.id as categoryId, c.name as categoryName, c.icon as categoryIcon,
                    SUM(ii.amount * COALESCE(er.rateToIdr, 1.0)) as amount
             FROM installment_items ii
             JOIN installments i ON ii.installment_id = i.id
@@ -196,7 +206,7 @@ interface ExpenseDao {
 
     @Query(
         """
-        SELECT SUM(amount) 
+        SELECT SUM(amount)
         FROM (
             SELECT (amount * COALESCE(er.rateToIdr, 1.0)) as amount FROM expenses e
             LEFT JOIN exchange_rates er ON e.currency = er.code

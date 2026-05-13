@@ -2,7 +2,20 @@ package com.sans.finance.presentation.search
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -13,16 +26,39 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DateRangePicker
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDateRangePickerState
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.R
 import com.sans.finance.core.util.CalendarUtils
@@ -78,7 +114,9 @@ fun SearchScreen(
                                         Text(
                                             "Search...",
                                             style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                alpha = 0.6f
+                                            )
                                         )
                                     }
                                     innerTextField()
@@ -107,12 +145,12 @@ fun SearchScreen(
                 actions = {
                     IconButton(onClick = { showFilterSheet = true }) {
                         val isFiltered = state.selectedCategoryIds.isNotEmpty() ||
-                                state.selectedAccountIds.isNotEmpty() ||
-                                state.minAmount != null ||
-                                state.maxAmount != null ||
-                                state.selectedTags.isNotEmpty() ||
-                                state.selectedTypes.isNotEmpty() ||
-                                state.activeDateFilter != DateRangeFilter.ALL_TIME
+                            state.selectedAccountIds.isNotEmpty() ||
+                            state.minAmount != null ||
+                            state.maxAmount != null ||
+                            state.selectedTags.isNotEmpty() ||
+                            state.selectedTypes.isNotEmpty() ||
+                            state.activeDateFilter != DateRangeFilter.ALL_TIME
                         Icon(
                             Icons.Default.Tune,
                             contentDescription = "Filters",
@@ -154,7 +192,10 @@ fun SearchScreen(
                             expenseToDelete = null
                         }
                     ) {
-                        Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+                        Text(
+                            stringResource(R.string.delete),
+                            color = MaterialTheme.colorScheme.error
+                        )
                     }
                 },
                 dismissButton = {
@@ -204,7 +245,8 @@ fun SearchScreen(
                             ExpenseItem(
                                 expense = expense,
                                 categoryName = category?.name,
-                                categoryIcon = category?.icon ?: (if (expense.isInstallmentPayment) "💳" else "📁"),
+                                categoryIcon = category?.icon
+                                    ?: (if (expense.isInstallmentPayment) "💳" else "📁"),
                                 accountName = account?.name,
                                 isPrivacyModeEnabled = state.isPrivacyModeEnabled,
                                 searchQuery = state.searchQuery,
@@ -233,7 +275,13 @@ fun SearchScreen(
             onAmountFilterChanged = { min, max -> viewModel.updateAmountFilter(min, max) },
             onTagToggle = { viewModel.toggleTagFilter(it) },
             onTypeToggle = { viewModel.toggleTypeFilter(it) },
-            onDateRangeSelected = { start, end -> viewModel.updateDateRange(DateRangeFilter.CUSTOM, start, end) },
+            onDateRangeSelected = { start, end ->
+                viewModel.updateDateRange(
+                    DateRangeFilter.CUSTOM,
+                    start,
+                    end
+                )
+            },
             onQuickDateSelected = { viewModel.updateDateRange(it) },
             onClearFilters = { viewModel.clearFilters() }
         )
@@ -242,19 +290,20 @@ fun SearchScreen(
 
 private fun isFiltered(state: SearchState): Boolean {
     return state.selectedCategoryIds.isNotEmpty() ||
-            state.selectedAccountIds.isNotEmpty() ||
-            state.minAmount != null ||
-            state.maxAmount != null ||
-            state.selectedTags.isNotEmpty() ||
-            state.selectedTypes.isNotEmpty() ||
-            state.activeDateFilter != DateRangeFilter.ALL_TIME
+        state.selectedAccountIds.isNotEmpty() ||
+        state.minAmount != null ||
+        state.maxAmount != null ||
+        state.selectedTags.isNotEmpty() ||
+        state.selectedTypes.isNotEmpty() ||
+        state.activeDateFilter != DateRangeFilter.ALL_TIME
 }
 
 @Composable
 fun DateHeader(dateMillis: Long) {
     val calendar = CalendarUtils.getInstance()
     calendar.timeInMillis = dateMillis
-    val dateStr = com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter().format(calendar.time)
+    val dateStr =
+        com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter().format(calendar.time)
 
     Box(
         modifier = Modifier
@@ -475,7 +524,10 @@ fun SearchFilterSheet(
                         onClick = { onCategoryToggle(category.id) },
                         label = { Text(category.name) },
                         leadingIcon = {
-                            com.sans.finance.presentation.components.CategoryIcon(icon = category.icon, fontSize = 14.sp)
+                            com.sans.finance.presentation.components.CategoryIcon(
+                                icon = category.icon,
+                                fontSize = 14.sp
+                            )
                         }
                     )
                 }

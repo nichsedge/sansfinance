@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <!-- Grants the camera app write access to cache-dir files for photo capture -->
-    <cache-path
-        name="camera_images"
-        path="." />
+  <!-- Grants the camera app write access to cache-dir files for photo capture -->
+  <cache-path
+    name="camera_images"
+    path="." />
 </paths>

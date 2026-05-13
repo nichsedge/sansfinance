@@ -63,14 +63,17 @@ interface InstallmentDao {
     ): Flow<List<com.sans.finance.data.local.entity.InstallmentItemEntity>>
 
     @Query("SELECT ii.id as id, ii.due_date as date, e.title as title, ii.amount as amount, e.category_id as category_id, e.details as details, e.id as expense_id, e.account_id as account_id, ii.month_number as month_number, i.duration_months as total_months, ii.status as status, e.currency as currency, c.name as category_name, c.icon as category_icon, (SELECT GROUP_CONCAT(t.name) FROM tags t JOIN expense_tag_ref etr ON t.id = etr.tagId WHERE etr.expenseId = e.id) as tags_list FROM installment_items ii JOIN installments i ON ii.installment_id = i.id JOIN expenses e ON i.expense_id = e.id JOIN categories c ON e.category_id = c.id WHERE ii.due_date >= :since AND ii.due_date < :until")
-    fun getInstallmentPaymentsBetween(since: Long, until: Long): Flow<List<com.sans.finance.data.local.entity.InstallmentPaymentRow>>
+    fun getInstallmentPaymentsBetween(
+        since: Long,
+        until: Long
+    ): Flow<List<com.sans.finance.data.local.entity.InstallmentPaymentRow>>
 
     @androidx.room.Transaction
     @Query(
         """
         SELECT DISTINCT
-            ii.id as id, 
-            ii.due_date as date, 
+            ii.id as id,
+            ii.due_date as date,
             e.title as title,
             ii.amount as amount,
             e.category_id as category_id,

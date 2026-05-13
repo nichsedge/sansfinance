@@ -96,7 +96,6 @@ class DashboardViewModel @Inject constructor(
     }
 
 
-
     val state = combine(
         financeContext,
         portfolioContext,
@@ -128,7 +127,8 @@ class DashboardViewModel @Inject constructor(
         val latestPortfolioIdr = portfolioHistory.lastOrNull()?.totalIdr ?: 0.0
         // portfolioAssets in base currency
         val baseRate = if (baseCurrency == "IDR") 1.0 else rates[baseCurrency] ?: 1.0
-        val portfolioAssets = if (baseRate > 0) ((latestPortfolioIdr / baseRate) * 100).toLong() else (latestPortfolioIdr * 100).toLong()
+        val portfolioAssets =
+            if (baseRate > 0) ((latestPortfolioIdr / baseRate) * 100).toLong() else (latestPortfolioIdr * 100).toLong()
 
         val assets = portfolioAssets
         val liabilities = 0L
@@ -141,7 +141,7 @@ class DashboardViewModel @Inject constructor(
         val distribution = when (selectedTab) {
             WealthDistributionTab.CURRENCY -> {
                 latestHoldings.groupBy { it.currency }
-                    .mapValues { entry -> 
+                    .mapValues { entry ->
                         val idrValue = entry.value.sumOf { it.valueIdr }
                         if (baseRate > 0) ((idrValue / baseRate) * 100).toLong() else (idrValue * 100).toLong()
                     }
@@ -149,7 +149,7 @@ class DashboardViewModel @Inject constructor(
 
             WealthDistributionTab.ASSET_CLASS -> {
                 latestHoldings.groupBy { it.assetClass }
-                    .mapValues { entry -> 
+                    .mapValues { entry ->
                         val idrValue = entry.value.sumOf { it.valueIdr }
                         if (baseRate > 0) ((idrValue / baseRate) * 100).toLong() else (idrValue * 100).toLong()
                     }
@@ -157,7 +157,7 @@ class DashboardViewModel @Inject constructor(
 
             WealthDistributionTab.CATEGORY -> {
                 latestHoldings.groupBy { it.category }
-                    .mapValues { entry -> 
+                    .mapValues { entry ->
                         val idrValue = entry.value.sumOf { it.valueIdr }
                         if (baseRate > 0) ((idrValue / baseRate) * 100).toLong() else (idrValue * 100).toLong()
                     }
@@ -179,8 +179,10 @@ class DashboardViewModel @Inject constructor(
         val monthlyTxns = transactions.filter {
             it.date >= monthStart && it.date < nextMonthStart && (!it.isInstallment || it.isInstallmentPayment)
         }
-        val monthlyIncome = monthlyTxns.filter { it.type == "INCOME" }.sumOf { convertToBase(it.amount, it.currency) }
-        val monthlyExpense = monthlyTxns.filter { it.type == "EXPENSE" }.sumOf { convertToBase(it.amount, it.currency) }
+        val monthlyIncome = monthlyTxns.filter { it.type == "INCOME" }
+            .sumOf { convertToBase(it.amount, it.currency) }
+        val monthlyExpense = monthlyTxns.filter { it.type == "EXPENSE" }
+            .sumOf { convertToBase(it.amount, it.currency) }
         val savingsRate =
             if (monthlyIncome > 0) ((monthlyIncome - monthlyExpense).toFloat() / monthlyIncome.toFloat()).coerceIn(
                 0f,
@@ -242,7 +244,8 @@ class DashboardViewModel @Inject constructor(
             val snapshotAtDay = portfolioHistory.filter { it.snapshot_date <= dayStart }
                 .maxByOrNull { it.snapshot_date }
             val dayValueIdr = snapshotAtDay?.totalIdr ?: 0.0
-            val dayValue = if (baseRate > 0) ((dayValueIdr / baseRate) * 100).toLong() else (dayValueIdr * 100).toLong()
+            val dayValue =
+                if (baseRate > 0) ((dayValueIdr / baseRate) * 100).toLong() else (dayValueIdr * 100).toLong()
             trend.add(dayValue)
         }
 
@@ -255,7 +258,9 @@ class DashboardViewModel @Inject constructor(
             totalAssets = assets,
             totalLiabilities = liabilities,
             upcomingBills = (recurring + transactions.filter { it.isInstallmentPayment && it.status == "Pending" && it.date >= now })
-                .sortedBy { if (it.isInstallmentPayment) it.date else it.nextDueDate ?: Long.MAX_VALUE }
+                .sortedBy {
+                    if (it.isInstallmentPayment) it.date else it.nextDueDate ?: Long.MAX_VALUE
+                }
                 .take(3),
             goals = goals.map { goal ->
                 val currentAmountIdr = when (goal.targetType) {
@@ -292,7 +297,8 @@ class DashboardViewModel @Inject constructor(
             financialFreedomScore = freedomScore,
             isFireManualEnabled = isFireManual,
             manualFireAnnualExpense = manualFireExpense,
-            recentTransactions = transactions.filter { it.date <= now }.sortedByDescending { it.date }.take(5)
+            recentTransactions = transactions.filter { it.date <= now }
+                .sortedByDescending { it.date }.take(5)
         )
     }.stateIn(
         scope = viewModelScope,

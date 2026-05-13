@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Language
-
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -55,7 +54,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.domain.model.Category
 import com.sans.finance.presentation.components.PrivacyText
@@ -79,7 +77,7 @@ fun BudgetScreen(
                     }
                 },
 
-            )
+                )
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -173,8 +171,8 @@ fun BudgetItem(
     val overspent = (status.spent - status.budget.amount).coerceAtLeast(0L)
 
     val accentColor = if (isOverBudget) MaterialTheme.colorScheme.error
-                      else if (progress > 0.8f) Color(0xFFFF9800)
-                      else MaterialTheme.colorScheme.primary
+    else if (progress > 0.8f) Color(0xFFFF9800)
+    else MaterialTheme.colorScheme.primary
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -185,8 +183,14 @@ fun BudgetItem(
             else MaterialTheme.colorScheme.surface
         ),
         border = if (isOverBudget)
-            androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.2f))
-            else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            androidx.compose.foundation.BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.error.copy(alpha = 0.2f)
+            )
+        else androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(
@@ -210,7 +214,10 @@ fun BudgetItem(
 
                 IconButton(
                     onClick = onDelete,
-                    modifier = Modifier.background(MaterialTheme.colorScheme.error.copy(alpha = 0.05f), CircleShape)
+                    modifier = Modifier.background(
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.05f),
+                        CircleShape
+                    )
                 ) {
                     Icon(
                         Icons.Default.Delete,
@@ -236,7 +243,10 @@ fun BudgetItem(
                     fontWeight = FontWeight.Black,
                     color = accentColor
                 )
-                Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(bottom = 4.dp)) {
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                ) {
                     Text(
                         "of ",
                         style = MaterialTheme.typography.bodySmall,
@@ -276,7 +286,12 @@ fun BudgetItem(
             ) {
                 if (isOverBudget) {
                     Row(
-                        modifier = Modifier.background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f), CircleShape).padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier
+                            .background(
+                                MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
+                                CircleShape
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
@@ -296,7 +311,12 @@ fun BudgetItem(
                     }
                 } else {
                     Row(
-                        modifier = Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape).padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier
+                            .background(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                CircleShape
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         PrivacyText(

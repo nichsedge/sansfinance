@@ -4,8 +4,8 @@ import com.sans.finance.data.local.dao.InstallmentDao
 import com.sans.finance.data.local.entity.InstallmentEntity
 import com.sans.finance.domain.model.Installment
 import com.sans.finance.domain.repository.InstallmentRepository
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 class InstallmentRepositoryImpl(
@@ -137,7 +137,8 @@ class InstallmentRepositoryImpl(
         val totalAmount = items.sumOf { it.amount }
         val remainingBalance = items.filter { it.status == "Pending" }.sumOf { it.amount }
         val nextDueDate = items.filter { it.status == "Pending" }.minOfOrNull { it.dueDate } ?: 0L
-        val monthlyPayment = if (installment.durationMonths > 0) totalAmount / installment.durationMonths else 0L
+        val monthlyPayment =
+            if (installment.durationMonths > 0) totalAmount / installment.durationMonths else 0L
 
         return Installment(
             id = installment.id,

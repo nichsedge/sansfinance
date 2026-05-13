@@ -32,9 +32,10 @@ class SansFinanceApp : Application(), Configuration.Provider {
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val syncRequest = PeriodicWorkRequestBuilder<com.sans.finance.data.worker.SyncExchangeRatesWorker>(
-            24, TimeUnit.HOURS
-        ).setConstraints(constraints).build()
+        val syncRequest =
+            PeriodicWorkRequestBuilder<com.sans.finance.data.worker.SyncExchangeRatesWorker>(
+                24, TimeUnit.HOURS
+            ).setConstraints(constraints).build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "SyncExchangeRates",

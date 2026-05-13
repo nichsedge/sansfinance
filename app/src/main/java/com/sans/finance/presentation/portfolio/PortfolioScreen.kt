@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material.icons.filled.UploadFile
-
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -59,10 +58,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import com.sans.finance.presentation.components.GlassCard
@@ -116,7 +113,11 @@ fun PortfolioScreen(
                                 .clickable { showViewMenu = true }
                                 .padding(horizontal = 4.dp, vertical = 2.dp)
                         ) {
-                            Text("Portfolio", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                            Text(
+                                "Portfolio",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.ExtraBold
+                            )
                             Icon(
                                 imageVector = Icons.Default.ArrowDropDown,
                                 contentDescription = "Switch View",
@@ -228,9 +229,11 @@ fun PortfolioScreen(
                 }
             }
         } else {
-            Column(modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
                 PrimaryTabRow(
                     selectedTabIndex = state.selectedTab,
                     containerColor = MaterialTheme.colorScheme.surface,
@@ -240,12 +243,22 @@ fun PortfolioScreen(
                     Tab(
                         selected = state.selectedTab == 0,
                         onClick = { viewModel.selectTab(0) },
-                        text = { Text("Overview", fontWeight = if (state.selectedTab == 0) FontWeight.Black else FontWeight.Medium) }
+                        text = {
+                            Text(
+                                "Overview",
+                                fontWeight = if (state.selectedTab == 0) FontWeight.Black else FontWeight.Medium
+                            )
+                        }
                     )
                     Tab(
                         selected = state.selectedTab == 1,
                         onClick = { viewModel.selectTab(1) },
-                        text = { Text("Health", fontWeight = if (state.selectedTab == 1) FontWeight.Black else FontWeight.Medium) }
+                        text = {
+                            Text(
+                                "Health",
+                                fontWeight = if (state.selectedTab == 1) FontWeight.Black else FontWeight.Medium
+                            )
+                        }
                     )
                 }
 
@@ -265,7 +278,10 @@ fun PortfolioScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = MaterialTheme.shapes.extraLarge,
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    )
                                 ) {
                                     Column(modifier = Modifier.padding(20.dp)) {
                                         Text(
@@ -294,7 +310,10 @@ fun PortfolioScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = MaterialTheme.shapes.extraLarge,
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    )
                                 ) {
                                     Column(modifier = Modifier.padding(20.dp)) {
                                         Text(
@@ -334,7 +353,9 @@ fun PortfolioScreen(
                     PortfolioHealthView(
                         healthList = state.healthList,
                         isPrivacyModeEnabled = state.isPrivacyModeEnabled,
-                        modifier = Modifier.padding(16.dp).padding(bottom = 80.dp)
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .padding(bottom = 80.dp)
                     )
                 }
             }
@@ -354,7 +375,10 @@ fun AssetCategoryGroup(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
     ) {
         Column {
             Row(
@@ -422,7 +446,8 @@ fun PortfolioHeader(state: PortfolioScreenState, onForecastingClick: () -> Unit)
             state.previousTotalIdr?.let { prev ->
                 val diff = state.totalValueIdr - prev
                 val percent = if (prev != 0.0) (diff / prev) * 100 else 0.0
-                val color = if (diff >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+                val color =
+                    if (diff >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -439,7 +464,12 @@ fun PortfolioHeader(state: PortfolioScreenState, onForecastingClick: () -> Unit)
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = "${if (diff >= 0) "+" else ""}${String.format("%.2f", percent)}% vs last",
+                        text = "${if (diff >= 0) "+" else ""}${
+                            String.format(
+                                "%.2f",
+                                percent
+                            )
+                        }% vs last",
                         style = MaterialTheme.typography.labelSmall,
                         color = color,
                         fontWeight = FontWeight.Black
@@ -455,7 +485,11 @@ fun PortfolioHeader(state: PortfolioScreenState, onForecastingClick: () -> Unit)
                 shape = MaterialTheme.shapes.large,
                 contentPadding = PaddingValues(vertical = 12.dp)
             ) {
-                Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, modifier = Modifier.size(20.dp))
+                Icon(
+                    Icons.AutoMirrored.Filled.TrendingUp,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
                 Spacer(Modifier.width(8.dp))
                 Text("View Wealth Trajectory", fontWeight = FontWeight.Bold)
             }
@@ -502,9 +536,14 @@ fun HoldingItem(
             if (holding.quantity > 0 && holding.price != null) {
                 val quantity = holding.quantity
                 val price = holding.price
-                
+
                 val quantityFormatted = when {
-                    quantity >= 1_000_000 -> String.format(Locale.US, "%,.2fM", quantity / 1_000_000.0)
+                    quantity >= 1_000_000 -> String.format(
+                        Locale.US,
+                        "%,.2fM",
+                        quantity / 1_000_000.0
+                    )
+
                     quantity >= 1_000 -> String.format(Locale.US, "%,.0f", quantity)
                     quantity >= 1 -> String.format(Locale.US, "%,.4f", quantity)
                     else -> String.format(Locale.US, "%.8f", quantity).trimEnd('0').trimEnd('.')
@@ -513,7 +552,12 @@ fun HoldingItem(
                 val displayValue = if (isPrivacyModeEnabled) "••••" else {
                     val priceNonNull = price!!
                     val priceFormatted = when {
-                        priceNonNull >= 1_000_000 -> String.format(Locale.US, "%,.1fM", priceNonNull / 1_000_000.0)
+                        priceNonNull >= 1_000_000 -> String.format(
+                            Locale.US,
+                            "%,.1fM",
+                            priceNonNull / 1_000_000.0
+                        )
+
                         priceNonNull >= 1_000 -> String.format(Locale.US, "%,.0f", priceNonNull)
                         priceNonNull >= 1 -> String.format(Locale.US, "%,.2f", priceNonNull)
                         else -> String.format(Locale.US, "%,.4f", priceNonNull)
