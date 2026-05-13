@@ -1,4 +1,5 @@
 #!/bin/bash
+cd "$(dirname "$0")/.." || exit
 # 📤 RESTORE: PC -> APP
 PACKAGE_NAME="com.sans.finance"
 SNAPSHOT_NAME="sans_finance_db_snapshot.sqlite"

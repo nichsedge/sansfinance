@@ -1,4 +1,5 @@
 #!/bin/bash
+cd "$(dirname "$0")/.." || exit
 
 # Simple idempotent sync script for development
 PACKAGE_NAME="com.sans.finance"

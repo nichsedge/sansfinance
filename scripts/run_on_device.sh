@@ -1,4 +1,5 @@
 #!/bin/bash
+cd "$(dirname "$0")/.." || exit
 
 PACKAGE="com.sans.finance"
 

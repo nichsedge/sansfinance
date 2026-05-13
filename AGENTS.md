@@ -7,16 +7,25 @@
 - UI and resources are in `app/src/main/res` (Compose UI lives in Kotlin under `presentation/`).
 - Unit tests are in `app/src/test/java/com/sans/finance`.
 - Instrumentation tests are in `app/src/androidTest/java/com/sans/finance`.
-- Utility scripts at repo root: `backup.sh`, `restore.sh`, `sync.sh`, `push_portfolio.sh`, `run_on_device.sh`.
+- Utility scripts in `scripts/`: `backup.sh`, `restore.sh`, `sync.sh`, `push_portfolio.sh`, `run_on_device.sh`.
+- A `Makefile` is provided for common tasks (run, build, test, backup, etc.).
 - A sample database snapshot exists at `sans_finance_db_snapshot.sqlite` (do not edit in-place).
 
 ## Build, Test, and Development Commands
 
-Use the Gradle wrapper from the repo root:
+You can use the `Makefile` for convenience:
+
+- `make run` — build and run on device
+- `make build` — build debug APK
+- `make release` — build and package release APK
+- `make test-unit` — run JVM unit tests
+- `make test-android` — run instrumentation tests
+- `make backup` / `make restore` / `make sync` — script shortcuts
+
+Alternatively, use the Gradle wrapper from the repo root:
 
 - `./gradlew assembleDebug` — build debug APK
 - `./gradlew assembleRelease` — build an optimized, minified release APK (using debug signing)
-- `./build_release.sh` — clean build and copy the release APK to `./release/`
 - `./gradlew testDebugUnitTest` — run JVM unit tests
 - `./gradlew connectedDebugAndroidTest` — run instrumentation tests on a device/emulator
 - `./gradlew tasks` — list available tasks

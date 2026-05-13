@@ -1,4 +1,5 @@
 #!/bin/bash
+cd "$(dirname "$0")/.." || exit
 
 # Script to push portfolio JSON snapshots to the device for importing
 # Usage: ./push_portfolio.sh [filename]

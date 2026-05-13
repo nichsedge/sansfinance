@@ -1,4 +1,5 @@
 #!/bin/bash
+cd "$(dirname "$0")/.." || exit
 # 🚀 Build Release APK
 set -e
 
