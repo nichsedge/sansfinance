@@ -116,10 +116,11 @@ fun ExpenseItem(
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
-                        if (expense.isRecurring && expense.recurrenceInterval != null) {
+                        val interval = expense.recurrenceInterval
+                        if (expense.isRecurring && interval != null) {
                             Text(
                                 " • ${
-                                    expense.recurrenceInterval.lowercase()
+                                    interval.lowercase()
                                         .replaceFirstChar { it.uppercase() }
                                 }",
                                 style = MaterialTheme.typography.labelSmall,
@@ -159,10 +160,11 @@ fun ExpenseItem(
                             }
                         }
                     }
-                    if (showNextDueDate && expense.nextDueDate != null) {
+                    val dueDate = expense.nextDueDate
+                    if (showNextDueDate && dueDate != null) {
                         val dateStr =
                             com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter()
-                                .format(java.util.Date(expense.nextDueDate))
+                                .format(java.util.Date(dueDate))
                         Text(
                             "Next: $dateStr",
                             style = MaterialTheme.typography.labelSmall,

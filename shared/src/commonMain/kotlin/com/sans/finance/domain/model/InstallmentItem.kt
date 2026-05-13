@@ -1,5 +1,8 @@
 package com.sans.finance.domain.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class InstallmentItem(
     val id: Long,
     val installmentId: Long,

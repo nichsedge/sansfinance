@@ -34,3 +34,11 @@
 # Keep domain models that might be serialized/deserialized
 -keep class com.sans.finance.domain.model.** { *; }
 -keep class com.sans.finance.data.local.entity.** { *; }
+
+# Keep Application class and Hilt base class
+-keep class com.sans.finance.SansFinanceApp { *; }
+-keep class com.sans.finance.Hilt_SansFinanceApp { *; }
+
+# Keep WorkManager Workers
+-keep class com.sans.finance.data.worker.** { *; }
+-keep class androidx.hilt.work.** { *; }

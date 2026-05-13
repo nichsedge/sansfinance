@@ -1,5 +1,8 @@
 package com.sans.finance.domain.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class AssetClassTarget(
     val assetClass: String,
     val targetPercentage: Double,
@@ -11,6 +14,7 @@ enum class RiskLevel {
     LOW, MEDIUM, HIGH, VERY_HIGH
 }
 
+@Serializable
 data class AssetClassHealth(
     val assetClass: String,
     val currentPercentage: Double,

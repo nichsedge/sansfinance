@@ -324,8 +324,9 @@ abstract class AppDatabase : RoomDatabase() {
 
         val MIGRATION_20_21 = object : androidx.room.migration.Migration(20, 21) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-                db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS expenses_fts USING fts4(content=\"expenses\", note, description)")
-                db.execSQL("INSERT INTO expenses_fts(rowid, note, description) SELECT id, note, description FROM expenses")
+                db.execSQL("DROP TABLE IF EXISTS `expenses_fts`")
+                db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `expenses_fts` USING fts4(content=`expenses`, `description`, `note`)")
+                db.execSQL("INSERT INTO expenses_fts(rowid, description, note) SELECT id, description, note FROM expenses")
             }
         }
 

@@ -1,5 +1,8 @@
 package com.sans.finance.domain.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Expense(
     val id: Long = 0,
     val date: Long,

@@ -1,17 +1,17 @@
 package com.sans.finance.domain.usecase
 
-import com.sans.finance.data.local.dao.CurrencyDao
+import com.sans.finance.domain.repository.CurrencyRepository
 import javax.inject.Inject
 
 class ConvertCurrencyUseCase @Inject constructor(
-    private val currencyDao: CurrencyDao
+    private val currencyRepository: CurrencyRepository
 ) {
     suspend operator fun invoke(amount: Long, from: String, to: String): Long {
         if (from == to) return amount
         
         // Base currency is IDR in our ExchangeRateEntity
-        val fromRate = if (from == "IDR") 1.0 else currencyDao.getRate(from)?.rateToIdr ?: 1.0
-        val toRate = if (to == "IDR") 1.0 else currencyDao.getRate(to)?.rateToIdr ?: 1.0
+        val fromRate = if (from == "IDR") 1.0 else currencyRepository.getRateToIdr(from) ?: 1.0
+        val toRate = if (to == "IDR") 1.0 else currencyRepository.getRateToIdr(to) ?: 1.0
         
         if (toRate == 0.0) return amount
         

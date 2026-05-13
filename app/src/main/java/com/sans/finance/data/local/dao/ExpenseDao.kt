@@ -109,6 +109,9 @@ interface ExpenseDao {
     @Query("SELECT DISTINCT note FROM expenses WHERE note LIKE '%' || :query || '%' ORDER BY note ASC LIMIT 5")
     suspend fun getNoteSuggestions(query: String): List<String>
 
+    @Query("SELECT DISTINCT description FROM expenses WHERE description LIKE '%' || :query || '%' AND description IS NOT NULL ORDER BY description ASC LIMIT 5")
+    suspend fun getDescriptionSuggestions(query: String): List<String>
+
     @Query("SELECT note FROM expenses GROUP BY note ORDER BY COUNT(*) DESC LIMIT :limit")
     suspend fun getTopFrequentNotes(limit: Int): List<String>
 

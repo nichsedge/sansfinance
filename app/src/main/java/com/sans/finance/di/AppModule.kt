@@ -112,6 +112,11 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideCurrencyRepository(dao: com.sans.finance.data.local.dao.CurrencyDao): com.sans.finance.domain.repository.CurrencyRepository =
+        com.sans.finance.data.repository.CurrencyRepositoryImpl(dao)
+
+    @Provides
+    @Singleton
     fun provideExpenseRepository(
         db: AppDatabase,
         dao: ExpenseDao,

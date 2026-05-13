@@ -6,6 +6,6 @@ import androidx.room.Fts4
 @Fts4(contentEntity = ExpenseEntity::class)
 @Entity(tableName = "expenses_fts")
 data class ExpenseFtsEntity(
-    val note: String,
-    val description: String?
+    val description: String?,
+    val note: String
 )

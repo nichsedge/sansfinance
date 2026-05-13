@@ -252,8 +252,9 @@ class ExpenseRepositoryImpl(
         if (expense.type == "TRANSFER") {
             val amount = if (isReverse) -expense.amount else expense.amount
             updateAccountBalance(expense.accountId, -amount)
-            if (expense.toAccountId != null) {
-                updateAccountBalance(expense.toAccountId, amount)
+            val toId = expense.toAccountId
+            if (toId != null) {
+                updateAccountBalance(toId, amount)
             }
         } else {
             val isIncome = expense.type == "INCOME"
@@ -394,8 +395,9 @@ class ExpenseRepositoryImpl(
             expenses.forEach { exp ->
                 if (exp.type == "TRANSFER") {
                     balances[exp.accountId] = (balances[exp.accountId] ?: 0L) - exp.finalPrice
-                    if (exp.toAccountId != null) {
-                        balances[exp.toAccountId] = (balances[exp.toAccountId] ?: 0L) + exp.finalPrice
+                    val toId = exp.toAccountId
+                    if (toId != null) {
+                        balances[toId] = (balances[toId] ?: 0L) + exp.finalPrice
                     }
                 } else if (exp.type == "INCOME") {
                     balances[exp.accountId] = (balances[exp.accountId] ?: 0L) + exp.finalPrice

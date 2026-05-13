@@ -547,9 +547,10 @@ fun TransactionItem(transaction: Expense) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (!transaction.description.isNullOrBlank()) {
+            val desc = transaction.description
+            if (!desc.isNullOrBlank()) {
                 Text(
-                    text = transaction.description,
+                    text = desc,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.secondary
                 )
