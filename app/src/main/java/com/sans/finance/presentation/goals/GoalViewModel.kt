@@ -79,7 +79,7 @@ class GoalViewModel @Inject constructor(
             goalRepository.insertGoal(
                 GoalEntity(
                     name = name,
-                    targetAmount = targetAmount,
+                    targetAmount = targetAmount.toLong(),
                     targetType = targetType,
                     targetName = targetName,
                     currency = localeManager.getCurrency(),
@@ -100,7 +100,7 @@ class GoalViewModel @Inject constructor(
             goalRepository.updateGoal(
                 goal.copy(
                     name = newName,
-                    targetAmount = newTargetAmount,
+                    targetAmount = newTargetAmount.toLong(),
                     targetType = newTargetType,
                     targetName = newTargetName,
                     updatedAt = System.currentTimeMillis()

@@ -8,11 +8,9 @@ import androidx.room.PrimaryKey
 data class ExpenseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val date: Long, // timestamp
-    @ColumnInfo(name = "description") val description: String?,
-    @ColumnInfo(name = "note") val note: String,
-    val quantity: Int,
-    @ColumnInfo(name = "original_price") val originalPrice: Long,
-    @ColumnInfo(name = "final_price") val finalPrice: Long,
+    @ColumnInfo(name = "title") val title: String,
+    @ColumnInfo(name = "details") val details: String?,
+    @ColumnInfo(name = "amount") val amount: Long,
     @ColumnInfo(name = "category_id") val categoryId: Long,
     @ColumnInfo(name = "account_id") val accountId: Long = 1, // Default to 1 (Cash) for migration
     @ColumnInfo(name = "to_account_id") val toAccountId: Long? = null,

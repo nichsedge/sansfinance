@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 data class GoalEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val targetAmount: Double,
+    val targetAmount: Long,
     val targetType: String = "TOTAL", // TOTAL, CATEGORY, ASSET_CLASS
     val targetName: String? = null,   // Specific category or asset class name
     val currency: String = "IDR",

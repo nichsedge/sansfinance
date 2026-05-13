@@ -15,9 +15,9 @@ object CsvExporter {
         expenses.forEach { expense ->
             val dateStr = dateFormat.format(Date(expense.date))
             val source = escapeCsv(expense.tags.firstOrNull() ?: "")
-            val description = escapeCsv(expense.description ?: "")
-            val note = escapeCsv(expense.note)
-            val qty = expense.quantity.toString()
+            val details = escapeCsv(expense.details ?: "")
+            val title = escapeCsv(expense.title)
+            val qty = "1"
 
             // Re-calculate simple prices for export consistency with seeds
             val itemPrice = (expense.amount / 100.0).toString()
@@ -25,7 +25,7 @@ object CsvExporter {
             val status = "Completed" // Default for sync
             val isInst = if (expense.isInstallment) "1" else "0"
 
-            csvLines.add("$dateStr,$source,$description,$note,$qty,$itemPrice,$orderTotal,$status,$isInst")
+            csvLines.add("$dateStr,$source,$details,$title,$qty,$itemPrice,$orderTotal,$status,$isInst")
         }
 
         return csvLines.joinToString("\n")

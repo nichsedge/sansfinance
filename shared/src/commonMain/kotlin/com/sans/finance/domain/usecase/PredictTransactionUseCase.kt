@@ -7,8 +7,8 @@ import javax.inject.Inject
 class PredictTransactionUseCase @Inject constructor(
     private val repository: ExpenseRepository
 ) {
-    suspend operator fun invoke(note: String): TransactionPrediction? {
-        val lastExpense = repository.getPredictionForNote(note) ?: return null
+    suspend operator fun invoke(title: String): TransactionPrediction? {
+        val lastExpense = repository.getPredictionForTitle(title) ?: return null
         return TransactionPrediction(
             categoryId = lastExpense.categoryId,
             accountId = lastExpense.accountId,

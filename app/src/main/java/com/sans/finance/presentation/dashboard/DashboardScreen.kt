@@ -871,7 +871,7 @@ fun DashboardBillItem(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = bill.note.ifBlank { bill.categoryName ?: "Upcoming Bill" },
+                    text = bill.title.ifBlank { bill.categoryName ?: "Upcoming Bill" },
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -1356,15 +1356,15 @@ fun RecentTransactionItem(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = transaction.note.ifBlank { transaction.categoryName ?: "Transaction" },
+                    text = transaction.title.ifBlank { transaction.categoryName ?: "Transaction" },
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
                 )
-                val subtitle = if (transaction.note.isNotBlank()) {
-                    transaction.description ?: transaction.categoryName ?: ""
+                val subtitle = if (transaction.title.isNotBlank()) {
+                    transaction.details ?: transaction.categoryName ?: ""
                 } else {
-                    transaction.description ?: ""
+                    transaction.details ?: ""
                 }
 
                 if (subtitle.isNotBlank()) {

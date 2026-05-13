@@ -33,13 +33,13 @@ interface ExpenseDao {
         SELECT DISTINCT e.* FROM expenses e
         LEFT JOIN expense_tag_ref etr ON e.id = etr.expenseId
         LEFT JOIN tags t ON etr.tagId = t.id
-        WHERE (:query IS NULL OR e.note LIKE '%' || :query || '%' OR e.description LIKE '%' || :query || '%')
+        WHERE (:query IS NULL OR e.title LIKE '%' || :query || '%' OR e.details LIKE '%' || :query || '%')
         AND (:categoryCount = 0 OR e.category_id IN (:categoryIds))
         AND (:accountCount = 0 OR e.account_id IN (:accountIds))
         AND (e.date >= :since AND e.date < :until)
         AND e.is_installment = 0
-        AND (:minAmount IS NULL OR e.final_price >= :minAmount)
-        AND (:maxAmount IS NULL OR e.final_price <= :maxAmount)
+        AND (:minAmount IS NULL OR e.amount >= :minAmount)
+        AND (:maxAmount IS NULL OR e.amount <= :maxAmount)
         AND (:tagCount = 0 OR t.name IN (:tags))
         AND (:typeCount = 0 OR e.type IN (:types))
         ORDER BY e.date DESC
@@ -96,41 +96,41 @@ interface ExpenseDao {
     suspend fun deleteExpenseTagRefs(expenseId: Long)
 
     @Transaction
-    @Query("SELECT * FROM expenses WHERE note = :note AND final_price = :amount AND date BETWEEN :startTime AND :endTime AND account_id = :accountId LIMIT 1")
-    suspend fun findDuplicateExpense(note: String, amount: Long, startTime: Long, endTime: Long, accountId: Long): com.sans.finance.data.local.entity.ExpenseWithTags?
+    @Query("SELECT * FROM expenses WHERE title = :title AND amount = :amount AND date BETWEEN :startTime AND :endTime AND account_id = :accountId LIMIT 1")
+    suspend fun findDuplicateExpense(title: String, amount: Long, startTime: Long, endTime: Long, accountId: Long): com.sans.finance.data.local.entity.ExpenseWithTags?
 
     @Query("SELECT COUNT(*) FROM expenses")
     suspend fun getExpenseCount(): Int
 
     @Transaction
-    @Query("SELECT * FROM expenses WHERE note = :note ORDER BY date DESC LIMIT 1")
-    suspend fun getLastExpenseByNote(note: String): com.sans.finance.data.local.entity.ExpenseWithTags?
+    @Query("SELECT * FROM expenses WHERE title = :title ORDER BY date DESC LIMIT 1")
+    suspend fun getLastExpenseByTitle(title: String): com.sans.finance.data.local.entity.ExpenseWithTags?
 
-    @Query("SELECT DISTINCT note FROM expenses WHERE note LIKE '%' || :query || '%' ORDER BY note ASC LIMIT 5")
-    suspend fun getNoteSuggestions(query: String): List<String>
+    @Query("SELECT DISTINCT title FROM expenses WHERE title LIKE '%' || :query || '%' ORDER BY title ASC LIMIT 5")
+    suspend fun getTitleSuggestions(query: String): List<String>
 
-    @Query("SELECT DISTINCT description FROM expenses WHERE description LIKE '%' || :query || '%' AND description IS NOT NULL ORDER BY description ASC LIMIT 5")
-    suspend fun getDescriptionSuggestions(query: String): List<String>
+    @Query("SELECT DISTINCT details FROM expenses WHERE details LIKE '%' || :query || '%' AND details IS NOT NULL ORDER BY details ASC LIMIT 5")
+    suspend fun getDetailsSuggestions(query: String): List<String>
 
-    @Query("SELECT note FROM expenses GROUP BY note ORDER BY COUNT(*) DESC LIMIT :limit")
-    suspend fun getTopFrequentNotes(limit: Int): List<String>
+    @Query("SELECT title FROM expenses GROUP BY title ORDER BY COUNT(*) DESC LIMIT :limit")
+    suspend fun getTopFrequentTitles(limit: Int): List<String>
 
     @Query("""
-        SELECT note FROM expenses 
+        SELECT title FROM expenses 
         WHERE strftime('%w', date / 1000, 'unixepoch') = :dayOfWeek
-        GROUP BY note 
+        GROUP BY title 
         ORDER BY COUNT(*) DESC 
         LIMIT :limit
     """)
-    suspend fun getTopFrequentNotesByDay(dayOfWeek: String, limit: Int): List<String>
+    suspend fun getTopFrequentTitlesByDay(dayOfWeek: String, limit: Int): List<String>
 
-    @Query("SELECT SUM(final_price * COALESCE((SELECT rateToIdr FROM exchange_rates WHERE code = expenses.currency), 1.0)) FROM expenses WHERE type = 'EXPENSE' AND date >= :since AND is_installment = 0")
+    @Query("SELECT SUM(amount * COALESCE((SELECT rateToIdr FROM exchange_rates WHERE code = expenses.currency), 1.0)) FROM expenses WHERE type = 'EXPENSE' AND date >= :since AND is_installment = 0")
     fun getTotalSpentSince(since: Long): Flow<Long?>
 
-    @Query("SELECT SUM(final_price * COALESCE((SELECT rateToIdr FROM exchange_rates WHERE code = expenses.currency), 1.0)) FROM expenses WHERE type = 'EXPENSE' AND is_installment = 0 AND date >= :since AND date < :until")
+    @Query("SELECT SUM(amount * COALESCE((SELECT rateToIdr FROM exchange_rates WHERE code = expenses.currency), 1.0)) FROM expenses WHERE type = 'EXPENSE' AND is_installment = 0 AND date >= :since AND date < :until")
     fun getTotalSpentBetween(since: Long, until: Long): Flow<Long?>
 
-    @Query("SELECT SUM(final_price * COALESCE((SELECT rateToIdr FROM exchange_rates WHERE code = expenses.currency), 1.0)) FROM expenses WHERE type = 'EXPENSE' AND is_installment = 0")
+    @Query("SELECT SUM(amount * COALESCE((SELECT rateToIdr FROM exchange_rates WHERE code = expenses.currency), 1.0)) FROM expenses WHERE type = 'EXPENSE' AND is_installment = 0")
     fun getAllTimeSpent(): Flow<Long?>
 
     @Query(
@@ -138,7 +138,7 @@ interface ExpenseDao {
         SELECT categoryId, categoryName, categoryIcon, SUM(amount) as totalAmount
         FROM (
             SELECT c.id as categoryId, c.name as categoryName, c.icon as categoryIcon, 
-                   SUM(e.final_price * COALESCE(er.rateToIdr, 1.0)) as amount
+                   SUM(e.amount * COALESCE(er.rateToIdr, 1.0)) as amount
             FROM expenses e
             JOIN categories c ON e.category_id = c.id
             LEFT JOIN exchange_rates er ON e.currency = er.code
@@ -168,7 +168,7 @@ interface ExpenseDao {
         SELECT categoryId, categoryName, categoryIcon, SUM(amount) as totalAmount
         FROM (
             SELECT c.id as categoryId, c.name as categoryName, c.icon as categoryIcon, 
-                   SUM(e.final_price * COALESCE(er.rateToIdr, 1.0)) as amount
+                   SUM(e.amount * COALESCE(er.rateToIdr, 1.0)) as amount
             FROM expenses e
             JOIN categories c ON e.category_id = c.id
             LEFT JOIN exchange_rates er ON e.currency = er.code
@@ -198,7 +198,7 @@ interface ExpenseDao {
         """
         SELECT SUM(amount) 
         FROM (
-            SELECT (final_price * COALESCE(er.rateToIdr, 1.0)) as amount FROM expenses e
+            SELECT (amount * COALESCE(er.rateToIdr, 1.0)) as amount FROM expenses e
             LEFT JOIN exchange_rates er ON e.currency = er.code
             WHERE e.date >= :since AND e.date < :until AND e.type = :type AND e.is_installment = 0
             UNION ALL
@@ -216,7 +216,7 @@ interface ExpenseDao {
         """
         SELECT day, SUM(amount) as amount
         FROM (
-            SELECT (date / 86400000) * 86400000 as day, SUM(final_price) as amount
+            SELECT (date / 86400000) * 86400000 as day, SUM(amount) as amount
             FROM expenses
             WHERE date >= :since AND date < :until AND type = 'EXPENSE' AND is_installment = 0
             GROUP BY day
@@ -239,7 +239,7 @@ interface ExpenseDao {
         """
         SELECT day, SUM(amount) as amount
         FROM (
-            SELECT (date / 86400000) * 86400000 as day, SUM(final_price) as amount
+            SELECT (date / 86400000) * 86400000 as day, SUM(amount) as amount
             FROM expenses
             WHERE date >= :since AND date < :until AND type = :type AND category_id = :categoryId
             GROUP BY day
@@ -266,11 +266,11 @@ interface ExpenseDao {
         """
         SELECT day, SUM(amount) as amount
         FROM (
-            SELECT CAST(strftime('%s', date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, final_price as amount
+            SELECT CAST(strftime('%s', date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, amount as amount
             FROM expenses
             WHERE type = :type AND category_id = :categoryId AND is_installment = 0
             UNION ALL
-            SELECT CAST(strftime('%s', due_date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, amount
+            SELECT CAST(strftime('%s', due_date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, ii.amount
             FROM installment_items ii
             JOIN installments i ON ii.installment_id = i.id
             JOIN expenses e ON i.expense_id = e.id

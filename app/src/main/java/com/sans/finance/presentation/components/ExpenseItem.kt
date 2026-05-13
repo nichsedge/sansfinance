@@ -72,7 +72,7 @@ fun ExpenseItem(
 
             // Details
             Column(modifier = Modifier.weight(1f)) {
-                val noteText = expense.note.ifBlank { expense.description ?: "" }
+                val noteText = expense.title.ifBlank { expense.details ?: "" }
                 val annotatedNote = remember(noteText, searchQuery) {
                     if (searchQuery.isEmpty()) {
                         androidx.compose.ui.text.AnnotatedString(noteText)

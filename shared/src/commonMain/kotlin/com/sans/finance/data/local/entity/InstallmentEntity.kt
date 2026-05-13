@@ -21,11 +21,7 @@ import androidx.room.PrimaryKey
 data class InstallmentEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "expense_id") val expenseId: Long,
-    @ColumnInfo(name = "total_amount") val totalAmount: Long,
-    @ColumnInfo(name = "monthly_payment") val monthlyPayment: Long,
-    @ColumnInfo(name = "duration_months") val durationMonths: Int,
-    @ColumnInfo(name = "remaining_balance") val remainingBalance: Long,
-    @ColumnInfo(name = "next_due_date") val nextDueDate: Long,
     val status: String,
+    @ColumnInfo(name = "duration_months") val durationMonths: Int,
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis()
 )

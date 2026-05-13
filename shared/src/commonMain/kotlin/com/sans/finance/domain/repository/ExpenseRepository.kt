@@ -20,12 +20,12 @@ interface ExpenseRepository {
     ): Flow<List<Expense>>
 
     suspend fun getExpenseById(id: Long): Expense?
-    suspend fun getNoteSuggestions(query: String): List<String>
-    suspend fun getTopFrequentNotes(limit: Int): List<String>
-    suspend fun getTopFrequentNotesByDay(dayOfWeek: Int, limit: Int): List<String>
-    suspend fun getDescriptionSuggestions(query: String): List<String>
-    suspend fun getPredictionForNote(note: String): Expense?
-    suspend fun findPotentialDuplicate(note: String, amount: Long, date: Long, accountId: Long): Expense?
+    suspend fun getTitleSuggestions(query: String): List<String>
+    suspend fun getTopFrequentTitles(limit: Int): List<String>
+    suspend fun getTopFrequentTitlesByDay(dayOfWeek: Int, limit: Int): List<String>
+    suspend fun getDetailsSuggestions(query: String): List<String>
+    suspend fun getPredictionForTitle(title: String): Expense?
+    suspend fun findPotentialDuplicate(title: String, amount: Long, date: Long, accountId: Long): Expense?
     suspend fun insertExpense(expense: Expense): Long
     suspend fun updateExpense(expense: Expense)
     suspend fun deleteExpense(expense: Expense)

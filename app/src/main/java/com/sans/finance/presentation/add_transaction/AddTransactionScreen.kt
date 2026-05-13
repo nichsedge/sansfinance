@@ -77,8 +77,8 @@ fun AddTransactionScreen(
     var showDatePicker by remember { androidx.compose.runtime.mutableStateOf(false) }
     val dateFormatter = DateFormatterUtils.getStandardFormatter()
     val focusManager = LocalFocusManager.current
-    var noteExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
-    var descriptionExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var titleExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var detailsExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var accountExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var toAccountExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var recurrenceExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
@@ -160,7 +160,7 @@ fun AddTransactionScreen(
                 onDismissRequest = { viewModel.showDuplicateDialog = false },
                 title = { Text("Potential Duplicate") },
                 text = {
-                    Text("A similar transaction already exists: \"${viewModel.duplicateFound?.note}\" for ${viewModel.duplicateFound?.amount?.let { it / 100.0 }} ${viewModel.duplicateFound?.currency}.\n\nDo you want to add this as a new transaction anyway?")
+                    Text("A similar transaction already exists: \"${viewModel.duplicateFound?.title}\" for ${viewModel.duplicateFound?.amount?.let { it / 100.0 }} ${viewModel.duplicateFound?.currency}.\n\nDo you want to add this as a new transaction anyway?")
                 },
                 confirmButton = {
                     Button(
@@ -417,14 +417,14 @@ fun AddTransactionScreen(
 
             @OptIn(ExperimentalMaterial3Api::class)
             ExposedDropdownMenuBox(
-                expanded = noteExpanded && viewModel.noteSuggestions.isNotEmpty(),
-                onExpandedChange = { noteExpanded = !noteExpanded }
+                expanded = titleExpanded && viewModel.titleSuggestions.isNotEmpty(),
+                onExpandedChange = { titleExpanded = !titleExpanded }
             ) {
                 OutlinedTextField(
-                    value = viewModel.note,
+                    value = viewModel.title,
                     onValueChange = {
-                        viewModel.note = it
-                        noteExpanded = true
+                        viewModel.title = it
+                        titleExpanded = true
                     },
                     label = { Text(stringResource(R.string.what_did_you_buy)) },
                     modifier = Modifier
@@ -441,15 +441,15 @@ fun AddTransactionScreen(
                 )
 
                 ExposedDropdownMenu(
-                    expanded = noteExpanded && viewModel.noteSuggestions.isNotEmpty(),
-                    onDismissRequest = { noteExpanded = false }
+                    expanded = titleExpanded && viewModel.titleSuggestions.isNotEmpty(),
+                    onDismissRequest = { titleExpanded = false }
                 ) {
-                    viewModel.noteSuggestions.forEach { suggestion ->
+                    viewModel.titleSuggestions.forEach { suggestion ->
                         DropdownMenuItem(
                             text = { Text(suggestion) },
                             onClick = {
-                                viewModel.note = suggestion
-                                noteExpanded = false
+                                viewModel.title = suggestion
+                                titleExpanded = false
                                 viewModel.applyPrediction(suggestion)
                             }
                         )
@@ -534,14 +534,14 @@ fun AddTransactionScreen(
 
             @OptIn(ExperimentalMaterial3Api::class)
             ExposedDropdownMenuBox(
-                expanded = descriptionExpanded && viewModel.descriptionSuggestions.isNotEmpty(),
-                onExpandedChange = { descriptionExpanded = !descriptionExpanded }
+                expanded = detailsExpanded && viewModel.detailsSuggestions.isNotEmpty(),
+                onExpandedChange = { detailsExpanded = !detailsExpanded }
             ) {
                 OutlinedTextField(
-                    value = viewModel.description,
+                    value = viewModel.details,
                     onValueChange = {
-                        viewModel.description = it
-                        descriptionExpanded = true
+                        viewModel.details = it
+                        detailsExpanded = true
                     },
                     label = { Text(stringResource(R.string.merchant_store)) },
                     modifier = Modifier
@@ -562,15 +562,15 @@ fun AddTransactionScreen(
                 )
 
                 ExposedDropdownMenu(
-                    expanded = descriptionExpanded && viewModel.descriptionSuggestions.isNotEmpty(),
-                    onDismissRequest = { descriptionExpanded = false }
+                    expanded = detailsExpanded && viewModel.detailsSuggestions.isNotEmpty(),
+                    onDismissRequest = { detailsExpanded = false }
                 ) {
-                    viewModel.descriptionSuggestions.forEach { suggestion ->
+                    viewModel.detailsSuggestions.forEach { suggestion ->
                         DropdownMenuItem(
                             text = { Text(suggestion) },
                             onClick = {
-                                viewModel.description = suggestion
-                                descriptionExpanded = false
+                                viewModel.details = suggestion
+                                detailsExpanded = false
                             }
                         )
                     }

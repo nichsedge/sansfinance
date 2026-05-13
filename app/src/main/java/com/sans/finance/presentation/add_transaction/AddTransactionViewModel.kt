@@ -13,9 +13,9 @@ import androidx.navigation.toRoute
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.usecase.AddTransactionUseCase
 import com.sans.finance.domain.usecase.DeleteExpenseUseCase
+import com.sans.finance.domain.usecase.GetDetailsSuggestionsUseCase
 import com.sans.finance.domain.usecase.GetExpenseByIdUseCase
-import com.sans.finance.domain.usecase.GetItemNameSuggestionsUseCase
-import com.sans.finance.domain.usecase.GetMerchantSuggestionsUseCase
+import com.sans.finance.domain.usecase.GetTitleSuggestionsUseCase
 import com.sans.finance.domain.usecase.CheckDuplicateExpenseUseCase
 import com.sans.finance.domain.usecase.UpdateExpenseUseCase
 import com.sans.finance.presentation.navigation.Screen
@@ -40,8 +40,8 @@ class AddTransactionViewModel @Inject constructor(
     private val getExpenseByIdUseCase: GetExpenseByIdUseCase,
     private val getCategoriesUseCase: com.sans.finance.domain.usecase.GetCategoriesUseCase,
     private val createInstallmentPlanUseCase: com.sans.finance.domain.usecase.CreateInstallmentPlanUseCase,
-    private val getItemNameSuggestionsUseCase: GetItemNameSuggestionsUseCase,
-    private val getMerchantSuggestionsUseCase: GetMerchantSuggestionsUseCase,
+    private val getTitleSuggestionsUseCase: GetTitleSuggestionsUseCase,
+    private val getDetailsSuggestionsUseCase: GetDetailsSuggestionsUseCase,
     private val installmentRepository: com.sans.finance.domain.repository.InstallmentRepository,
     private val expenseRepository: com.sans.finance.domain.repository.ExpenseRepository,
     private val accountRepository: com.sans.finance.domain.repository.AccountRepository,
@@ -77,8 +77,8 @@ class AddTransactionViewModel @Inject constructor(
     )
 
     var amount by mutableStateOf("")
-    var note by mutableStateOf("")
-    var description by mutableStateOf("")
+    var title by mutableStateOf("")
+    var details by mutableStateOf("")
     var categoryId by mutableLongStateOf(1L)
     var accountId by mutableLongStateOf(1L)
     var toAccountId by mutableLongStateOf(2L)
@@ -102,11 +102,11 @@ class AddTransactionViewModel @Inject constructor(
     var currency by mutableStateOf(localeManager.getCurrency())
     val enabledCurrencies = localeManager.getEnabledCurrencies()
 
-    var noteSuggestions by mutableStateOf(emptyList<String>())
+    var titleSuggestions by mutableStateOf(emptyList<String>())
         private set
     var duplicateFound by mutableStateOf<Expense?>(null)
     var showDuplicateDialog by mutableStateOf(false)
-    var descriptionSuggestions by mutableStateOf(emptyList<String>())
+    var detailsSuggestions by mutableStateOf(emptyList<String>())
         private set
 
     var newTagText by mutableStateOf("")
@@ -128,8 +128,8 @@ class AddTransactionViewModel @Inject constructor(
             viewModelScope.launch {
                 getExpenseByIdUseCase(id)?.let { expense ->
                     amount = kotlin.math.ceil(expense.amount / 100.0).toLong().toString()
-                    note = expense.note
-                    description = expense.description ?: ""
+                    title = expense.title
+                    details = expense.details ?: ""
                     categoryId = expense.categoryId
                     accountId = expense.accountId
                     toAccountId = expense.toAccountId ?: 2L
@@ -155,28 +155,28 @@ class AddTransactionViewModel @Inject constructor(
             }
         }
 
-        snapshotFlow { note }
+        snapshotFlow { title }
             .debounce(300)
             .distinctUntilChanged()
             .onEach { query ->
                 if (query.length >= 2) {
-                    noteSuggestions = getItemNameSuggestionsUseCase(query)
+                    titleSuggestions = getTitleSuggestionsUseCase(query)
                 } else if (query.isEmpty()) {
-                    noteSuggestions = getFrequencyBasedSuggestionsUseCase()
+                    titleSuggestions = getFrequencyBasedSuggestionsUseCase()
                 } else {
-                    noteSuggestions = emptyList()
+                    titleSuggestions = emptyList()
                 }
             }
             .launchIn(viewModelScope)
 
-        snapshotFlow { description }
+        snapshotFlow { details }
             .debounce(300)
             .distinctUntilChanged()
             .onEach { query ->
                 if (query.length >= 2) {
-                    descriptionSuggestions = getMerchantSuggestionsUseCase(query)
+                    detailsSuggestions = getDetailsSuggestionsUseCase(query)
                 } else {
-                    descriptionSuggestions = emptyList()
+                    detailsSuggestions = emptyList()
                 }
             }
             .launchIn(viewModelScope)
@@ -224,9 +224,9 @@ class AddTransactionViewModel @Inject constructor(
         status = newStatus
     }
 
-    fun applyPrediction(note: String) {
+    fun applyPrediction(title: String) {
         viewModelScope.launch {
-            predictTransactionUseCase(note)?.let { prediction ->
+            predictTransactionUseCase(title)?.let { prediction ->
                 categoryId = prediction.categoryId
                 accountId = prediction.accountId
                 transactionType = prediction.type
@@ -241,7 +241,7 @@ class AddTransactionViewModel @Inject constructor(
         if (!isEditMode && !showDuplicateDialog) {
             viewModelScope.launch {
                 val duplicate = checkDuplicateExpenseUseCase(
-                    note = note,
+                    title = title,
                     amount = amountInCents,
                     date = selectedDate,
                     accountId = accountId
@@ -277,7 +277,7 @@ class AddTransactionViewModel @Inject constructor(
             val expense = Expense(
                 id = editExpenseId ?: 0,
                 date = selectedDate,
-                note = note.trim(),
+                title = title.trim(),
                 amount = amountInCents,
                 categoryId = categoryId,
                 accountId = accountId,
@@ -287,9 +287,8 @@ class AddTransactionViewModel @Inject constructor(
                 isRecurring = isRecurring,
                 recurrenceInterval = if (isRecurring) recurrenceInterval else null,
                 nextDueDate = nextDueDateVal,
-                description = description.ifBlank { null },
+                details = details.ifBlank { null },
                 tags = selectedTags,
-                quantity = 1,
                 currency = currency,
                 isInstallmentPayment = isInstallmentPayment,
                 installmentMonth = installmentMonth,

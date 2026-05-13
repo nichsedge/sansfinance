@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 data class Expense(
     val id: Long = 0,
     val date: Long,
-    val note: String,
+    val title: String,
     val amount: Long,
     val categoryId: Long,
     val isRecurring: Boolean = false,
@@ -17,12 +17,11 @@ data class Expense(
     val installmentMonth: Int = 0,
     val installmentTotalMonths: Int = 0,
     val status: String = "Paid",
-    val description: String? = null,
+    val details: String? = null,
     val accountId: Long = 1,
     val toAccountId: Long? = null,
     val type: String = "EXPENSE",
     val tags: List<String> = emptyList(),
-    val quantity: Int = 1,
     val currency: String = "USD",
     // Installment specific fields
     val totalPaid: Long = 0L,

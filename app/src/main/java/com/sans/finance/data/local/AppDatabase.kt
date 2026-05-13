@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
         GoalEntity::class,
         BudgetEntity::class
     ],
-    version = 23,
+    version = 24,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -339,6 +339,55 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_22_23 = object : androidx.room.migration.Migration(22, 23) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE portfolio_holdings RENAME COLUMN amount TO quantity")
+            }
+        }
+
+        val MIGRATION_23_24 = object : androidx.room.migration.Migration(23, 24) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // 1. Refactor expenses table (rename columns and drop original_price, quantity)
+                db.execSQL("CREATE TABLE IF NOT EXISTS `expenses_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `date` INTEGER NOT NULL, `title` TEXT NOT NULL, `details` TEXT, `amount` INTEGER NOT NULL, `category_id` INTEGER NOT NULL, `account_id` INTEGER NOT NULL DEFAULT 1, `to_account_id` INTEGER, `type` TEXT NOT NULL DEFAULT 'EXPENSE', `currency` TEXT NOT NULL DEFAULT 'USD', `status` TEXT NOT NULL, `is_recurring` INTEGER NOT NULL, `is_installment` INTEGER NOT NULL DEFAULT 0, `recurrence_interval` TEXT, `next_due_date` INTEGER, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL)")
+                db.execSQL("""
+                    INSERT INTO expenses_new (id, date, title, details, amount, category_id, account_id, to_account_id, type, currency, status, is_recurring, is_installment, recurrence_interval, next_due_date, created_at, updated_at)
+                    SELECT id, date, note, description, final_price, category_id, account_id, to_account_id, type, currency, status, is_recurring, is_installment, recurrence_interval, next_due_date, created_at, updated_at
+                    FROM expenses
+                """.trimIndent())
+                db.execSQL("DROP TABLE expenses")
+                db.execSQL("ALTER TABLE expenses_new RENAME TO expenses")
+
+                // 2. Refactor expenses_fts
+                db.execSQL("DROP TABLE IF EXISTS `expenses_fts`")
+                db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `expenses_fts` USING fts4(content=`expenses`, `title`, `details`)")
+                db.execSQL("INSERT INTO expenses_fts(rowid, title, details) SELECT id, title, details FROM expenses")
+
+                // 3. Refactor installments table (remove redundant columns)
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `installments_new` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                        `expense_id` INTEGER NOT NULL, 
+                        `status` TEXT NOT NULL, 
+                        `duration_months` INTEGER NOT NULL, 
+                        `created_at` INTEGER NOT NULL,
+                        FOREIGN KEY(`expense_id`) REFERENCES `expenses`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    INSERT INTO installments_new (id, expense_id, status, duration_months, created_at)
+                    SELECT id, expense_id, status, duration_months, created_at
+                    FROM installments
+                """.trimIndent())
+                db.execSQL("DROP TABLE installments")
+                db.execSQL("ALTER TABLE installments_new RENAME TO installments")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_installments_expense_id` ON `installments` (`expense_id`)")
+
+                // 4. Update goals table (targetAmount from Double to Long)
+                db.execSQL("CREATE TABLE IF NOT EXISTS `goals_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `targetAmount` INTEGER NOT NULL, `targetType` TEXT NOT NULL, `targetName` TEXT, `currency` TEXT NOT NULL, `deadline` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)")
+                db.execSQL("""
+                    INSERT INTO goals_new (id, name, targetAmount, targetType, targetName, currency, deadline, createdAt, updatedAt)
+                    SELECT id, name, CAST(targetAmount AS INTEGER), targetType, targetName, currency, deadline, createdAt, updatedAt
+                    FROM goals
+                """.trimIndent())
+                db.execSQL("DROP TABLE goals")
+                db.execSQL("ALTER TABLE goals_new RENAME TO goals")
             }
         }
     }

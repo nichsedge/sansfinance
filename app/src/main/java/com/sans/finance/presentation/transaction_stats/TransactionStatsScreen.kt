@@ -538,7 +538,7 @@ fun TransactionItem(transaction: Expense) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = transaction.note,
+                text = transaction.title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -547,7 +547,7 @@ fun TransactionItem(transaction: Expense) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            val desc = transaction.description
+            val desc = transaction.details
             if (!desc.isNullOrBlank()) {
                 Text(
                     text = desc,

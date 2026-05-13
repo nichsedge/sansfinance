@@ -7,8 +7,8 @@ import javax.inject.Inject
 class CheckDuplicateExpenseUseCase @Inject constructor(
     private val repository: ExpenseRepository
 ) {
-    suspend operator fun invoke(note: String, amount: Long, date: Long, accountId: Long): Expense? {
-        if (note.isBlank()) return null
-        return repository.findPotentialDuplicate(note.trim(), amount, date, accountId)
+    suspend operator fun invoke(title: String, amount: Long, date: Long, accountId: Long): Expense? {
+        if (title.isBlank()) return null
+        return repository.findPotentialDuplicate(title.trim(), amount, date, accountId)
     }
 }
