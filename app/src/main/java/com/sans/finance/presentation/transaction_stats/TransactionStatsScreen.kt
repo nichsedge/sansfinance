@@ -149,10 +149,9 @@ fun TransactionStatsScreen(
                     state = state,
                     onPrevious = viewModel::onPreviousPeriod,
                     onNext = viewModel::onNextPeriod,
-                    onDateClick = {
-                        if (state.selectedPeriodType == TransactionStatsPeriodType.CUSTOM) showDatePicker =
-                            true
-                    }
+                onDateNavigatorClick = {
+                    showDatePicker = true
+                }
                 )
 
                 // Income / Expense Overview Cards
@@ -268,13 +267,25 @@ fun TransactionStatsScreen(
     }
 
     if (showDatePicker) {
-        CustomDateRangePickerDialog(
-            onDismiss = { showDatePicker = false },
-            onRangeSelected = { start, end ->
-                viewModel.onCustomDateRangeSelected(start, end)
-                showDatePicker = false
-            }
-        )
+        if (state.selectedPeriodType == TransactionStatsPeriodType.CUSTOM) {
+            CustomDateRangePickerDialog(
+                onDismiss = { showDatePicker = false },
+                onRangeSelected = { start, end ->
+                    viewModel.onCustomDateRangeSelected(start, end)
+                    showDatePicker = false
+                }
+            )
+        } else {
+            com.sans.finance.presentation.components.MonthYearPickerDialog(
+                onDismissRequest = { showDatePicker = false },
+                onDateSelected = { month, year ->
+                    viewModel.onDateSelected(month, year)
+                    showDatePicker = false
+                },
+                initialMonth = state.currentPeriodDate.get(Calendar.MONTH),
+                initialYear = state.currentPeriodDate.get(Calendar.YEAR)
+            )
+        }
     }
 }
 
@@ -317,7 +328,7 @@ fun DateNavigator(
     state: TransactionStatsState,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
-    onDateClick: () -> Unit
+    onDateNavigatorClick: () -> Unit
 ) {
     val periodText = getPeriodText(state)
 
@@ -334,10 +345,10 @@ fun DateNavigator(
         }
 
         Surface(
-            onClick = onDateClick,
+            onClick = onDateNavigatorClick,
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            enabled = state.selectedPeriodType == TransactionStatsPeriodType.CUSTOM
+            enabled = true
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),

@@ -232,8 +232,8 @@ fun DashboardScreen(
             if (state.goals.isNotEmpty()) {
                 item {
                     SectionHeader("GOAL PROGRESS")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         state.goals.forEach { goal ->
                             DashboardGoalItem(
                                 goal,
@@ -286,8 +286,8 @@ fun DashboardScreen(
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         state.upcomingBills.forEach { bill ->
                             DashboardBillItem(
                                 bill,
@@ -301,8 +301,8 @@ fun DashboardScreen(
             if (state.recentTransactions.isNotEmpty()) {
                 item {
                     SectionHeader("RECENT TRANSACTIONS")
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         state.recentTransactions.forEach { transaction ->
                             RecentTransactionItem(
                                 transaction = transaction,
@@ -411,7 +411,7 @@ fun BreakdownItem(
             amount = amount,
             currencyCode = currencyCode,
             isVisible = !isPrivacyModeEnabled,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Black,
             color = color
         )
@@ -456,7 +456,7 @@ fun ForecastCard(
                     amount = if (selectedIndex == -1) projectedBalance else trendData[selectedIndex],
                     currencyCode = currencyCode,
                     isVisible = !isPrivacyModeEnabled,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -689,7 +689,7 @@ fun MonthlyCashFlowCard(
                         amount = cashFlow,
                         currencyCode = currencyCode,
                         isVisible = !isPrivacyModeEnabled,
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Black,
                         color = if (cashFlow >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
                     )
@@ -751,7 +751,7 @@ fun FlowBox(
             amount = amount,
             currencyCode = currencyCode,
             isVisible = !isPrivacyModeEnabled,
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Black,
             color = color
         )
@@ -814,7 +814,7 @@ fun DashboardGoalItem(goal: DashboardGoal, currencyCode: String, isPrivacyModeEn
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
         shape = MaterialTheme.shapes.large
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
@@ -827,18 +827,18 @@ fun DashboardGoalItem(goal: DashboardGoal, currencyCode: String, isPrivacyModeEn
                 if (!isPrivacyModeEnabled) {
                     Text(
                         "${(progress * 100).toInt()}%",
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Black
                     )
                 } else {
                     Text(
                         "••%",
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Black
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier
@@ -869,14 +869,14 @@ fun DashboardBillItem(
     ) {
         Row(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(10.dp)
                 .fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(28.dp)
                     .background(
                         MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
                         MaterialTheme.shapes.medium
@@ -885,14 +885,14 @@ fun DashboardBillItem(
             ) {
                 CategoryIcon(
                     icon = bill.categoryIcon ?: "📄",
-                    fontSize = 16.sp
+                    fontSize = 14.sp
                 )
             }
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = bill.title.ifBlank { bill.categoryName ?: "Upcoming Bill" },
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1
@@ -908,7 +908,7 @@ fun DashboardBillItem(
                 amount = bill.amount,
                 currencyCode = bill.currency,
                 isVisible = !isPrivacyModeEnabled,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.error
             )
@@ -944,7 +944,7 @@ fun GlobalBudgetCard(
             )
         )
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1007,7 +1007,7 @@ fun GlobalBudgetCard(
                         amount = spent,
                         currencyCode = currencyCode,
                         isVisible = !isPrivacyModeEnabled,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Black
                     )
                 }
@@ -1022,7 +1022,7 @@ fun GlobalBudgetCard(
                         amount = if (isOverBudget) spent - budget else remaining,
                         currencyCode = currencyCode,
                         isVisible = !isPrivacyModeEnabled,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Black,
                         color = color
                     )
@@ -1206,7 +1206,7 @@ fun FinancialFreedomCard(
                         )
                     )
                 )
-                .padding(20.dp)
+                .padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1246,7 +1246,7 @@ fun FinancialFreedomCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1297,7 +1297,7 @@ fun FinancialFreedomCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Progress towards FIRE Target (25x)
             val fireProgress = (yearsOfCover / 25.0).coerceIn(0.0, 1.0).toFloat()
@@ -1352,10 +1352,10 @@ fun RecentTransactionItem(
     ) {
         Row(
             modifier = Modifier
-                .padding(12.dp)
+                .padding(8.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             val isIncome = transaction.type == "INCOME"
             val statusColor =
@@ -1363,7 +1363,7 @@ fun RecentTransactionItem(
 
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(28.dp)
                     .background(
                         (if (isIncome) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceVariant).copy(
                             alpha = 0.1f
@@ -1374,14 +1374,14 @@ fun RecentTransactionItem(
             ) {
                 CategoryIcon(
                     icon = transaction.categoryIcon ?: (if (isIncome) "💰" else "💸"),
-                    fontSize = 16.sp
+                    fontSize = 14.sp
                 )
             }
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = transaction.title.ifBlank { transaction.categoryName ?: "Transaction" },
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
                 )
@@ -1406,7 +1406,7 @@ fun RecentTransactionItem(
                     amount = transaction.amount,
                     currencyCode = transaction.currency,
                     isVisible = !isPrivacyModeEnabled,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Black,
                     color = statusColor
                 )

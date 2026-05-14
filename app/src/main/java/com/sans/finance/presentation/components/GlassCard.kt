@@ -45,7 +45,7 @@ fun GlassCard(
             )
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(16.dp),
             content = content
         )
     }

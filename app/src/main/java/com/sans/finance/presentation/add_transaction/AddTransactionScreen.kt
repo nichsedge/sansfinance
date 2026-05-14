@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -186,8 +187,8 @@ fun AddTransactionScreen(
                 .padding(paddingValues)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             if (viewModel.isInstallmentPayment) {
                 Surface(
@@ -236,7 +237,7 @@ fun AddTransactionScreen(
             val types = listOf("EXPENSE", "INCOME", "TRANSFER")
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 items(types) { type ->
                     FilterChip(
@@ -245,10 +246,12 @@ fun AddTransactionScreen(
                         label = {
                             Text(
                                 type.lowercase().replaceFirstChar { it.uppercase() },
+                                style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (viewModel.transactionType == type) FontWeight.Bold else FontWeight.Normal
                             )
                         },
-                        shape = androidx.compose.foundation.shape.CircleShape
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        modifier = Modifier.height(32.dp)
                     )
                 }
             }
@@ -265,12 +268,14 @@ fun AddTransactionScreen(
                     value = selectedAccount?.name ?: "Unknown Account",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text(if (viewModel.transactionType == "TRANSFER") "From Account" else "Account") },
+                    label = { Text(if (viewModel.transactionType == "TRANSFER") "From Account" else "Account", fontSize = 12.sp) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded) },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .heightIn(min = 48.dp)
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                    shape = MaterialTheme.shapes.medium
+                    shape = MaterialTheme.shapes.small,
+                    textStyle = MaterialTheme.typography.bodyMedium
                 )
                 ExposedDropdownMenu(
                     expanded = accountExpanded,
@@ -298,12 +303,14 @@ fun AddTransactionScreen(
                         value = selectedToAccount?.name ?: "Unknown Account",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("To Account") },
+                        label = { Text("To Account", fontSize = 12.sp) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = toAccountExpanded) },
                         modifier = Modifier
                             .fillMaxWidth()
+                            .heightIn(min = 48.dp)
                             .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                        shape = MaterialTheme.shapes.medium
+                        shape = MaterialTheme.shapes.small,
+                        textStyle = MaterialTheme.typography.bodyMedium
                     )
                     ExposedDropdownMenu(
                         expanded = toAccountExpanded,
@@ -339,11 +346,13 @@ fun AddTransactionScreen(
                         value = viewModel.currency,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Curr") },
+                        label = { Text("Curr", fontSize = 10.sp) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = currencyExpanded) },
-                        modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                        shape = MaterialTheme.shapes.medium,
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                        modifier = Modifier
+                            .heightIn(min = 48.dp)
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                        shape = MaterialTheme.shapes.small,
+                        textStyle = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
                     )
                     ExposedDropdownMenu(
                         expanded = currencyExpanded,
@@ -364,9 +373,9 @@ fun AddTransactionScreen(
                 OutlinedTextField(
                     value = viewModel.amount,
                     onValueChange = { viewModel.amount = it },
-                    label = { Text(stringResource(R.string.amount_spent)) },
-                    modifier = Modifier.weight(1f),
-                    textStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    label = { Text(stringResource(R.string.amount_spent), fontSize = 12.sp) },
+                    modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                     singleLine = true,
                     visualTransformation = com.sans.finance.core.util.ThousandsSeparatorVisualTransformation(),
                     keyboardOptions = KeyboardOptions(
@@ -376,7 +385,7 @@ fun AddTransactionScreen(
                     keyboardActions = KeyboardActions(
                         onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
                     ),
-                    shape = MaterialTheme.shapes.medium
+                    shape = MaterialTheme.shapes.small
                 )
             }
 
@@ -384,15 +393,16 @@ fun AddTransactionScreen(
             OutlinedTextField(
                 value = dateFormatter.format(Date(viewModel.selectedDate)),
                 onValueChange = { },
-                label = { Text("Transaction Date") },
-                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Transaction Date", fontSize = 12.sp) },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                 readOnly = true,
                 trailingIcon = {
                     IconButton(onClick = { showDatePicker = true }) {
                         Icon(Icons.Default.DateRange, contentDescription = "Select Date")
                     }
                 },
-                shape = MaterialTheme.shapes.medium
+                shape = MaterialTheme.shapes.small,
+                textStyle = MaterialTheme.typography.bodyMedium
             )
 
             if (showDatePicker) {
@@ -429,9 +439,10 @@ fun AddTransactionScreen(
                         viewModel.title = it
                         titleExpanded = true
                     },
-                    label = { Text(stringResource(R.string.what_did_you_buy)) },
+                    label = { Text(stringResource(R.string.what_did_you_buy), fontSize = 12.sp) },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .heightIn(min = 48.dp)
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
@@ -440,7 +451,8 @@ fun AddTransactionScreen(
                     keyboardActions = KeyboardActions(
                         onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
                     ),
-                    shape = MaterialTheme.shapes.medium
+                    shape = MaterialTheme.shapes.small,
+                    textStyle = MaterialTheme.typography.bodyMedium
                 )
 
                 ExposedDropdownMenu(
@@ -468,7 +480,7 @@ fun AddTransactionScreen(
             )
 
             LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 items(categories) { category ->
                     FilterChip(
@@ -476,12 +488,13 @@ fun AddTransactionScreen(
                         onClick = { viewModel.categoryId = category.id },
                         label = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                CategoryIcon(category.icon, fontSize = 16.sp)
-                                Spacer(Modifier.width(8.dp))
-                                Text(category.name)
+                                CategoryIcon(category.icon, fontSize = 14.sp)
+                                Spacer(Modifier.width(4.dp))
+                                Text(category.name, style = MaterialTheme.typography.labelMedium)
                             }
                         },
-                        shape = androidx.compose.foundation.shape.CircleShape
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        modifier = Modifier.height(32.dp)
                     )
                 }
             }
@@ -497,16 +510,17 @@ fun AddTransactionScreen(
 
             @OptIn(ExperimentalLayoutApi::class)
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 val tagsToShow = (allTags + viewModel.selectedTags).distinct()
                 tagsToShow.forEach { tagName ->
                     FilterChip(
                         selected = viewModel.selectedTags.contains(tagName),
                         onClick = { viewModel.toggleTag(tagName) },
-                        label = { Text(tagName) },
-                        shape = androidx.compose.foundation.shape.CircleShape
+                        label = { Text(tagName, style = MaterialTheme.typography.labelMedium) },
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        modifier = Modifier.height(32.dp)
                     )
                 }
             }
@@ -514,8 +528,8 @@ fun AddTransactionScreen(
             OutlinedTextField(
                 value = viewModel.newTagText,
                 onValueChange = { viewModel.newTagText = it },
-                label = { Text("Add New Tag") },
-                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Add New Tag", fontSize = 12.sp) },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                 singleLine = true,
                 trailingIcon = {
                     IconButton(onClick = { viewModel.addNewTag() }) {
@@ -531,7 +545,8 @@ fun AddTransactionScreen(
                         focusManager.clearFocus()
                     }
                 ),
-                shape = MaterialTheme.shapes.medium
+                shape = MaterialTheme.shapes.small,
+                textStyle = MaterialTheme.typography.bodyMedium
             )
 
 
@@ -546,9 +561,10 @@ fun AddTransactionScreen(
                         viewModel.details = it
                         detailsExpanded = true
                     },
-                    label = { Text(stringResource(R.string.merchant_store)) },
+                    label = { Text(stringResource(R.string.merchant_store), fontSize = 12.sp) },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .heightIn(min = 48.dp)
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
@@ -561,7 +577,8 @@ fun AddTransactionScreen(
                             if (!viewModel.isInstallment) viewModel.onSaveClick(onBack)
                         }
                     ),
-                    shape = MaterialTheme.shapes.medium
+                    shape = MaterialTheme.shapes.small,
+                    textStyle = MaterialTheme.typography.bodyMedium
                 )
 
                 ExposedDropdownMenu(
@@ -588,7 +605,7 @@ fun AddTransactionScreen(
             )
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 items(paymentTypes.size) { index ->
                     val type = paymentTypes[index]
@@ -598,10 +615,12 @@ fun AddTransactionScreen(
                         label = {
                             Text(
                                 paymentLabels[index],
+                                style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (viewModel.paymentType == type) FontWeight.Bold else FontWeight.Normal
                             )
                         },
-                        shape = androidx.compose.foundation.shape.CircleShape
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        modifier = Modifier.height(32.dp)
                     )
                 }
             }
@@ -617,12 +636,14 @@ fun AddTransactionScreen(
                             .replaceFirstChar { it.uppercase() },
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Recurrence Interval") },
+                        label = { Text("Recurrence Interval", fontSize = 12.sp) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = recurrenceExpanded) },
                         modifier = Modifier
                             .fillMaxWidth()
+                            .heightIn(min = 48.dp)
                             .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                        shape = MaterialTheme.shapes.medium
+                        shape = MaterialTheme.shapes.small,
+                        textStyle = MaterialTheme.typography.bodyMedium
                     )
                     ExposedDropdownMenu(
                         expanded = recurrenceExpanded,
@@ -648,8 +669,8 @@ fun AddTransactionScreen(
                 OutlinedTextField(
                     value = viewModel.durationMonths,
                     onValueChange = { viewModel.durationMonths = it },
-                    label = { Text(stringResource(R.string.duration_months)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(R.string.duration_months), fontSize = 12.sp) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Number,
@@ -661,7 +682,8 @@ fun AddTransactionScreen(
                             viewModel.onSaveClick(onBack)
                         }
                     ),
-                    shape = MaterialTheme.shapes.medium
+                    shape = MaterialTheme.shapes.small,
+                    textStyle = MaterialTheme.typography.bodyMedium
                 )
             }
 
@@ -675,15 +697,15 @@ fun AddTransactionScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
-                shape = MaterialTheme.shapes.medium
-            ) {
+                    .height(40.dp),
+                shape = MaterialTheme.shapes.small
+) {
                 Text(
                     text = (if (viewModel.isEditMode) stringResource(R.string.update_transaction) else stringResource(
                         R.string.confirm_transaction
                     )).uppercase(),
                     fontWeight = FontWeight.Black,
-                    fontSize = 16.sp,
+                    fontSize = 14.sp,
                     letterSpacing = 1.sp
                 )
             }

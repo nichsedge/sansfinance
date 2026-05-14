@@ -46,7 +46,7 @@ fun MainScreen(
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Dashboard,
+            startDestination = Screen.ExpenseList,
             modifier = Modifier.padding(paddingValues)
         ) {
             composable<Screen.Dashboard> {

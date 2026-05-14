@@ -202,7 +202,7 @@ class AddTransactionViewModel @Inject constructor(
     }
 
     fun addNewTag() {
-        val tagToAdd = newTagText.trim().lowercase()
+        val tagToAdd = newTagText.trim()
         if (tagToAdd.isNotBlank() && !selectedTags.contains(tagToAdd)) {
             selectedTags = selectedTags + tagToAdd
             newTagText = ""

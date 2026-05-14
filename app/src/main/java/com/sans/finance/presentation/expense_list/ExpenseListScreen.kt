@@ -323,7 +323,9 @@ fun ExpenseListScreen(
                                                 amount = dayIncome,
                                                 currencyCode = state.currentCurrency,
                                                 isVisible = !state.isPrivacyModeEnabled,
-                                                style = MaterialTheme.typography.labelSmall,
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontWeight = FontWeight.SemiBold
+                                                ),
                                                 color = Color(0xFF4CAF50)
                                             )
                                             if (dayExpense > 0) Spacer(modifier = Modifier.size(8.dp))
@@ -333,7 +335,9 @@ fun ExpenseListScreen(
                                                 amount = dayExpense,
                                                 currencyCode = state.currentCurrency,
                                                 isVisible = !state.isPrivacyModeEnabled,
-                                                style = MaterialTheme.typography.labelSmall,
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontWeight = FontWeight.SemiBold
+                                                ),
                                                 color = Color(0xFFE53935)
                                             )
                                         }
@@ -417,29 +421,23 @@ fun ExpenseListScreen(
     }
 
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = if (state.startDate > 0) state.startDate else System.currentTimeMillis()
-        )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let {
-                        viewModel.jumpToDate(it)
-                    }
-                    showDatePicker = false
-                }) {
-                    Text("Select")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancel")
-                }
-            }
-        ) {
-            DatePicker(state = datePickerState)
+        val cal = com.sans.finance.core.util.CalendarUtils.getInstance().apply {
+            timeInMillis = if (state.startDate > 0) state.startDate else System.currentTimeMillis()
         }
+        com.sans.finance.presentation.components.MonthYearPickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            onDateSelected = { month, year ->
+                val jumpCal = com.sans.finance.core.util.CalendarUtils.getInstance().apply {
+                    set(java.util.Calendar.YEAR, year)
+                    set(java.util.Calendar.MONTH, month)
+                    set(java.util.Calendar.DAY_OF_MONTH, 1)
+                }
+                viewModel.jumpToDate(jumpCal.timeInMillis)
+                showDatePicker = false
+            },
+            initialMonth = cal.get(java.util.Calendar.MONTH),
+            initialYear = cal.get(java.util.Calendar.YEAR)
+        )
     }
 
 }

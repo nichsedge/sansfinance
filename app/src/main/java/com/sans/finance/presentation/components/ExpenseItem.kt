@@ -185,7 +185,7 @@ fun ExpenseItem(
                     amount = if (expense.type == "INCOME") displayAmount else -displayAmount,
                     currencyCode = expense.currency,
                     isVisible = !isPrivacyModeEnabled,
-                    style = MaterialTheme.typography.bodyMedium.copy(
+                    style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold
                     ),
                     color = amountColor

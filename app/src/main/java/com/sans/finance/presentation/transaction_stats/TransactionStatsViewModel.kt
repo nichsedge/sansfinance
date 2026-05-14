@@ -117,6 +117,17 @@ class TransactionStatsViewModel @Inject constructor(
         loadData()
     }
 
+    fun onDateSelected(month: Int, year: Int) {
+        _state.update {
+            val newDate = it.currentPeriodDate.clone() as Calendar
+            newDate.set(Calendar.YEAR, year)
+            newDate.set(Calendar.MONTH, month)
+            newDate.set(Calendar.DAY_OF_MONTH, 1)
+            it.copy(currentPeriodDate = newDate, selectedCategory = null)
+        }
+        loadData()
+    }
+
     private fun loadData() {
         dataJob?.cancel()
 

@@ -883,7 +883,7 @@ fun TagEditDialog(
             )
         },
         confirmButton = {
-            Button(onClick = { if (name.isNotBlank()) onConfirm(name.lowercase().trim()) }) {
+            Button(onClick = { if (name.isNotBlank()) onConfirm(name.trim()) }) {
                 Text("Confirm")
             }
         },
