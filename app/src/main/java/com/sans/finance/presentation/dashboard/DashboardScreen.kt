@@ -150,8 +150,8 @@ fun DashboardScreen(
                     )
                 )
                 .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            contentPadding = PaddingValues(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
                 NetWorthCard(
@@ -357,12 +357,12 @@ fun NetWorthCard(
                 amount = netWorth,
                 currencyCode = currencyCode,
                 isVisible = !isPrivacyModeEnabled,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -440,7 +440,7 @@ fun ForecastCard(
     ) {
         Row(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(12.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -456,7 +456,7 @@ fun ForecastCard(
                     amount = if (selectedIndex == -1) projectedBalance else trendData[selectedIndex],
                     currencyCode = currencyCode,
                     isVisible = !isPrivacyModeEnabled,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -490,14 +490,14 @@ fun WealthDistributionCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(14.dp)) {
             Text(
                 "Wealth Distribution",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Tabs
             Row(
@@ -539,7 +539,7 @@ fun WealthDistributionCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Stacked Bar
             Row(
@@ -606,7 +606,7 @@ fun WealthDistributionCard(
                             amount = entry.value,
                             currencyCode = currencyCode,
                             isVisible = !isPrivacyModeEnabled,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Black
                         )
                     }
@@ -632,8 +632,8 @@ fun MonthlyCashFlowCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
                 "Monthly Summary",
@@ -689,7 +689,7 @@ fun MonthlyCashFlowCard(
                         amount = cashFlow,
                         currencyCode = currencyCode,
                         isVisible = !isPrivacyModeEnabled,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Black,
                         color = if (cashFlow >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
                     )
@@ -751,7 +751,7 @@ fun FlowBox(
             amount = amount,
             currencyCode = currencyCode,
             isVisible = !isPrivacyModeEnabled,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Black,
             color = color
         )
@@ -876,7 +876,7 @@ fun DashboardBillItem(
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(32.dp)
                     .background(
                         MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
                         MaterialTheme.shapes.medium
@@ -885,7 +885,7 @@ fun DashboardBillItem(
             ) {
                 CategoryIcon(
                     icon = bill.categoryIcon ?: "📄",
-                    fontSize = 22.sp
+                    fontSize = 16.sp
                 )
             }
 
@@ -908,7 +908,7 @@ fun DashboardBillItem(
                 amount = bill.amount,
                 currencyCode = bill.currency,
                 isVisible = !isPrivacyModeEnabled,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.error
             )
@@ -1363,7 +1363,7 @@ fun RecentTransactionItem(
 
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(32.dp)
                     .background(
                         (if (isIncome) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceVariant).copy(
                             alpha = 0.1f
@@ -1374,7 +1374,7 @@ fun RecentTransactionItem(
             ) {
                 CategoryIcon(
                     icon = transaction.categoryIcon ?: (if (isIncome) "💰" else "💸"),
-                    fontSize = 22.sp
+                    fontSize = 16.sp
                 )
             }
 
@@ -1406,7 +1406,7 @@ fun RecentTransactionItem(
                     amount = transaction.amount,
                     currencyCode = transaction.currency,
                     isVisible = !isPrivacyModeEnabled,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Black,
                     color = statusColor
                 )

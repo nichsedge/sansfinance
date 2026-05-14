@@ -61,22 +61,22 @@ fun ExpenseItem(
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 12.dp)
+                .padding(horizontal = 12.dp, vertical = 4.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Category Icon
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(28.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
             ) {
                 CategoryIcon(
                     icon = categoryIcon,
-                    fontSize = 20.sp
+                    fontSize = 14.sp
                 )
             }
 
@@ -110,8 +110,8 @@ fun ExpenseItem(
 
                 Text(
                     text = annotatedNote,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = FontWeight.Bold,
                         letterSpacing = 0.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
@@ -125,18 +125,18 @@ fun ExpenseItem(
                 ) {
                     Text(
                         categoryName ?: stringResource(R.string.uncategorized),
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1
                     )
                     Text(
                         "•",
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                         color = MaterialTheme.colorScheme.outlineVariant
                     )
                     Text(
                         accountName ?: "Unknown",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -145,30 +145,22 @@ fun ExpenseItem(
                     val interval = expense.recurrenceInterval
                     if (expense.isRecurring && interval != null) {
                         Text(
-                            " • ${interval.lowercase().replaceFirstChar { it.uppercase() }}",
-                            style = MaterialTheme.typography.labelSmall,
+                            "• ${interval.lowercase().take(3)}",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = MaterialTheme.colorScheme.secondary,
                             fontWeight = FontWeight.Bold
                         )
                     }
-                }
 
-                if (expense.isInstallmentPayment && expense.installmentTotalMonths > 0) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                "Installment ${expense.installmentMonth} / ${expense.installmentTotalMonths}",
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                color = MaterialTheme.colorScheme.primary,
+                    if (expense.isInstallmentPayment && expense.installmentTotalMonths > 0) {
+                        Text(
+                            "• ${expense.installmentMonth}/${expense.installmentTotalMonths}",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Black
-                            )
-                        }
+                            ),
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
                     }
                 }
             }
@@ -193,7 +185,7 @@ fun ExpenseItem(
                     amount = if (expense.type == "INCOME") displayAmount else -displayAmount,
                     currencyCode = expense.currency,
                     isVisible = !isPrivacyModeEnabled,
-                    style = MaterialTheme.typography.titleMedium.copy(
+                    style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Bold
                     ),
                     color = amountColor

@@ -113,21 +113,21 @@ fun RecurringExpensesScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 12.dp)
         ) {
 
             // Total card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp),
+                    .padding(vertical = 12.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 ),
                 shape = MaterialTheme.shapes.large
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp)
+                    modifier = Modifier.padding(16.dp)
                 ) {
                     val totalLabel = when (state.viewMode) {
                         RecurringViewMode.MONTHLY -> "Total Monthly Recurring"
@@ -148,7 +148,7 @@ fun RecurringExpensesScreen(
                     )
                     Text(
                         CurrencyFormatter.formatAmount(totalAmount, state.currentCurrency),
-                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black),
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
 
@@ -167,7 +167,7 @@ fun RecurringExpensesScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterChip(
@@ -196,7 +196,7 @@ fun RecurringExpensesScreen(
                 }
             } else {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(state.recurringExpenses, key = { it.id }) { expense ->
                         val category = state.categories.find { it.id == expense.categoryId }

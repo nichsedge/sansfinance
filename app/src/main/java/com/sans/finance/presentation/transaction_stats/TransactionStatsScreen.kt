@@ -134,8 +134,8 @@ fun TransactionStatsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (state.selectedCategory == null) {
                 // Period Type Selector
@@ -192,7 +192,7 @@ fun TransactionStatsScreen(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         )
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Column(modifier = Modifier.padding(12.dp)) {
                             Text(
                                 "Cash Flow",
                                 style = MaterialTheme.typography.labelMedium,
@@ -215,7 +215,7 @@ fun TransactionStatsScreen(
                         )
                     ) {
                         Row(
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier.padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
@@ -263,7 +263,7 @@ fun TransactionStatsScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 
@@ -340,7 +340,7 @@ fun DateNavigator(
             enabled = state.selectedPeriodType == TransactionStatsPeriodType.CUSTOM
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (state.selectedPeriodType == TransactionStatsPeriodType.CUSTOM) {
@@ -421,7 +421,7 @@ fun StatsSimpleCard(
         shape = MaterialTheme.shapes.large,
         border = if (isSelected) androidx.compose.foundation.BorderStroke(2.dp, color) else null
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 title,
                 style = MaterialTheme.typography.labelMedium,
@@ -468,7 +468,7 @@ fun CategoryBreakdown(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onCategoryClick(category) }
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
@@ -523,7 +523,7 @@ fun CategoryDetailView(
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Detail Header
         Row(
@@ -564,7 +564,7 @@ fun CategoryDetailView(
             )
         ) {
             Column(
-                modifier = Modifier.padding(8.dp),
+                modifier = Modifier.padding(4.dp),
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 if (state.categoryTransactions.isEmpty()) {
@@ -595,7 +595,7 @@ fun TransactionItem(transaction: Expense) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -672,9 +672,9 @@ fun TrendChart(
     ) {
         Box(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(12.dp)
                 .fillMaxWidth()
-                .height(220.dp)
+                .height(180.dp)
         ) {
             if (trendData.isEmpty()) {
                 Text(

@@ -69,6 +69,7 @@ fun InstallmentsScreen(
                 title = {
                     Text(
                         stringResource(R.string.active_installments),
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -84,15 +85,15 @@ fun InstallmentsScreen(
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
                 shape = MaterialTheme.shapes.large
             ) {
-                Column(modifier = Modifier.padding(24.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         stringResource(R.string.total_monthly_due),
                         style = MaterialTheme.typography.labelMedium,
@@ -103,10 +104,10 @@ fun InstallmentsScreen(
                             state.totalMonthlyDue,
                             state.currentCurrency
                         ),
-                        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Black),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black),
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         stringResource(R.string.total_remaining_balance) + ": " + com.sans.finance.core.util.CurrencyFormatter.formatAmount(
                             state.totalRemainingBalance, state.currentCurrency
@@ -141,7 +142,7 @@ fun InstallmentsScreen(
                     )
                 }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(currentList) { item ->
                         ExpandableInstallment(item, state.currentCurrency, viewModel)
                     }
@@ -172,7 +173,7 @@ fun ExpandableInstallment(
         color = MaterialTheme.colorScheme.surfaceVariant,
         onClick = { expanded = !expanded }
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -181,8 +182,10 @@ fun ExpandableInstallment(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         installment.expenseName ?: "Installment Plan #${installment.id}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                     installment.expenseDate?.let {
                         Text(
@@ -199,7 +202,7 @@ fun ExpandableInstallment(
                             installment.monthlyPayment,
                             currencyCode
                         ) + "/mo",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.ExtraBold
                     )
@@ -245,7 +248,7 @@ fun ExpandableInstallment(
             val progress =
                 if (installment.durationMonths > 0) paidCount.toFloat() / installment.durationMonths else 0f
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -269,16 +272,16 @@ fun ExpandableInstallment(
 
             if (expanded) {
                 Column(
-                    modifier = Modifier.padding(top = 16.dp)
+                    modifier = Modifier.padding(top = 12.dp)
                 ) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     items.forEach { monthlyItem ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp),
+                                .padding(vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {

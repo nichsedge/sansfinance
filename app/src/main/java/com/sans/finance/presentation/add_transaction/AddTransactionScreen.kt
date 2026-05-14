@@ -186,8 +186,8 @@ fun AddTransactionScreen(
                 .padding(paddingValues)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (viewModel.isInstallmentPayment) {
                 Surface(
@@ -196,7 +196,7 @@ fun AddTransactionScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
@@ -208,8 +208,8 @@ fun AddTransactionScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 "Installment Payment",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
                             )
                             Text(
                                 "Payment ${viewModel.installmentMonth} of ${viewModel.installmentTotalMonths} for this plan",
@@ -236,7 +236,7 @@ fun AddTransactionScreen(
             val types = listOf("EXPENSE", "INCOME", "TRANSFER")
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(types) { type ->
                     FilterChip(
@@ -343,7 +343,7 @@ fun AddTransactionScreen(
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = currencyExpanded) },
                         modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                         shape = MaterialTheme.shapes.medium,
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
                     )
                     ExposedDropdownMenu(
                         expanded = currencyExpanded,
@@ -366,7 +366,7 @@ fun AddTransactionScreen(
                     onValueChange = { viewModel.amount = it },
                     label = { Text(stringResource(R.string.amount_spent)) },
                     modifier = Modifier.weight(1f),
-                    textStyle = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    textStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     singleLine = true,
                     visualTransformation = com.sans.finance.core.util.ThousandsSeparatorVisualTransformation(),
                     keyboardOptions = KeyboardOptions(
@@ -468,7 +468,7 @@ fun AddTransactionScreen(
             )
 
             LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(categories) { category ->
                     FilterChip(
@@ -588,7 +588,7 @@ fun AddTransactionScreen(
             )
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(paymentTypes.size) { index ->
                     val type = paymentTypes[index]
@@ -675,7 +675,7 @@ fun AddTransactionScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(58.dp),
+                    .height(48.dp),
                 shape = MaterialTheme.shapes.medium
             ) {
                 Text(

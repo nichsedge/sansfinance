@@ -1,7 +1,10 @@
 package com.sans.finance.presentation.expense_list
 
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -88,6 +91,7 @@ fun ExpenseListScreen(
     var showFilterSheet by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var isSummaryExpanded by remember { mutableStateOf(true) }
 
     LaunchedEffect(state.error) {
         state.error?.let {
@@ -205,14 +209,36 @@ fun ExpenseListScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            SummaryCard(
-                income = state.totalFilteredIncome,
-                expense = state.totalFilteredExpense,
-                total = state.totalFilteredAmount,
-                currencyCode = state.currentCurrency,
-                avgMonthlyExpense = state.avgMonthlyExpense,
-                isPrivacyModeEnabled = state.isPrivacyModeEnabled
-            )
+            if (isSummaryExpanded) {
+                Box(modifier = Modifier.combinedClickable(
+                    onClick = { },
+                    onLongClick = { isSummaryExpanded = false }
+                )) {
+                    SummaryCard(
+                        income = state.totalFilteredIncome,
+                        expense = state.totalFilteredExpense,
+                        total = state.totalFilteredAmount,
+                        currencyCode = state.currentCurrency,
+                        avgMonthlyExpense = state.avgMonthlyExpense,
+                        isPrivacyModeEnabled = state.isPrivacyModeEnabled
+                    )
+                }
+            } else {
+                Surface(
+                    onClick = { isSummaryExpanded = true },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Row(
+                        modifier = Modifier.padding(8.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Show Summary", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
 
             val todayMillis = remember {
                 com.sans.finance.core.util.CalendarUtils.getInstance().apply {
@@ -226,12 +252,12 @@ fun ExpenseListScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    start = 16.dp,
-                    top = 16.dp,
-                    end = 16.dp,
-                    bottom = 80.dp
+                    start = 12.dp,
+                    top = 12.dp,
+                    end = 12.dp,
+                    bottom = 72.dp
                 ),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 var hasShownTodaySeparator = false
                 var hasFutureTransactions = false
@@ -248,7 +274,7 @@ fun ExpenseListScreen(
                         hasShownTodaySeparator = true
                     }
 
-                    item(key = "header-$date") {
+                    stickyHeader(key = "header-$date") {
                         val cal = com.sans.finance.core.util.CalendarUtils.getInstance()
                             .apply { timeInMillis = date }
                         val day =
@@ -266,72 +292,58 @@ fun ExpenseListScreen(
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.surface,
-                            tonalElevation = 1.dp,
-                            shape = MaterialTheme.shapes.medium
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                            tonalElevation = 0.dp
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = day,
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Black,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                    Spacer(modifier = Modifier.size(12.dp))
-                                    Column {
+                            Column {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
-                                            text = dayOfWeek.uppercase(),
+                                            text = "$day $dayOfWeek",
                                             style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
+                                            fontWeight = FontWeight.Black,
+                                            color = MaterialTheme.colorScheme.primary
                                         )
+                                        Spacer(modifier = Modifier.size(8.dp))
                                         Text(
                                             text = monthYear,
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
-                                }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    if (dayIncome > 0) {
-                                        PrivacyText(
-                                            amount = dayIncome,
-                                            currencyCode = state.currentCurrency,
-                                            isVisible = !state.isPrivacyModeEnabled,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = Color(0xFF4CAF50)
-                                        )
-                                        Spacer(modifier = Modifier.size(8.dp))
-                                    }
-                                    if (dayExpense > 0) {
-                                        PrivacyText(
-                                            amount = dayExpense,
-                                            currencyCode = state.currentCurrency,
-                                            isVisible = !state.isPrivacyModeEnabled,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = Color(0xFFE53935)
-                                        )
-                                    }
-                                    val dayTransfer = expenses.filter { it.type == "TRANSFER" }
-                                        .sumOf { it.amount }
-                                    if (dayTransfer > 0) {
-                                        Spacer(modifier = Modifier.size(8.dp))
-                                        PrivacyText(
-                                            amount = dayTransfer,
-                                            currencyCode = state.currentCurrency,
-                                            isVisible = !state.isPrivacyModeEnabled,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = Color(0xFF2196F3)
-                                        )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (dayIncome > 0) {
+                                            PrivacyText(
+                                                amount = dayIncome,
+                                                currencyCode = state.currentCurrency,
+                                                isVisible = !state.isPrivacyModeEnabled,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Color(0xFF4CAF50)
+                                            )
+                                            if (dayExpense > 0) Spacer(modifier = Modifier.size(8.dp))
+                                        }
+                                        if (dayExpense > 0) {
+                                            PrivacyText(
+                                                amount = dayExpense,
+                                                currencyCode = state.currentCurrency,
+                                                isVisible = !state.isPrivacyModeEnabled,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Color(0xFFE53935)
+                                            )
+                                        }
                                     }
                                 }
+                                HorizontalDivider(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    thickness = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                )
                             }
                         }
                     }

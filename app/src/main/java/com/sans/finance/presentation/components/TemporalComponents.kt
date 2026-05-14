@@ -86,7 +86,7 @@ fun TodaySeparator(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         HorizontalDivider(

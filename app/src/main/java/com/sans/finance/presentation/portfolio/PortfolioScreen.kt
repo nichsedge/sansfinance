@@ -282,8 +282,8 @@ fun PortfolioScreen(
                 if (state.selectedTab == 0) {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                        contentPadding = PaddingValues(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         item {
                             PortfolioHeader(state, onForecastingClick)
@@ -300,7 +300,7 @@ fun PortfolioScreen(
                                         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                                     )
                                 ) {
-                                    Column(modifier = Modifier.padding(20.dp)) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
                                         Text(
                                             "Net Worth Trend",
                                             style = MaterialTheme.typography.titleSmall,
@@ -312,7 +312,7 @@ fun PortfolioScreen(
                                             history = state.valueHistory,
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .height(200.dp),
+                                                .height(160.dp),
                                             isPrivacyModeEnabled = state.isPrivacyModeEnabled,
                                             currencyCode = state.currentCurrency
                                         )
@@ -332,7 +332,7 @@ fun PortfolioScreen(
                                         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                                     )
                                 ) {
-                                    Column(modifier = Modifier.padding(20.dp)) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
                                         Text(
                                             "Asset Allocation",
                                             style = MaterialTheme.typography.titleSmall,
@@ -455,7 +455,7 @@ fun GoalsSummaryCard(
         ),
         onClick = onGoalsClick
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -543,7 +543,7 @@ fun AssetCategoryGroup(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -567,7 +567,7 @@ fun AssetCategoryGroup(
                 HoldingItem(holding, isPrivacyModeEnabled, currentCurrency)
                 if (index < holdings.size - 1) {
                     HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 20.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp),
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                     )
                 }
@@ -596,7 +596,7 @@ fun PortfolioHeader(state: PortfolioScreenState, onForecastingClick: () -> Unit)
                 amount = (state.totalValueIdr * 100).toLong(),
                 currencyCode = state.currentCurrency,
                 isVisible = !state.isPrivacyModeEnabled,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -645,7 +645,7 @@ fun PortfolioHeader(state: PortfolioScreenState, onForecastingClick: () -> Unit)
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(12.dp))
             Button(
                 onClick = onForecastingClick,
                 modifier = Modifier.fillMaxWidth(),
@@ -674,7 +674,7 @@ fun HoldingItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {

@@ -238,8 +238,8 @@ fun SettingsContent(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        contentPadding = PaddingValues(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
 
 
@@ -254,14 +254,14 @@ fun SettingsContent(
             ) {
                 Row(
                     modifier = Modifier
-                        .padding(16.dp)
+                        .padding(12.dp)
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Translate, contentDescription = null)
-                        Spacer(Modifier.width(16.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(
                             when {
                                 currentLanguage.startsWith("en") -> "English"; currentLanguage.startsWith(
@@ -297,7 +297,7 @@ fun SettingsContent(
                             Icons.Default.ShoppingCart,
                             contentDescription = null
                         ) // Using ShoppingCart as placeholder or find a better one
-                        Spacer(Modifier.width(16.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(
                             when (currentCurrency) {
                                 "USD" -> "US Dollar (USD)"; "IDR" -> "Indonesian Rupiah (IDR)"; "CNY" -> "Chinese Yuan (CNY)"; else -> currentCurrency
@@ -358,7 +358,7 @@ fun SettingsContent(
             ) {
                 Row(
                     modifier = Modifier
-                        .padding(16.dp)
+                        .padding(12.dp)
                         .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -367,7 +367,7 @@ fun SettingsContent(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(Modifier.width(16.dp))
+                    Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Savings Goals")
                     }
@@ -385,7 +385,7 @@ fun SettingsContent(
             ) {
                 Row(
                     modifier = Modifier
-                        .padding(16.dp)
+                        .padding(12.dp)
                         .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -394,7 +394,7 @@ fun SettingsContent(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(Modifier.width(16.dp))
+                    Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Monthly Budget")
                         Text(
@@ -428,7 +428,7 @@ fun SettingsContent(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(Modifier.width(16.dp))
+                    Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(stringResource(R.string.recurring_expenses))
                         Text(
@@ -505,7 +505,7 @@ fun SettingsContent(
             ) {
                 Row(
                     modifier = Modifier
-                        .padding(16.dp)
+                        .padding(12.dp)
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
