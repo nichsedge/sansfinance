@@ -57,6 +57,10 @@ object PortfolioJsonImporter {
             inputStream.bufferedReader().use { it.readText() }
         } ?: throw Exception("Failed to open input stream")
 
+        return parseContent(jsonString)
+    }
+
+    fun parseContent(jsonString: String): Triple<Long, List<PortfolioHoldingEntity>, Double?> {
         val snapshot = json.decodeFromString<PortfolioSnapshotJson>(jsonString)
 
         val snapshotDate = try {

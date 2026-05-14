@@ -73,6 +73,8 @@ fun AccountScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var accountToEdit by remember { mutableStateOf<AccountEntity?>(null) }
     var showMenu by remember { mutableStateOf(false) }
+    var showAdjustmentDialog by remember { mutableStateOf(false) }
+    var pendingUpdate by remember { mutableStateOf<Triple<AccountEntity, String, Long>?>(null) }
 
     Scaffold(
         topBar = {
@@ -246,7 +248,12 @@ fun AccountScreen(
                         onClick = {
                             val parsedBalance = balance.toLongOrNull()?.times(100) ?: 0L
                             if (isEditing) {
-                                viewModel.updateAccount(accountToEdit!!, name, type, parsedBalance)
+                                if (parsedBalance != accountToEdit!!.balance) {
+                                    pendingUpdate = Triple(accountToEdit!!, name, parsedBalance)
+                                    showAdjustmentDialog = true
+                                } else {
+                                    viewModel.updateAccount(accountToEdit!!, name, type, parsedBalance)
+                                }
                             } else {
                                 viewModel.addAccount(
                                     name,
@@ -287,6 +294,72 @@ fun AccountScreen(
                     }
                 },
                 shape = MaterialTheme.shapes.extraLarge
+            )
+        }
+
+        if (showAdjustmentDialog && pendingUpdate != null) {
+            val (account, newName, newBalance) = pendingUpdate!!
+            val diff = newBalance - account.balance
+            val isIncrease = diff > 0
+            val absDiff = if (diff > 0) diff else -diff
+
+            AlertDialog(
+                onDismissRequest = {
+                    showAdjustmentDialog = false
+                    pendingUpdate = null
+                },
+                title = { Text("Balance Adjustment", fontWeight = FontWeight.Bold) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("You changed the balance of ${account.name}.")
+                        Text(
+                            "Difference: ${if (isIncrease) "+" else "-"}${
+                                com.sans.finance.core.util.CurrencyFormatter.formatAmount(
+                                    absDiff,
+                                    account.currency
+                                )
+                            }",
+                            fontWeight = FontWeight.Bold,
+                            color = if (isIncrease) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text("Would you like to record this difference as a transaction?")
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.updateAccount(
+                                account,
+                                newName,
+                                account.type,
+                                newBalance,
+                                recordAdjustment = true
+                            )
+                            showAdjustmentDialog = false
+                            pendingUpdate = null
+                        }
+                    ) {
+                        Text("Record as ${if (isIncrease) "Income" else "Expense"}")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.updateAccount(
+                                account,
+                                newName,
+                                account.type,
+                                newBalance,
+                                recordAdjustment = false
+                            )
+                            showAdjustmentDialog = false
+                            pendingUpdate = null
+                        }
+                    ) {
+                        Text("Just Update Balance")
+                    }
+                }
             )
         }
     }

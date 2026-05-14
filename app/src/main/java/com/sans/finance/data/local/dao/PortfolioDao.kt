@@ -61,6 +61,13 @@ interface PortfolioDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHoldings(items: List<PortfolioHoldingEntity>)
 
+    @androidx.room.Transaction
+    suspend fun insertSnapshot(header: PortfolioSnapshotHeaderEntity, items: List<PortfolioHoldingEntity>) {
+        deleteByDate(header.snapshotDate)
+        insertHeader(header)
+        insertHoldings(items)
+    }
+
     @Query("DELETE FROM portfolio_snapshot_headers WHERE snapshotDate = :date")
     suspend fun deleteByDate(date: Long)
 

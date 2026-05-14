@@ -396,10 +396,12 @@ class ExpenseRepositoryImpl(
         tagDao.deleteTag(tag.toEntity())
     }
 
-    override suspend fun performDatabaseMaintenance() {
-        db.withTransaction {
-            tagDao.deleteOrphanedTags()
+    override suspend fun cleanOrphanedTags() {
+        tagDao.deleteOrphanedTags()
+    }
 
+    override suspend fun reSyncAccountBalances() {
+        db.withTransaction {
             // Balance re-sync
             val accounts = accountDao.getAllAccounts().first()
             val balances = mutableMapOf<Long, Long>()

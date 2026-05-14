@@ -82,5 +82,6 @@ interface ExpenseRepository {
         type: String
     ): Flow<List<DaySpent>>
 
-    suspend fun performDatabaseMaintenance()
+    suspend fun cleanOrphanedTags()
+    suspend fun reSyncAccountBalances()
 }

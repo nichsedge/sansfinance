@@ -55,16 +55,25 @@ object CsvParser {
         val result = mutableListOf<String>()
         var current = StringBuilder()
         var inQuotes = false
-
-        line.forEach { char ->
+        var i = 0
+        while (i < line.length) {
+            val char = line[i]
             when {
-                char == '\"' -> inQuotes = !inQuotes
+                char == '\"' -> {
+                    if (inQuotes && i + 1 < line.length && line[i + 1] == '\"') {
+                        current.append('\"')
+                        i++ // Skip next quote
+                    } else {
+                        inQuotes = !inQuotes
+                    }
+                }
                 char == ',' && !inQuotes -> {
                     result.add(current.toString())
                     current = StringBuilder()
                 }
                 else -> current.append(char)
             }
+            i++
         }
         result.add(current.toString())
         return result

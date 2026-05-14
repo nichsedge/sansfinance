@@ -6,8 +6,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.data.util.CsvExporter
 import com.sans.finance.data.util.CsvParser
+import com.sans.finance.data.util.PortfolioCsvExporter
+import com.sans.finance.data.util.PortfolioCsvParser
 import com.sans.finance.data.util.PortfolioJsonExporter
 import com.sans.finance.data.util.PortfolioJsonImporter
+import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.repository.ExpenseRepository
 import com.sans.finance.domain.repository.PortfolioRepository
@@ -81,7 +84,7 @@ class DataManagementViewModel @Inject constructor(
             try {
                 when (type) {
                     ImportExportType.TRANSACTIONS -> exportTransactions(uri, format)
-                    ImportExportType.PORTFOLIO -> exportPortfolio(uri)
+                    ImportExportType.PORTFOLIO -> exportPortfolio(uri, format)
                 }
             } catch (e: Exception) {
                 _state.value = _state.value.copy(message = "Export failed: ${e.message}")
@@ -126,7 +129,19 @@ class DataManagementViewModel @Inject constructor(
     }
 
     private suspend fun importPortfolio(uri: Uri) {
-        val (date, items, exchangeRate) = PortfolioJsonImporter.parse(context, uri)
+        val content = context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
+            ?: throw Exception("Could not read file")
+
+        val (date, items, exchangeRate) = try {
+            if (content.trim().startsWith("{")) {
+                PortfolioJsonImporter.parseContent(content)
+            } else {
+                PortfolioCsvParser.parse(content)
+            }
+        } catch (e: Exception) {
+            throw Exception("Format not recognized or invalid: ${e.message}")
+        }
+
         if (items.isEmpty()) {
             _state.value = _state.value.copy(message = "No holdings found in file")
             return
@@ -142,20 +157,64 @@ class DataManagementViewModel @Inject constructor(
             ExportFormat.JSON -> json.encodeToString(expenses)
         }
 
-        context.contentResolver.openOutputStream(uri)?.use { it.bufferedWriter().write(content) }
+        if (content.isBlank()) throw Exception("Generated content is empty")
+
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                outputStream.bufferedWriter().use { writer ->
+                    writer.write(content)
+                    writer.flush()
+                }
+            }
+        }
         _state.value = _state.value.copy(message = "Transactions exported successfully")
     }
 
-    private suspend fun exportPortfolio(uri: Uri) {
-        val dates = portfolioRepository.getAllSnapshotDates().first()
-        if (dates.isEmpty()) throw Exception("No portfolio data to export")
+    private suspend fun exportPortfolio(uri: Uri, format: ExportFormat) {
+        val allDates = portfolioRepository.getAllSnapshotDates().first()
+        if (allDates.isEmpty()) throw Exception("No portfolio snapshots found")
 
-        val latestDate = dates.first()
-        val holdings = portfolioRepository.getSnapshotByDateSync(latestDate)
-        val jsonString = PortfolioJsonExporter.toSnapshotJson(latestDate, holdings)
+        var exportDate: Long? = null
+        var holdings: List<PortfolioHoldingEntity> = emptyList<PortfolioHoldingEntity>()
 
-        context.contentResolver.openOutputStream(uri)?.use { it.bufferedWriter().write(jsonString) }
-        _state.value = _state.value.copy(message = "Latest portfolio snapshot exported")
+        // 1. Try to get holdings for the absolute latest date
+        val latestDate = allDates.first()
+        holdings = portfolioRepository.getSnapshotByDateSync(latestDate)
+        exportDate = latestDate
+
+        // 2. If latest is empty, search for any snapshot that has holdings
+        if (holdings.isEmpty()) {
+            for (date in allDates) {
+                val h = portfolioRepository.getSnapshotByDateSync(date)
+                if (h.isNotEmpty()) {
+                    holdings = h
+                    exportDate = date
+                    break
+                }
+            }
+        }
+
+        if (holdings.isEmpty()) {
+            throw Exception("Found ${allDates.size} snapshots, but all are empty")
+        }
+
+        val finalDate = exportDate ?: latestDate
+        val content = when (format) {
+            ExportFormat.CSV -> PortfolioCsvExporter.toCsv(finalDate, holdings)
+            ExportFormat.JSON -> PortfolioJsonExporter.toSnapshotJson(finalDate, holdings)
+        }
+
+        if (content.isBlank()) throw Exception("Generated content is empty")
+
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                outputStream.bufferedWriter().use { writer ->
+                    writer.write(content)
+                    writer.flush()
+                }
+            }
+        }
+        _state.value = _state.value.copy(message = "Exported ${holdings.size} holdings as ${format.name}")
     }
 
     fun clearMessage() {

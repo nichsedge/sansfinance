@@ -45,8 +45,14 @@ class SettingsViewModel @Inject constructor(
     private val _isPrivacyModeEnabled = mutableStateOf(localeManager.isPrivacyModeEnabled())
     val isPrivacyModeEnabled: State<Boolean> = _isPrivacyModeEnabled
 
-    fun updateLanguage(lang: String) {
+    fun setLanguage(lang: String) {
+        localeManager.setLocale(lang)
         _currentLanguage.value = lang
+    }
+
+    fun setCurrency(currency: String) {
+        localeManager.setCurrency(currency)
+        _currentCurrency.value = currency
     }
 
     fun toggleCurrency() {
@@ -55,8 +61,14 @@ class SettingsViewModel @Inject constructor(
         val next =
             if (currentIndex != -1 && currentIndex + 1 < enabled.size) enabled[currentIndex + 1] else enabled.firstOrNull()
                 ?: "USD"
-        localeManager.setCurrency(next)
-        _currentCurrency.value = next
+        setCurrency(next)
+    }
+
+    fun restartApp(context: android.content.Context) {
+        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        context.startActivity(intent)
+        Runtime.getRuntime().exit(0)
     }
 
     fun toggleEnabledCurrency(currency: String) {
@@ -98,14 +110,28 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun performMaintenance() {
+    fun cleanTags() {
         _isLoading.value = true
         viewModelScope.launch {
             try {
-                repository.performDatabaseMaintenance()
-                _syncMessage.value = "Maintenance completed successfully"
+                repository.cleanOrphanedTags()
+                _syncMessage.value = "Tags cleaned successfully"
             } catch (e: Exception) {
-                _error.value = "Maintenance failed: ${e.message}"
+                _error.value = "Failed to clean tags: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun reSyncBalances() {
+        _isLoading.value = true
+        viewModelScope.launch {
+            try {
+                repository.reSyncAccountBalances()
+                _syncMessage.value = "Balances synchronized successfully"
+            } catch (e: Exception) {
+                _error.value = "Failed to sync balances: ${e.message}"
             } finally {
                 _isLoading.value = false
             }

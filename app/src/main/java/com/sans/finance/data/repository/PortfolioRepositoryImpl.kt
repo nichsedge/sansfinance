@@ -62,9 +62,7 @@ class PortfolioRepositoryImpl(
             totalValueUsd = totalUsd
         )
 
-        dao.deleteByDate(date)
-        dao.insertHeader(header)
-        dao.insertHoldings(items)
+        dao.insertSnapshot(header, items)
     }
 
     override suspend fun deleteByDate(date: Long) =

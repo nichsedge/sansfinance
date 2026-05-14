@@ -104,6 +104,10 @@ fun DataManagementScreen(
                         viewModel.setImportType(ImportExportType.PORTFOLIO)
                         importLauncher.launch("*/*")
                     },
+                    onExportCsv = {
+                        viewModel.setExportType(ImportExportType.PORTFOLIO, ExportFormat.CSV)
+                        exportLauncher.launch("portfolio_${System.currentTimeMillis()}.csv")
+                    },
                     onExportJson = {
                         viewModel.setExportType(ImportExportType.PORTFOLIO, ExportFormat.JSON)
                         exportJsonLauncher.launch("portfolio_${System.currentTimeMillis()}.json")

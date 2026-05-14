@@ -32,25 +32,14 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             SansFinanceTheme {
-                AppNavigation(onLanguageToggle = {
-                    val current = localeManager.getLocale()
-                    val next = when {
-                        current.startsWith("en") -> "id"; current.startsWith("id") -> "zh"; current.startsWith(
-                            "zh"
-                        ) -> "en"; else -> "en"
-                    }
-                    localeManager.setLocale(next)
-                    // android.app.LocaleManager.applicationLocales already triggers
-                    // a system-level activity recreation automatically — no need to
-                    // call recreate() manually (doing so causes a double-recreation crash).
-                })
+                AppNavigation()
             }
         }
     }
 }
 
 @Composable
-fun AppNavigation(onLanguageToggle: () -> Unit) {
+fun AppNavigation() {
     val navController = rememberNavController()
     NavHost(
         navController = navController,
@@ -62,8 +51,7 @@ fun AppNavigation(onLanguageToggle: () -> Unit) {
     ) {
         composable<Screen.Main> {
             MainScreen(
-                rootNavController = navController,
-                onLanguageToggle = onLanguageToggle
+                rootNavController = navController
             )
         }
         composable<Screen.CategorySettings> {
@@ -134,7 +122,6 @@ fun AppNavigation(onLanguageToggle: () -> Unit) {
         composable<Screen.Settings> {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
-                onLanguageToggle = onLanguageToggle,
                 onNavigateToGoals = { navController.navigate(Screen.Goals) },
                 onNavigateToBudgets = { navController.navigate(Screen.Budgets) },
                 onNavigateToCategories = { navController.navigate(Screen.CategorySettings) },

@@ -58,6 +58,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.RadioButton
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -72,7 +74,6 @@ import com.sans.finance.presentation.components.CategoryIcon
 @Composable
 fun SettingsScreen(
     onBack: (() -> Unit)? = null,
-    onLanguageToggle: () -> Unit,
     onNavigateToGoals: () -> Unit,
     onNavigateToBudgets: () -> Unit,
     onNavigateToCategories: () -> Unit,
@@ -90,6 +91,9 @@ fun SettingsScreen(
     val context = LocalContext.current
 
     val listState = rememberLazyListState()
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    var showCurrencyDialog by remember { mutableStateOf(false) }
+    var showRestartDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.syncMessage.value) {
         viewModel.syncMessage.value?.let {
@@ -137,8 +141,8 @@ fun SettingsScreen(
             onNavigateToRecurringExpenses = onNavigateToRecurringExpenses,
             onNavigateToDataManagement = onNavigateToDataManagement,
             exportBackup = { viewModel.exportFullBackup(it) },
-            onLanguageToggle = onLanguageToggle,
-            onCurrencyToggle = { viewModel.toggleCurrency() },
+            onLanguageToggle = { showLanguageDialog = true },
+            onCurrencyToggle = { showCurrencyDialog = true },
             currentLanguage = currentLanguage,
             currentCurrency = viewModel.currentCurrency.value,
             currentBudget = currentBudget,
@@ -147,6 +151,57 @@ fun SettingsScreen(
             onToggleEnabledCurrency = { viewModel.toggleEnabledCurrency(it) },
             isPrivacyModeEnabled = viewModel.isPrivacyModeEnabled.value,
             onTogglePrivacyMode = { viewModel.togglePrivacyMode() }
+        )
+    }
+
+    if (showLanguageDialog) {
+        LanguageSelectionDialog(
+            currentLanguage = currentLanguage,
+            onDismiss = { showLanguageDialog = false },
+            onSelect = { lang ->
+                if (lang != currentLanguage) {
+                    viewModel.setLanguage(lang)
+                    showLanguageDialog = false
+                    showRestartDialog = true
+                } else {
+                    showLanguageDialog = false
+                }
+            }
+        )
+    }
+
+    if (showCurrencyDialog) {
+        CurrencySelectionDialog(
+            currentCurrency = viewModel.currentCurrency.value,
+            enabledCurrencies = viewModel.enabledCurrencies.value,
+            onDismiss = { showCurrencyDialog = false },
+            onSelect = { curr ->
+                if (curr != viewModel.currentCurrency.value) {
+                    viewModel.setCurrency(curr)
+                    showCurrencyDialog = false
+                    showRestartDialog = true
+                } else {
+                    showCurrencyDialog = false
+                }
+            }
+        )
+    }
+
+    if (showRestartDialog) {
+        AlertDialog(
+            onDismissRequest = { showRestartDialog = false },
+            title = { Text("Restart Required") },
+            text = { Text("The app needs to restart to apply the changes correctly.") },
+            confirmButton = {
+                Button(onClick = { viewModel.restartApp(context) }) {
+                    Text("Restart Now")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestartDialog = false }) {
+                    Text("Later")
+                }
+            }
         )
     }
 
@@ -564,11 +619,52 @@ fun SettingsContent(
         }
 
         item {
+            SettingsSectionTitle("Maintenance")
+
             Card(
-                onClick = { viewModel.performMaintenance() },
+                onClick = { viewModel.cleanTags() },
                 modifier = Modifier
-                    .fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                "Clean Orphaned Tags",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "Remove tags not linked to any expense",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null)
+                }
+            }
+
+            Card(
+                onClick = { viewModel.reSyncBalances() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f))
             ) {
                 Row(
                     modifier = Modifier
@@ -581,36 +677,28 @@ fun SettingsContent(
                         Icon(
                             Icons.Default.Sync,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            tint = MaterialTheme.colorScheme.error
                         )
                         Spacer(Modifier.width(16.dp))
                         Column {
                             Text(
-                                "Database Maintenance",
+                                "Re-sync Account Balances",
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                color = MaterialTheme.colorScheme.error,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                "Re-sync balances and clean tags",
+                                "Recalculate from history (May overwrite manual changes)",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
                             )
                         }
                     }
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }
@@ -800,6 +888,100 @@ fun TagEditDialog(
             }
         },
         dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun LanguageSelectionDialog(
+    currentLanguage: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
+) {
+    val languages = listOf(
+        "en" to "English",
+        "id" to "Indonesia",
+        "zh" to "中文 (Chinese)"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.language)) },
+        text = {
+            Column {
+                languages.forEach { (code, name) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(code) }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = currentLanguage.startsWith(code),
+                            onClick = { onSelect(code) }
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(name, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun CurrencySelectionDialog(
+    currentCurrency: String,
+    enabledCurrencies: List<String>,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select Currency") },
+        text = {
+            LazyColumn(modifier = Modifier.height(300.dp)) {
+                items(enabledCurrencies.size) { index ->
+                    val currency = enabledCurrencies[index]
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(currency) }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = currentCurrency == currency,
+                            onClick = { onSelect(currency) }
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            when (currency) {
+                                "USD" -> "US Dollar (USD)"
+                                "IDR" -> "Indonesian Rupiah (IDR)"
+                                "CNY" -> "Chinese Yuan (CNY)"
+                                "EUR" -> "Euro (EUR)"
+                                "GBP" -> "British Pound (GBP)"
+                                "JPY" -> "Japanese Yen (JPY)"
+                                "SGD" -> "Singapore Dollar (SGD)"
+                                else -> currency
+                            },
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }

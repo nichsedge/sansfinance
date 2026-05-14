@@ -34,8 +34,7 @@ import com.sans.finance.presentation.settings.SettingsScreen
 
 @Composable
 fun MainScreen(
-    rootNavController: NavHostController,
-    onLanguageToggle: () -> Unit
+    rootNavController: NavHostController
 ) {
     val navController = rememberNavController()
 
@@ -129,7 +128,6 @@ fun MainScreen(
             }
             composable<Screen.Settings> {
                 SettingsScreen(
-                    onLanguageToggle = onLanguageToggle,
                     onNavigateToGoals = {
                         rootNavController.navigate(Screen.Goals)
                     },

@@ -72,16 +72,43 @@ class AccountViewModel @Inject constructor(
         }
     }
 
-    fun updateAccount(account: AccountEntity, newName: String, newType: String, newBalance: Long) {
+    fun updateAccount(
+        account: AccountEntity,
+        newName: String,
+        newType: String,
+        newBalance: Long,
+        recordAdjustment: Boolean = false
+    ) {
         viewModelScope.launch {
-            accountRepository.updateAccount(
-                account.copy(
-                    name = newName,
-                    type = newType,
-                    balance = newBalance,
-                    updatedAt = System.currentTimeMillis()
+            val diff = newBalance - account.balance
+            if (recordAdjustment && diff != 0L) {
+                val isIncome = diff > 0
+                val amount = if (isIncome) diff else -diff
+                val type = if (isIncome) "INCOME" else "EXPENSE"
+
+                expenseRepository.insertExpense(
+                    com.sans.finance.domain.model.Expense(
+                        date = System.currentTimeMillis(),
+                        title = "Adjustment Balance",
+                        amount = amount,
+                        categoryId = 1L, // Default category
+                        accountId = account.id,
+                        type = type,
+                        currency = account.currency,
+                        details = "Manual balance adjustment for ${account.name}"
+                    )
                 )
-            )
+            } else {
+                // If not recording adjustment, just update the account directly
+                accountRepository.updateAccount(
+                    account.copy(
+                        name = newName,
+                        type = newType,
+                        balance = newBalance,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
+            }
         }
     }
 
