@@ -18,7 +18,6 @@ import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -78,7 +77,6 @@ fun ExpenseListScreen(
     onRecurringExpensesClick: () -> Unit,
     onSearchClick: () -> Unit,
     onExpenseClick: (Long) -> Unit,
-    onDataManagementClick: () -> Unit,
     viewModel: ExpenseListViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -192,21 +190,6 @@ fun ExpenseListScreen(
                                 )
                             }
                         )
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                        DropdownMenuItem(
-                            text = { Text("Import & Export") },
-                            onClick = {
-                                showMenu = false
-                                onDataManagementClick()
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.FileUpload,
-                                    contentDescription = null
-                                )
-                            }
-                        )
-
                     }
                 }
             )

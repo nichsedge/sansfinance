@@ -69,9 +69,6 @@ fun MainScreen(
                     },
                     onWealthForecastingClick = {
                         rootNavController.navigate(Screen.WealthForecasting)
-                    },
-                    onDataManagementClick = {
-                        rootNavController.navigate(Screen.DataManagement)
                     }
                 )
             }
@@ -94,9 +91,6 @@ fun MainScreen(
                     },
                     onExpenseClick = { id ->
                         rootNavController.navigate(Screen.EditExpense(id))
-                    },
-                    onDataManagementClick = {
-                        rootNavController.navigate(Screen.DataManagement)
                     }
                 )
             }
@@ -104,6 +98,9 @@ fun MainScreen(
                 AccountScreen(
                     onStatsClick = {
                         rootNavController.navigate(Screen.AccountStats)
+                    },
+                    onDebtStrategistClick = {
+                        rootNavController.navigate(Screen.DebtStrategist)
                     }
                 )
             }
@@ -120,6 +117,9 @@ fun MainScreen(
                     },
                     onForecastingClick = {
                         rootNavController.navigate(Screen.WealthForecasting)
+                    },
+                    onGoalsClick = {
+                        rootNavController.navigate(Screen.Goals)
                     },
                     onDataManagementClick = {
                         rootNavController.navigate(Screen.DataManagement)

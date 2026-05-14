@@ -40,11 +40,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.core.util.CurrencyFormatter
 import com.sans.finance.data.local.entity.GoalEntity
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,11 +102,11 @@ fun GoalScreen(
                     showAddDialog = false
                     goalToEdit = null
                 },
-                onConfirm = { name, amount, type, targetName ->
+                onConfirm = { name, amount, type, targetName, deadline ->
                     if (goalToEdit != null) {
-                        viewModel.updateGoalDetails(goalToEdit!!, name, amount, type, targetName)
+                        viewModel.updateGoalDetails(goalToEdit!!, name, amount, type, targetName, deadline)
                     } else {
-                        viewModel.addGoal(name, amount, type, targetName)
+                        viewModel.addGoal(name, amount, type, targetName, deadline)
                     }
                     showAddDialog = false
                     goalToEdit = null
@@ -148,6 +152,14 @@ fun GoalItem(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    goal.deadline?.let { deadline ->
+                        Text(
+                            text = "By ${SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date(deadline))}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
                 Row {
                     IconButton(onClick = onEdit) {
@@ -172,7 +184,7 @@ fun GoalItem(
                     .height(8.dp),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                strokeCap = StrokeCap.Round
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -211,7 +223,7 @@ fun AddGoalDialog(
     categories: List<String> = emptyList(),
     assetClasses: List<String> = emptyList(),
     onDismiss: () -> Unit,
-    onConfirm: (String, Double, String, String?) -> Unit
+    onConfirm: (String, Double, String, String?, Long?) -> Unit
 ) {
     val isEditing = goalToEdit != null
     var name by remember(goalToEdit) { mutableStateOf(goalToEdit?.name ?: "") }
@@ -220,6 +232,32 @@ fun AddGoalDialog(
     }
     var targetType by remember(goalToEdit) { mutableStateOf(goalToEdit?.targetType ?: "TOTAL") }
     var targetName by remember(goalToEdit) { mutableStateOf(goalToEdit?.targetName ?: "") }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var deadline by remember(goalToEdit) { mutableStateOf(goalToEdit?.deadline) }
+
+    if (showDatePicker) {
+        val datePickerState = androidx.compose.material3.rememberDatePickerState(
+            initialSelectedDateMillis = deadline ?: System.currentTimeMillis()
+        )
+        androidx.compose.material3.DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    deadline = datePickerState.selectedDateMillis
+                    showDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            androidx.compose.material3.DatePicker(state = datePickerState)
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -239,6 +277,19 @@ fun AddGoalDialog(
                     visualTransformation = com.sans.finance.core.util.ThousandsSeparatorVisualTransformation(),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = deadline?.let { SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date(it)) } ?: "",
+                    onValueChange = {},
+                    label = { Text("Deadline (Optional)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    readOnly = true,
+                    trailingIcon = {
+                        IconButton(onClick = { showDatePicker = true }) {
+                            Icon(Icons.Default.Add, contentDescription = "Select Date")
+                        }
+                    }
                 )
 
                 Text("Track Progress From:", style = MaterialTheme.typography.labelMedium)
@@ -315,7 +366,7 @@ fun AddGoalDialog(
         confirmButton = {
             Button(onClick = {
                 val target = amount.toDoubleOrNull() ?: 0.0
-                onConfirm(name, target, targetType, if (targetType == "TOTAL") null else targetName)
+                onConfirm(name, target, targetType, if (targetType == "TOTAL") null else targetName, deadline)
             }) {
                 Text(if (isEditing) "Save" else "Create")
             }

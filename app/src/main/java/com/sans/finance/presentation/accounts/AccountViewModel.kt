@@ -59,14 +59,23 @@ class AccountViewModel @Inject constructor(
         initialValue = AccountScreenState()
     )
 
-    fun addAccount(name: String, type: String, initialBalance: Long, currency: String = "IDR") {
+    fun addAccount(
+        name: String,
+        type: String,
+        initialBalance: Long,
+        currency: String = "IDR",
+        interestRate: Double = 0.0,
+        minPayment: Long = 0
+    ) {
         viewModelScope.launch {
             accountRepository.insertAccount(
                 AccountEntity(
                     name = name,
                     type = type,
                     balance = initialBalance,
-                    currency = currency
+                    currency = currency,
+                    interestRate = interestRate,
+                    minPayment = minPayment
                 )
             )
         }
@@ -77,7 +86,9 @@ class AccountViewModel @Inject constructor(
         newName: String,
         newType: String,
         newBalance: Long,
-        recordAdjustment: Boolean = false
+        recordAdjustment: Boolean = false,
+        interestRate: Double = 0.0,
+        minPayment: Long = 0
     ) {
         viewModelScope.launch {
             val diff = newBalance - account.balance
@@ -98,6 +109,17 @@ class AccountViewModel @Inject constructor(
                         details = "Manual balance adjustment for ${account.name}"
                     )
                 )
+                // Also update the account details
+                accountRepository.updateAccount(
+                    account.copy(
+                        name = newName,
+                        type = newType,
+                        balance = newBalance,
+                        interestRate = interestRate,
+                        minPayment = minPayment,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
             } else {
                 // If not recording adjustment, just update the account directly
                 accountRepository.updateAccount(
@@ -105,6 +127,8 @@ class AccountViewModel @Inject constructor(
                         name = newName,
                         type = newType,
                         balance = newBalance,
+                        interestRate = interestRate,
+                        minPayment = minPayment,
                         updatedAt = System.currentTimeMillis()
                     )
                 )

@@ -26,7 +26,8 @@ fun CircularGauge(
     size: Dp = 80.dp,
     strokeWidth: Dp = 8.dp,
     color: Color = MaterialTheme.colorScheme.primary,
-    trackColor: Color = MaterialTheme.colorScheme.surfaceVariant
+    trackColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    isPrivacyModeEnabled: Boolean = false
 ) {
     val animatedProgress by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
@@ -54,7 +55,7 @@ fun CircularGauge(
         }
 
         Text(
-            text = "${(progress * 100).toInt()}%",
+            text = if (isPrivacyModeEnabled) "••%" else "${(progress * 100).toInt()}%",
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Black,
             fontSize = (size.value * 0.25f).sp

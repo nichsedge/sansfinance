@@ -28,12 +28,9 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PieChart
-import androidx.compose.material.icons.filled.UploadFile
-import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -82,6 +79,7 @@ import java.util.Locale
 fun PortfolioScreen(
     onDashboardClick: () -> Unit,
     onForecastingClick: () -> Unit,
+    onGoalsClick: () -> Unit,
     onDataManagementClick: () -> Unit,
     viewModel: PortfolioViewModel = hiltViewModel()
 ) {
@@ -90,6 +88,7 @@ fun PortfolioScreen(
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.US) }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    var editingTarget by remember { mutableStateOf<com.sans.finance.domain.model.AssetClassHealth?>(null) }
 
     LaunchedEffect(state.importMessage) {
         state.importMessage?.let {
@@ -172,7 +171,20 @@ fun PortfolioScreen(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Import & Export") },
+                            text = { Text("Savings Goals") },
+                            onClick = {
+                                showMenu = false
+                                onGoalsClick()
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Analytics,
+                                    contentDescription = null
+                                )
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Data Management") },
                             onClick = {
                                 showMenu = false
                                 onDataManagementClick()
@@ -225,6 +237,12 @@ fun PortfolioScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.outlineVariant
                     )
+                    Spacer(Modifier.height(24.dp))
+                    Button(onClick = onDataManagementClick) {
+                        Icon(Icons.Default.FileUpload, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Import Data")
+                    }
                 }
             }
         } else {
@@ -333,6 +351,15 @@ fun PortfolioScreen(
                             }
                         }
 
+                        if (state.goals.isNotEmpty()) {
+                            item {
+                                GoalsSummaryCard(
+                                    goals = state.goals,
+                                    onGoalsClick = onGoalsClick
+                                )
+                            }
+                        }
+
                         state.holdingsByCategory.forEach { (category, holdings) ->
                             item {
                                 val categoryTotal = holdings.sumOf { it.valueIdr }
@@ -352,11 +379,143 @@ fun PortfolioScreen(
                     PortfolioHealthView(
                         healthList = state.healthList,
                         isPrivacyModeEnabled = state.isPrivacyModeEnabled,
+                        onTargetClick = { editingTarget = it },
                         modifier = Modifier
                             .padding(16.dp)
                             .padding(bottom = 80.dp)
                     )
                 }
+            }
+        }
+
+        editingTarget?.let { target ->
+            TargetEditDialog(
+                target = target,
+                onDismiss = { editingTarget = null },
+                onConfirm = { newPercentage ->
+                    viewModel.updateTarget(target.assetClass, newPercentage)
+                    editingTarget = null
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun TargetEditDialog(
+    target: com.sans.finance.domain.model.AssetClassHealth,
+    onDismiss: () -> Unit,
+    onConfirm: (Double) -> Unit
+) {
+    var percentageText by remember { mutableStateOf(target.targetPercentage.toString()) }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Target for ${target.assetClass}") },
+        text = {
+            Column {
+                androidx.compose.material3.OutlinedTextField(
+                    value = percentageText,
+                    onValueChange = { percentageText = it },
+                    label = { Text("Target Percentage (%)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                percentageText.toDoubleOrNull()?.let { onConfirm(it) }
+            }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun GoalsSummaryCard(
+    goals: List<com.sans.finance.presentation.goals.GoalWithProgress>,
+    onGoalsClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        ),
+        onClick = onGoalsClick
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Savings Goals",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+
+            goals.take(3).forEach { goalWithProgress ->
+                val goal = goalWithProgress.goal
+                val progress = (goalWithProgress.currentAmount.toFloat() / goal.targetAmount.toFloat()).coerceIn(0f, 1f)
+
+                Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            goal.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "${(progress * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    androidx.compose.material3.LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
+                }
+            }
+
+            if (goals.size > 3) {
+                Text(
+                    "+ ${goals.size - 3} more goals",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
         }
     }
@@ -441,6 +600,16 @@ fun PortfolioHeader(state: PortfolioScreenState, onForecastingClick: () -> Unit)
                 fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.onSurface
             )
+
+            state.xirr?.let { xirrValue ->
+                Text(
+                    text = "XIRR: ${String.format("%.2f%%", xirrValue * 100)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
 
             state.previousTotalIdr?.let { prev ->
                 val diff = state.totalValueIdr - prev

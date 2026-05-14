@@ -24,8 +24,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.FileUpload
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
@@ -33,8 +31,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DateRangePicker
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -75,11 +71,9 @@ import com.sans.finance.presentation.expense_list.DateRangeFilter
 fun SearchScreen(
     onBack: () -> Unit,
     onExpenseClick: (Long) -> Unit,
-    onDataManagementClick: () -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    var showMenu by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
     var expenseToDelete by remember { mutableStateOf<com.sans.finance.domain.model.Expense?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -161,32 +155,6 @@ fun SearchScreen(
                             Icons.Default.Tune,
                             contentDescription = "Filters",
                             tint = if (isFiltered) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(
-                            Icons.Default.MoreVert,
-                            contentDescription = "More"
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Import & Export") },
-                            onClick = {
-                                showMenu = false
-                                onDataManagementClick()
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.FileUpload,
-                                    contentDescription = null
-                                )
-                            }
                         )
                     }
                 }

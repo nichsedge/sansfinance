@@ -11,6 +11,8 @@ data class AccountEntity(
     val type: String, // "Cash", "Bank", "Credit Card", "Loan", "Investment"
     val balance: Long,
     val currency: String = "IDR",
+    @ColumnInfo(name = "interest_rate") val interestRate: Double = 0.0,
+    @ColumnInfo(name = "min_payment") val minPayment: Long = 0,
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis()
 )

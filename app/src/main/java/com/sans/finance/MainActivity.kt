@@ -84,9 +84,6 @@ fun AppNavigation() {
                 },
                 onExpenseClick = { id ->
                     navController.navigate(Screen.EditExpense(id))
-                },
-                onDataManagementClick = {
-                    navController.navigate(Screen.DataManagement)
                 }
             )
         }
@@ -99,9 +96,6 @@ fun AppNavigation() {
                 onBack = { navController.popBackStack() },
                 onExpenseClick = { id ->
                     navController.navigate(Screen.EditExpense(id))
-                },
-                onDataManagementClick = {
-                    navController.navigate(Screen.DataManagement)
                 }
             )
         }
@@ -145,6 +139,7 @@ fun AppNavigation() {
             com.sans.finance.presentation.portfolio.PortfolioScreen(
                 onDashboardClick = { navController.popBackStack() },
                 onForecastingClick = { navController.navigate(Screen.WealthForecasting) },
+                onGoalsClick = { navController.navigate(Screen.Goals) },
                 onDataManagementClick = { navController.navigate(Screen.DataManagement) }
             )
         }
@@ -161,6 +156,11 @@ fun AppNavigation() {
         }
         composable<Screen.WealthForecasting> {
             com.sans.finance.presentation.forecasting.WealthForecastingScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable<Screen.DebtStrategist> {
+            com.sans.finance.presentation.debt.DebtStrategistScreen(
                 onBack = { navController.popBackStack() }
             )
         }

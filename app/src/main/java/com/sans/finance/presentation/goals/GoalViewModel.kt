@@ -94,7 +94,8 @@ class GoalViewModel @Inject constructor(
         newName: String,
         newTargetAmount: Double,
         newTargetType: String,
-        newTargetName: String?
+        newTargetName: String?,
+        newDeadline: Long? = null
     ) {
         viewModelScope.launch {
             goalRepository.updateGoal(
@@ -103,6 +104,7 @@ class GoalViewModel @Inject constructor(
                     targetAmount = newTargetAmount.toLong(),
                     targetType = newTargetType,
                     targetName = newTargetName,
+                    deadline = newDeadline,
                     updatedAt = System.currentTimeMillis()
                 )
             )

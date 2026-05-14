@@ -42,7 +42,8 @@ import com.sans.finance.domain.model.RiskLevel
 fun PortfolioHealthView(
     healthList: List<AssetClassHealth>,
     isPrivacyModeEnabled: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onTargetClick: (AssetClassHealth) -> Unit = {}
 ) {
     if (healthList.isEmpty()) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -61,7 +62,7 @@ fun PortfolioHealthView(
         }
 
         items(healthList) { health ->
-            AssetHealthCard(health, isPrivacyModeEnabled)
+            AssetHealthCard(health, isPrivacyModeEnabled, onClick = { onTargetClick(health) })
         }
     }
 }
@@ -125,7 +126,7 @@ fun DiversificationSummary(healthList: List<AssetClassHealth>) {
 }
 
 @Composable
-fun AssetHealthCard(health: AssetClassHealth, isPrivacyModeEnabled: Boolean) {
+fun AssetHealthCard(health: AssetClassHealth, isPrivacyModeEnabled: Boolean, onClick: () -> Unit) {
     val statusColor = when (health.status) {
         HealthStatus.HEALTHY -> Color(0xFF4CAF50)
         HealthStatus.OVERWEIGHT -> Color(0xFFF44336)
@@ -139,6 +140,7 @@ fun AssetHealthCard(health: AssetClassHealth, isPrivacyModeEnabled: Boolean) {
     }
 
     Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(

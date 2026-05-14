@@ -34,9 +34,10 @@ import com.sans.finance.data.local.entity.TagEntity
         com.sans.finance.data.local.entity.ExpenseFtsEntity::class,
         com.sans.finance.data.local.entity.ExchangeRateEntity::class,
         GoalEntity::class,
-        BudgetEntity::class
+        BudgetEntity::class,
+        com.sans.finance.data.local.entity.PortfolioTargetEntity::class
     ],
-    version = 25,
+    version = 27,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -49,6 +50,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val budgetDao: com.sans.finance.data.local.dao.BudgetDao
     abstract val currencyDao: com.sans.finance.data.local.dao.CurrencyDao
     abstract val portfolioDao: com.sans.finance.data.local.dao.PortfolioDao
+    abstract val portfolioTargetDao: com.sans.finance.data.local.dao.PortfolioTargetDao
 
     fun checkpoint() {
         val cursor =

@@ -17,11 +17,17 @@ import kotlin.math.pow
 data class ForecastingState(
     val currentNetWorth: Long = 0L,
     val monthlySavings: Long = 0L,
+    val monthlyExpenses: Long = 0L,
     val expectedRoi: Float = 0.07f, // 7% default
     val projectionYears: Int = 20,
     val projections: List<ProjectionPoint> = emptyList(),
     val isLoading: Boolean = true,
-    val currentCurrency: String = "USD"
+    val currentCurrency: String = "USD",
+    val fireNumber: Long = 0L,
+    val yearsToFire: Int? = null,
+    val emergencyFundTarget: Long = 0L,
+    val emergencyFundMonths: Int = 6,
+    val currentEmergencyFund: Long = 0L
 )
 
 data class ProjectionPoint(
@@ -29,23 +35,41 @@ data class ProjectionPoint(
     val value: Long
 )
 
+private data class ForecastingData(
+    val portfolioHistory: List<com.sans.finance.data.local.dao.SnapshotTotal>,
+    val transactions: List<com.sans.finance.domain.model.Expense>,
+    val accounts: List<com.sans.finance.data.local.entity.AccountEntity>
+)
+
 @HiltViewModel
 class WealthForecastingViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val portfolioRepository: PortfolioRepository,
+    private val accountRepository: com.sans.finance.domain.repository.AccountRepository,
     private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
     private val _expectedRoi = MutableStateFlow(0.07f)
     private val _projectionYears = MutableStateFlow(25) // Show up to 25 years
+    private val _emergencyFundMonths = MutableStateFlow(6)
 
     val state = combine(
-        portfolioRepository.getTotalValueOverTime(),
-        expenseRepository.getExpensesBetween(0, Long.MAX_VALUE),
+        combine(
+            portfolioRepository.getTotalValueOverTime(),
+            expenseRepository.getExpensesBetween(0, Long.MAX_VALUE),
+            accountRepository.getAllAccounts()
+        ) { history, txns, accs ->
+            ForecastingData(history, txns, accs)
+        },
         _expectedRoi,
-        _projectionYears
-    ) { portfolioHistory, transactions, roi, years ->
-        val latestPortfolioIdr = portfolioHistory.lastOrNull()?.totalIdr ?: 0.0
+        _projectionYears,
+        _emergencyFundMonths
+    ) { data, roi, years, efMonths ->
+        val history = data.portfolioHistory
+        val txns = data.transactions
+        val accs = data.accounts
+
+        val latestPortfolioIdr = history.lastOrNull()?.totalIdr ?: 0.0
         val currentNetWorth = (latestPortfolioIdr * 100).toLong()
 
         val cal = CalendarUtils.getInstance()
@@ -58,7 +82,13 @@ class WealthForecastingViewModel @Inject constructor(
         cal.add(Calendar.MONTH, 1)
         val nextMonthStart = cal.timeInMillis
 
-        val monthlyTxns = transactions.filter {
+        // Calculate average monthly expenses over last 3 months
+        val threeMonthsAgo = CalendarUtils.getInstance().apply { add(Calendar.MONTH, -3) }.timeInMillis
+        val recentTransactions = txns.filter { it.date >= threeMonthsAgo }
+        val totalRecentExpenses = recentTransactions.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+        val avgMonthlyExpense = if (totalRecentExpenses > 0) totalRecentExpenses / 3 else 0L
+
+        val monthlyTxns = txns.filter {
             it.date >= monthStart && it.date < nextMonthStart && (!it.isInstallment || it.isInstallmentPayment)
         }
         val monthlyIncome = monthlyTxns.filter { it.type == "INCOME" }.sumOf { it.amount }
@@ -67,14 +97,26 @@ class WealthForecastingViewModel @Inject constructor(
 
         val projections = calculateProjections(currentNetWorth, monthlySavings, roi, years)
 
+        val fireNumber = avgMonthlyExpense * 12 * 25
+        val yearsToFire = projections.find { it.value >= fireNumber }?.year
+
+        val emergencyFundTarget = avgMonthlyExpense * efMonths
+        val currentEmergencyFund = accs.filter { it.type == "Cash" || it.type == "Bank" }.sumOf { it.balance }
+
         ForecastingState(
             currentNetWorth = currentNetWorth,
             monthlySavings = monthlySavings,
+            monthlyExpenses = avgMonthlyExpense,
             expectedRoi = roi,
             projectionYears = years,
             projections = projections,
             isLoading = false,
-            currentCurrency = localeManager.getCurrency()
+            currentCurrency = localeManager.getCurrency(),
+            fireNumber = fireNumber,
+            yearsToFire = yearsToFire,
+            emergencyFundTarget = emergencyFundTarget,
+            emergencyFundMonths = efMonths,
+            currentEmergencyFund = currentEmergencyFund
         )
     }.stateIn(
         scope = viewModelScope,

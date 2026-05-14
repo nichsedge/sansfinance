@@ -24,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PieChart
@@ -80,7 +79,6 @@ fun DashboardScreen(
     onRecurringExpensesClick: () -> Unit,
     onInstallmentsClick: () -> Unit,
     onWealthForecastingClick: () -> Unit,
-    onDataManagementClick: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -127,20 +125,6 @@ fun DashboardScreen(
                             leadingIcon = {
                                 Icon(
                                     Icons.Default.PieChart,
-                                    contentDescription = null
-                                )
-                            }
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                        DropdownMenuItem(
-                            text = { Text("Import & Export") },
-                            onClick = {
-                                showMenu = false
-                                onDataManagementClick()
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.FileUpload,
                                     contentDescription = null
                                 )
                             }
@@ -198,6 +182,7 @@ fun DashboardScreen(
                 MonthlyCashFlowCard(
                     income = state.monthlyIncome,
                     expense = state.monthlyExpense,
+                    cashFlow = state.monthlyCashFlow,
                     savingsRate = state.monthlySavingsRate,
                     currencyCode = state.currentCurrency,
                     isPrivacyModeEnabled = state.isPrivacyModeEnabled
@@ -635,6 +620,7 @@ fun WealthDistributionCard(
 fun MonthlyCashFlowCard(
     income: Long,
     expense: Long,
+    cashFlow: Long,
     savingsRate: Float,
     currencyCode: String,
     isPrivacyModeEnabled: Boolean
@@ -650,7 +636,7 @@ fun MonthlyCashFlowCard(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                "Monthly Cash Flow",
+                "Monthly Summary",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -679,40 +665,52 @@ fun MonthlyCashFlowCard(
                     modifier = Modifier.weight(1f)
                 )
             }
-            if (income > 0) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                            MaterialTheme.shapes.large
-                        )
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Savings Rate",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            if (savingsRate >= 0.2f) "Excellent progress!"
-                            else if (savingsRate >= 0.1f) "Good, keep it up."
-                            else "Try to save more.",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    com.sans.finance.presentation.components.CircularGauge(
-                        progress = savingsRate,
-                        size = 56.dp,
-                        color = if (savingsRate >= 0.2f) MaterialTheme.colorScheme.tertiary
-                        else if (savingsRate >= 0.1f) Color(0xFFFFC107)
-                        else MaterialTheme.colorScheme.error
+
+            // Cash Flow and Savings Rate Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        MaterialTheme.shapes.large
+                    )
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Cash Flow",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold
+                    )
+                    PrivacyText(
+                        amount = cashFlow,
+                        currencyCode = currencyCode,
+                        isVisible = !isPrivacyModeEnabled,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Black,
+                        color = if (cashFlow >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Savings Rate",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold
                     )
                 }
+
+                com.sans.finance.presentation.components.CircularGauge(
+                    progress = savingsRate,
+                    size = 80.dp,
+                    strokeWidth = 10.dp,
+                    color = if (savingsRate >= 0.2f) MaterialTheme.colorScheme.tertiary
+                    else if (savingsRate >= 0f) Color(0xFFFFC107)
+                    else MaterialTheme.colorScheme.error,
+                    isPrivacyModeEnabled = isPrivacyModeEnabled
+                )
             }
         }
     }

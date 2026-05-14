@@ -180,6 +180,64 @@ fun TransactionStatsScreen(
                     )
                 }
 
+                // Cash Flow and Savings Rate
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        shape = MaterialTheme.shapes.large,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                "Cash Flow",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                CurrencyFormatter.formatAmount(state.cashFlow, state.currentCurrency),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (state.cashFlow >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        shape = MaterialTheme.shapes.large,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Savings Rate",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            com.sans.finance.presentation.components.CircularGauge(
+                                progress = state.savingsRate.toFloat(),
+                                size = 48.dp,
+                                strokeWidth = 6.dp,
+                                color = if (state.savingsRate >= 0.2) MaterialTheme.colorScheme.tertiary
+                                else if (state.savingsRate >= 0) Color(0xFFFFC107)
+                                else MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+
                 if (state.isLoading) {
                     Box(
                         Modifier

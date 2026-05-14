@@ -63,10 +63,20 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.data.local.entity.AccountEntity
 import com.sans.finance.presentation.components.PrivacyText
 
+data class AccountUpdateParams(
+    val account: AccountEntity,
+    val name: String,
+    val type: String,
+    val balance: Long,
+    val interestRate: Double,
+    val minPayment: Long
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(
     onStatsClick: () -> Unit,
+    onDebtStrategistClick: () -> Unit = {},
     viewModel: AccountViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -74,7 +84,7 @@ fun AccountScreen(
     var accountToEdit by remember { mutableStateOf<AccountEntity?>(null) }
     var showMenu by remember { mutableStateOf(false) }
     var showAdjustmentDialog by remember { mutableStateOf(false) }
-    var pendingUpdate by remember { mutableStateOf<Triple<AccountEntity, String, Long>?>(null) }
+    var pendingUpdateData by remember { mutableStateOf<AccountUpdateParams?>(null) }
 
     Scaffold(
         topBar = {
@@ -103,6 +113,19 @@ fun AccountScreen(
                             leadingIcon = {
                                 Icon(
                                     Icons.Default.Insights,
+                                    contentDescription = null
+                                )
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Debt Strategist") },
+                            onClick = {
+                                showMenu = false
+                                onDebtStrategistClick()
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Payments,
                                     contentDescription = null
                                 )
                             }
@@ -153,6 +176,12 @@ fun AccountScreen(
             var type by remember(accountToEdit) { mutableStateOf(accountToEdit?.type ?: "Bank") }
             var balance by remember(accountToEdit) {
                 mutableStateOf(accountToEdit?.balance?.let { (it / 100).toString() } ?: "")
+            }
+            var interestRate by remember(accountToEdit) {
+                mutableStateOf(accountToEdit?.interestRate?.toString() ?: "0.0")
+            }
+            var minPayment by remember(accountToEdit) {
+                mutableStateOf(accountToEdit?.minPayment?.let { (it / 100).toString() } ?: "0")
             }
             var expanded by remember { mutableStateOf(false) }
 
@@ -241,25 +270,69 @@ fun AccountScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.large
                         )
+
+                        if (type == "Loan" || type == "Credit Card") {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                OutlinedTextField(
+                                    value = interestRate,
+                                    onValueChange = { interestRate = it },
+                                    label = { Text("Interest Rate (%)") },
+                                    modifier = Modifier.weight(1f),
+                                    shape = MaterialTheme.shapes.large,
+                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                                    )
+                                )
+                                OutlinedTextField(
+                                    value = minPayment,
+                                    onValueChange = { minPayment = it },
+                                    label = { Text("Min. Payment") },
+                                    modifier = Modifier.weight(1f),
+                                    shape = MaterialTheme.shapes.large,
+                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                    )
+                                )
+                            }
+                        }
                     }
                 },
                 confirmButton = {
                     Button(
                         onClick = {
                             val parsedBalance = balance.toLongOrNull()?.times(100) ?: 0L
+                            val parsedInterest = interestRate.toDoubleOrNull() ?: 0.0
+                            val parsedMinPayment = minPayment.toLongOrNull()?.times(100) ?: 0L
+
                             if (isEditing) {
                                 if (parsedBalance != accountToEdit!!.balance) {
-                                    pendingUpdate = Triple(accountToEdit!!, name, parsedBalance)
+                                    pendingUpdateData = AccountUpdateParams(
+                                        account = accountToEdit!!,
+                                        name = name,
+                                        type = type,
+                                        balance = parsedBalance,
+                                        interestRate = parsedInterest,
+                                        minPayment = parsedMinPayment
+                                    )
                                     showAdjustmentDialog = true
                                 } else {
-                                    viewModel.updateAccount(accountToEdit!!, name, type, parsedBalance)
+                                    viewModel.updateAccount(
+                                        accountToEdit!!,
+                                        name,
+                                        type,
+                                        parsedBalance,
+                                        interestRate = parsedInterest,
+                                        minPayment = parsedMinPayment
+                                    )
                                 }
                             } else {
                                 viewModel.addAccount(
                                     name,
                                     type,
                                     parsedBalance,
-                                    state.currentCurrency
+                                    state.currentCurrency,
+                                    interestRate = parsedInterest,
+                                    minPayment = parsedMinPayment
                                 )
                             }
                             showAddDialog = false
@@ -297,26 +370,26 @@ fun AccountScreen(
             )
         }
 
-        if (showAdjustmentDialog && pendingUpdate != null) {
-            val (account, newName, newBalance) = pendingUpdate!!
-            val diff = newBalance - account.balance
+        if (showAdjustmentDialog && pendingUpdateData != null) {
+            val data = pendingUpdateData!!
+            val diff = data.balance - data.account.balance
             val isIncrease = diff > 0
             val absDiff = if (diff > 0) diff else -diff
 
             AlertDialog(
                 onDismissRequest = {
                     showAdjustmentDialog = false
-                    pendingUpdate = null
+                    pendingUpdateData = null
                 },
                 title = { Text("Balance Adjustment", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("You changed the balance of ${account.name}.")
+                        Text("You changed the balance of ${data.account.name}.")
                         Text(
                             "Difference: ${if (isIncrease) "+" else "-"}${
                                 com.sans.finance.core.util.CurrencyFormatter.formatAmount(
                                     absDiff,
-                                    account.currency
+                                    data.account.currency
                                 )
                             }",
                             fontWeight = FontWeight.Bold,
@@ -330,14 +403,16 @@ fun AccountScreen(
                     Button(
                         onClick = {
                             viewModel.updateAccount(
-                                account,
-                                newName,
-                                account.type,
-                                newBalance,
-                                recordAdjustment = true
+                                data.account,
+                                data.name,
+                                data.type,
+                                data.balance,
+                                recordAdjustment = true,
+                                interestRate = data.interestRate,
+                                minPayment = data.minPayment
                             )
                             showAdjustmentDialog = false
-                            pendingUpdate = null
+                            pendingUpdateData = null
                         }
                     ) {
                         Text("Record as ${if (isIncrease) "Income" else "Expense"}")
@@ -347,14 +422,16 @@ fun AccountScreen(
                     TextButton(
                         onClick = {
                             viewModel.updateAccount(
-                                account,
-                                newName,
-                                account.type,
-                                newBalance,
-                                recordAdjustment = false
+                                data.account,
+                                data.name,
+                                data.type,
+                                data.balance,
+                                recordAdjustment = false,
+                                interestRate = data.interestRate,
+                                minPayment = data.minPayment
                             )
                             showAdjustmentDialog = false
-                            pendingUpdate = null
+                            pendingUpdateData = null
                         }
                     ) {
                         Text("Just Update Balance")

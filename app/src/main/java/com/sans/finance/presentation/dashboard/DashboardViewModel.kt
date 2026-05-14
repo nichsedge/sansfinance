@@ -31,6 +31,7 @@ data class DashboardState(
     // Monthly cash flow
     val monthlyIncome: Long = 0L,
     val monthlyExpense: Long = 0L,
+    val monthlyCashFlow: Long = 0L,
     val monthlySavingsRate: Float = 0f,
     // Global budget
     val globalBudget: Long = 0L,
@@ -183,11 +184,10 @@ class DashboardViewModel @Inject constructor(
             .sumOf { convertToBase(it.amount, it.currency) }
         val monthlyExpense = monthlyTxns.filter { it.type == "EXPENSE" }
             .sumOf { convertToBase(it.amount, it.currency) }
+        val monthlyCashFlow = monthlyIncome - monthlyExpense
         val savingsRate =
-            if (monthlyIncome > 0) ((monthlyIncome - monthlyExpense).toFloat() / monthlyIncome.toFloat()).coerceIn(
-                0f,
-                1f
-            )
+            if (monthlyIncome > 0) ((monthlyIncome - monthlyExpense).toFloat() / monthlyIncome.toFloat())
+            else if (monthlyExpense > 0) -1f // 100% negative if there are expenses but no income
             else 0f
 
         val now = System.currentTimeMillis()
@@ -284,6 +284,7 @@ class DashboardViewModel @Inject constructor(
             isLoading = false,
             monthlyIncome = monthlyIncome,
             monthlyExpense = monthlyExpense,
+            monthlyCashFlow = monthlyCashFlow,
             monthlySavingsRate = savingsRate,
             globalBudget = budgets.find { b -> b.categoryId == null }?.amount ?: 0L,
             globalSpent = monthlyExpense,

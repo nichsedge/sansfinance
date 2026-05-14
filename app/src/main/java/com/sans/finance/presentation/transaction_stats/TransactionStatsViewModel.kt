@@ -36,6 +36,8 @@ data class TransactionStatsState(
     val breakdown: List<CategorySpent> = emptyList(),
     val totalIncomeForPeriod: Long = 0L,
     val totalExpenseForPeriod: Long = 0L,
+    val cashFlow: Long = 0L,
+    val savingsRate: Double = 0.0,
     val selectedCategory: CategorySpent? = null,
     val categoryTrend: List<DaySpent> = emptyList(),
     val categoryTransactions: List<Expense> = emptyList(),
@@ -164,11 +166,24 @@ class TransactionStatsViewModel @Inject constructor(
                 return (amount / baseRate).toLong()
             }
 
+            val incomeConverted = convertFromIdr(income ?: 0L)
+            val expenseConverted = convertFromIdr(expense ?: 0L)
+            val cashFlow = incomeConverted - expenseConverted
+            val savingsRate = if (incomeConverted > 0) {
+                (incomeConverted - expenseConverted).toDouble() / incomeConverted.toDouble()
+            } else if (expenseConverted > 0) {
+                -1.0
+            } else {
+                0.0
+            }
+
             _state.update {
                 it.copy(
                     breakdown = breakdown.map { b -> b.copy(totalAmount = convertFromIdr(b.totalAmount)) },
-                    totalIncomeForPeriod = convertFromIdr(income ?: 0L),
-                    totalExpenseForPeriod = convertFromIdr(expense ?: 0L),
+                    totalIncomeForPeriod = incomeConverted,
+                    totalExpenseForPeriod = expenseConverted,
+                    cashFlow = cashFlow,
+                    savingsRate = savingsRate,
                     categoryTransactions = details.first,
                     categoryTrend = details.second.map { d -> d.copy(amount = convertFromIdr(d.amount)) },
                     isLoading = false

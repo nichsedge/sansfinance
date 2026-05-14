@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -191,6 +192,57 @@ fun WealthForecastingScreen(
                         projections = state.projections,
                         currencyCode = state.currentCurrency
                     )
+                }
+            }
+
+            // FIRE Index
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
+                        Spacer(Modifier.width(8.dp))
+                        Text("FIRE INDEX", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Black)
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column {
+                            Text("Target (25x Expenses)", style = MaterialTheme.typography.labelSmall)
+                            Text(CurrencyFormatter.formatAmountCompact(state.fireNumber, state.currentCurrency), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("Years to Freedom", style = MaterialTheme.typography.labelSmall)
+                            Text(state.yearsToFire?.let { "$it Years" } ?: "∞", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.tertiary)
+                        }
+                    }
+                }
+            }
+
+            // Emergency Fund (Sinking Fund)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text("Emergency Fund (Sinking Fund)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Black)
+                    Spacer(Modifier.height(12.dp))
+                    val progress = if (state.emergencyFundTarget > 0) (state.currentEmergencyFund.toFloat() / state.emergencyFundTarget).coerceIn(0f, 1f) else 0f
+                    androidx.compose.material3.LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(MaterialTheme.shapes.small),
+                        color = if (progress >= 1f) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("${(progress * 100).toInt()}% Covered", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Text(
+                            "${CurrencyFormatter.formatAmountCompact(state.currentEmergencyFund, state.currentCurrency)} / ${CurrencyFormatter.formatAmountCompact(state.emergencyFundTarget, state.currentCurrency)}",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
                 }
             }
 
