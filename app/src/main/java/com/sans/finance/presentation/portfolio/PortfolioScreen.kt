@@ -79,8 +79,6 @@ import java.util.Locale
 fun PortfolioScreen(
     onDashboardClick: () -> Unit,
     onForecastingClick: () -> Unit,
-    onGoalsClick: () -> Unit,
-    onDataManagementClick: () -> Unit,
     viewModel: PortfolioViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -170,32 +168,7 @@ fun PortfolioScreen(
                                 )
                             }
                         )
-                        DropdownMenuItem(
-                            text = { Text("Savings Goals") },
-                            onClick = {
-                                showMenu = false
-                                onGoalsClick()
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Analytics,
-                                    contentDescription = null
-                                )
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Data Management") },
-                            onClick = {
-                                showMenu = false
-                                onDataManagementClick()
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.FileUpload,
-                                    contentDescription = null
-                                )
-                            }
-                        )
+
                     }
                 }
             )
@@ -237,12 +210,7 @@ fun PortfolioScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.outlineVariant
                     )
-                    Spacer(Modifier.height(24.dp))
-                    Button(onClick = onDataManagementClick) {
-                        Icon(Icons.Default.FileUpload, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Import Data")
-                    }
+
                 }
             }
         } else {
@@ -351,14 +319,7 @@ fun PortfolioScreen(
                             }
                         }
 
-                        if (state.goals.isNotEmpty()) {
-                            item {
-                                GoalsSummaryCard(
-                                    goals = state.goals,
-                                    onGoalsClick = onGoalsClick
-                                )
-                            }
-                        }
+
 
                         state.holdingsByCategory.forEach { (category, holdings) ->
                             item {
@@ -373,7 +334,7 @@ fun PortfolioScreen(
                             }
                         }
 
-                        item { Spacer(modifier = Modifier.height(64.dp)) }
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
                     }
                 } else {
                     PortfolioHealthView(
@@ -382,7 +343,6 @@ fun PortfolioScreen(
                         onTargetClick = { editingTarget = it },
                         modifier = Modifier
                             .padding(16.dp)
-                            .padding(bottom = 80.dp)
                     )
                 }
             }
@@ -440,86 +400,7 @@ fun TargetEditDialog(
     )
 }
 
-@Composable
-fun GoalsSummaryCard(
-    goals: List<com.sans.finance.presentation.goals.GoalWithProgress>,
-    onGoalsClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-        ),
-        onClick = onGoalsClick
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Savings Goals",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-            Spacer(Modifier.height(16.dp))
 
-            goals.take(3).forEach { goalWithProgress ->
-                val goal = goalWithProgress.goal
-                val progress = (goalWithProgress.currentAmount.toFloat() / goal.targetAmount.toFloat()).coerceIn(0f, 1f)
-
-                Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            goal.name,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "${(progress * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    androidx.compose.material3.LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
-                    )
-                }
-            }
-
-            if (goals.size > 3) {
-                Text(
-                    "+ ${goals.size - 3} more goals",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun AssetCategoryGroup(

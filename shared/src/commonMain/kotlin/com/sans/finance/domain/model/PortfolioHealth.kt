@@ -31,7 +31,7 @@ enum class HealthStatus {
 
 object PortfolioHealthDefaults {
     val targets = listOf(
-        AssetClassTarget("Cash & Stables", 15.0, "Emergency fund and liquidity", RiskLevel.LOW),
+        AssetClassTarget("Cash & Equivalents", 15.0, "Emergency fund and liquidity", RiskLevel.LOW),
         AssetClassTarget("Equities", 50.0, "Stocks for long-term growth", RiskLevel.HIGH),
         AssetClassTarget("Fixed Income", 20.0, "Bonds and stable yield assets", RiskLevel.MEDIUM),
         AssetClassTarget("Crypto", 10.0, "High-risk speculative assets", RiskLevel.VERY_HIGH),

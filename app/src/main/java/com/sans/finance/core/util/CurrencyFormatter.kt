@@ -8,9 +8,13 @@ import kotlin.math.ceil
 object CurrencyFormatter {
     private fun getFormatter(currencyCode: String = "USD"): NumberFormat {
         val locale = when (currencyCode) {
-            "IDR" -> Locale.Builder().setLanguage("id").setRegion("ID").build()
-            "CNY" -> Locale.SIMPLIFIED_CHINESE
+            "IDR" -> Locale("id", "ID")
+            "CNY" -> Locale.CHINA
             "USD" -> Locale.US
+            "EUR" -> Locale.GERMANY
+            "GBP" -> Locale.UK
+            "JPY" -> Locale.JAPAN
+            "KRW" -> Locale.KOREA
             else -> Locale.getDefault()
         }
         val formatter = NumberFormat.getCurrencyInstance(locale)
@@ -33,12 +37,12 @@ object CurrencyFormatter {
         val amount = ceil(amountInCents / 100.0).toLong()
         val formatter = getFormatter(currencyCode)
 
-        // This will include the currency symbol and thousands separator but NO decimal part.
+        // Include currency symbol and thousands separator
         var formatted = formatter.format(amount)
 
-        // Ensure IDR uses Rp
-        if (currencyCode == "IDR" && formatted.contains("IDR")) {
-            formatted = formatted.replace("IDR", "Rp")
+        // Special case for IDR if it still shows IDR instead of Rp in some locales
+        if (currencyCode == "IDR" && !formatted.contains("Rp")) {
+            formatted = formatted.replace("IDR", "Rp").replace("ID", "Rp")
         }
 
         return formatted
@@ -49,14 +53,21 @@ object CurrencyFormatter {
      */
     fun formatAmountCompact(amountInCents: Long, currencyCode: String = "USD"): String {
         val amount = ceil(amountInCents / 100.0).toLong()
-        val symbol = when (currencyCode) {
-            "IDR" -> "Rp"
-            "USD" -> "$"
-            else -> try {
-                java.util.Currency.getInstance(currencyCode).getSymbol(Locale.getDefault())
-            } catch (e: Exception) {
-                currencyCode
+        val symbol = try {
+            val currency = java.util.Currency.getInstance(currencyCode)
+            val displayLocale = when (currencyCode) {
+                "IDR" -> Locale("id", "ID")
+                "CNY" -> Locale.CHINA
+                "USD" -> Locale.US
+                "EUR" -> Locale.GERMANY
+                "GBP" -> Locale.UK
+                "JPY" -> Locale.JAPAN
+                else -> Locale.getDefault()
             }
+            val sym = currency.getSymbol(displayLocale)
+            if (currencyCode == "IDR" && sym == "IDR") "Rp" else sym
+        } catch (e: Exception) {
+            currencyCode
         }
 
         if (amount == 0L) return "${symbol}0"

@@ -117,12 +117,6 @@ fun MainScreen(
                     },
                     onForecastingClick = {
                         rootNavController.navigate(Screen.WealthForecasting)
-                    },
-                    onGoalsClick = {
-                        rootNavController.navigate(Screen.Goals)
-                    },
-                    onDataManagementClick = {
-                        rootNavController.navigate(Screen.DataManagement)
                     }
                 )
             }

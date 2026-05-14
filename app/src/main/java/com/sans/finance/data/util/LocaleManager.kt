@@ -14,6 +14,32 @@ class LocaleManager @Inject constructor(
     private val prefs: SharedPreferences =
         context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
 
+    companion object {
+        val SUPPORTED_LANGUAGES = listOf(
+            "en" to "English",
+            "id" to "Indonesia",
+            "zh" to "中文 (Chinese)",
+            "ja" to "日本語 (Japanese)",
+            "ko" to "한국어 (Korean)",
+            "fr" to "Français (French)",
+            "de" to "Deutsch (German)",
+            "es" to "Español (Spanish)",
+            "ru" to "Русский (Russian)"
+        )
+
+        val COMMON_CURRENCIES = listOf(
+            "USD", "IDR", "CNY", "EUR", "GBP", "JPY", "SGD", "AUD", "CAD", "CHF", "HKD", "KRW", "MYR", "PHP", "THB", "VND"
+        )
+
+        fun getAllAvailableCurrencies(): List<String> {
+            return try {
+                java.util.Currency.getAvailableCurrencies().map { it.currencyCode }.sorted()
+            } catch (e: Exception) {
+                COMMON_CURRENCIES
+            }
+        }
+    }
+
     fun setLocale(language: String) {
         prefs.edit().putString("language", language).apply()
 
@@ -47,7 +73,8 @@ class LocaleManager @Inject constructor(
     }
 
     fun getEnabledCurrencies(): List<String> {
-        val currencies = prefs.getString("enabled_currencies", "USD,IDR,CNY") ?: "USD,IDR,CNY"
+        val default = COMMON_CURRENCIES.take(6).joinToString(",")
+        val currencies = prefs.getString("enabled_currencies", default) ?: default
         return currencies.split(",").filter { it.isNotBlank() }
     }
 

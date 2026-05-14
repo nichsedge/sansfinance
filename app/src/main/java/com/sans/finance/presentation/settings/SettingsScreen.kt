@@ -64,6 +64,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.R
 import com.sans.finance.domain.model.Category
@@ -94,6 +96,8 @@ fun SettingsScreen(
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
     var showRestartDialog by remember { mutableStateOf(false) }
+    var showSyncConfirmation by remember { mutableStateOf(false) }
+    var showAllCurrenciesDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.syncMessage.value) {
         viewModel.syncMessage.value?.let {
@@ -147,16 +151,30 @@ fun SettingsScreen(
             currentCurrency = viewModel.currentCurrency.value,
             currentBudget = currentBudget,
             isLoading = isLoading,
+            isPrivacyModeEnabled = viewModel.isPrivacyModeEnabled.value,
+            onTogglePrivacyMode = { viewModel.togglePrivacyMode() },
+            onReSync = { showSyncConfirmation = true },
+            supportedLanguages = viewModel.supportedLanguages,
+            commonCurrencies = viewModel.commonCurrencies,
             enabledCurrencies = viewModel.enabledCurrencies.value,
             onToggleEnabledCurrency = { viewModel.toggleEnabledCurrency(it) },
-            isPrivacyModeEnabled = viewModel.isPrivacyModeEnabled.value,
-            onTogglePrivacyMode = { viewModel.togglePrivacyMode() }
+            onShowAllCurrencies = { showAllCurrenciesDialog = true }
+        )
+    }
+
+    if (showAllCurrenciesDialog) {
+        AllCurrenciesDialog(
+            allCurrencies = viewModel.allAvailableCurrencies,
+            enabledCurrencies = viewModel.enabledCurrencies.value,
+            onDismiss = { showAllCurrenciesDialog = false },
+            onToggle = { viewModel.toggleEnabledCurrency(it) }
         )
     }
 
     if (showLanguageDialog) {
         LanguageSelectionDialog(
             currentLanguage = currentLanguage,
+            supportedLanguages = viewModel.supportedLanguages,
             onDismiss = { showLanguageDialog = false },
             onSelect = { lang ->
                 if (lang != currentLanguage) {
@@ -205,6 +223,32 @@ fun SettingsScreen(
         )
     }
 
+    if (showSyncConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showSyncConfirmation = false },
+            title = { Text("Re-sync Balances?") },
+            text = { Text("This will recalculate all account balances from your transaction history. Manual adjustments may be overwritten. Continue?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.reSyncBalances()
+                        showSyncConfirmation = false
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Re-sync")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSyncConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -226,10 +270,14 @@ fun SettingsContent(
     currentCurrency: String,
     currentBudget: Long,
     isLoading: Boolean,
+    isPrivacyModeEnabled: Boolean,
+    onTogglePrivacyMode: () -> Unit,
+    onReSync: () -> Unit,
+    supportedLanguages: List<Pair<String, String>>,
+    commonCurrencies: List<String>,
     enabledCurrencies: List<String>,
     onToggleEnabledCurrency: (String) -> Unit,
-    isPrivacyModeEnabled: Boolean,
-    onTogglePrivacyMode: () -> Unit
+    onShowAllCurrencies: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -239,77 +287,35 @@ fun SettingsContent(
             .fillMaxSize()
             .padding(paddingValues),
         contentPadding = PaddingValues(12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-
-
         // Language Section
         item {
             SettingsSectionTitle(stringResource(R.string.language))
-            Card(
+            SettingsClickableCard(
                 onClick = onLanguageToggle,
-                modifier = Modifier
-                    .fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Translate, contentDescription = null)
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            when {
-                                currentLanguage.startsWith("en") -> "English"; currentLanguage.startsWith(
-                                "id"
-                            ) -> "Indonesia"; else -> "中文 (Chinese)"
-                            },
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                    Icon(Icons.Default.ChevronRight, contentDescription = null)
-                }
-            }
+                icon = Icons.Default.Translate,
+                title = supportedLanguages.find { it.first == currentLanguage.take(2) }?.second
+                    ?: supportedLanguages.find { it.first == "en" }?.second
+                    ?: currentLanguage
+            )
         }
 
         // Currency Section
         item {
             SettingsSectionTitle("Currency")
-            Card(
+            SettingsClickableCard(
                 onClick = onCurrencyToggle,
-                modifier = Modifier
-                    .fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.ShoppingCart,
-                            contentDescription = null
-                        ) // Using ShoppingCart as placeholder or find a better one
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            when (currentCurrency) {
-                                "USD" -> "US Dollar (USD)"; "IDR" -> "Indonesian Rupiah (IDR)"; "CNY" -> "Chinese Yuan (CNY)"; else -> currentCurrency
-                            },
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                    Icon(Icons.Default.ChevronRight, contentDescription = null)
+                icon = Icons.Default.ShoppingCart,
+                title = try {
+                    val curr = java.util.Currency.getInstance(currentCurrency)
+                    "${curr.displayName} (${curr.currencyCode})"
+                } catch (e: Exception) {
+                    currentCurrency
                 }
-            }
+            )
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
                 "Quick Selection Options",
                 style = MaterialTheme.typography.labelSmall,
@@ -322,385 +328,244 @@ fun SettingsContent(
                     .padding(horizontal = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val allOptions = listOf("USD", "IDR", "EUR", "GBP", "JPY", "SGD")
-                allOptions.forEach { curr ->
+                commonCurrencies.forEach { curr ->
                     val isEnabled = enabledCurrencies.contains(curr)
                     FilterChip(
                         selected = isEnabled,
                         onClick = { onToggleEnabledCurrency(curr) },
-                        label = { Text(curr) },
+                        label = { Text(curr, style = MaterialTheme.typography.labelSmall) },
                         leadingIcon = if (isEnabled) {
                             {
                                 Icon(
                                     imageVector = Icons.Default.Flag,
                                     contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
                             }
                         } else null
                     )
                 }
+
+                FilterChip(
+                    selected = false,
+                    onClick = onShowAllCurrencies,
+                    label = { Text("More...", style = MaterialTheme.typography.labelSmall) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                )
             }
         }
 
         item {
-            Spacer(Modifier.height(16.dp))
             SettingsSectionTitle("Features")
-
-            Surface(
+            SettingsClickableCard(
                 onClick = onGoals,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 1.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Flag,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Savings Goals")
-                    }
-                }
-            }
+                icon = Icons.Default.Flag,
+                title = "Savings Goals",
+                subtitle = "Track your financial targets"
+            )
+        }
 
-            Surface(
+        item {
+            SettingsClickableCard(
                 onClick = onBudget,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 1.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.ShoppingCart,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Monthly Budget")
-                        Text(
-                            if (currentBudget > 0L) com.sans.finance.core.util.CurrencyFormatter.formatAmount(
-                                currentBudget, currentCurrency
-                            ) else "Not Set",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
+                icon = Icons.Default.ShoppingCart,
+                title = "Monthly Budget",
+                subtitle = if (currentBudget > 0L) {
+                    com.sans.finance.core.util.CurrencyFormatter.formatAmount(currentBudget, currentCurrency)
+                } else "Not Set"
+            )
+        }
 
-            Surface(
+        item {
+            SettingsClickableCard(
                 onClick = onNavigateToRecurringExpenses,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 1.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Sync,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.recurring_expenses))
-                        Text(
-                            "Manage subscriptions and fixed costs",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
+                icon = Icons.Default.Sync,
+                title = stringResource(R.string.recurring_expenses),
+                subtitle = "Manage subscriptions and fixed costs"
+            )
         }
 
         item {
-            Surface(
+            SettingsClickableCard(
                 onClick = onNavigateToCategories,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 1.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.ChevronRight, // Could change icon later
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(16.dp))
-                    Text(stringResource(R.string.categories))
-                }
-            }
+                icon = Icons.Default.ChevronRight,
+                title = stringResource(R.string.categories)
+            )
         }
 
         item {
-            Surface(
+            SettingsClickableCard(
                 onClick = onNavigateToTags,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 1.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(16.dp))
-                    Text(stringResource(R.string.tags))
-                }
-            }
+                icon = Icons.Default.ChevronRight,
+                title = stringResource(R.string.tags)
+            )
         }
 
         // Security Section
         item {
             SettingsSectionTitle("Security")
-            Card(
-                onClick = onTogglePrivacyMode,
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-
-                        Column {
-                            Text("Privacy Mode", style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                if (isPrivacyModeEnabled) "Hiding sensitive balances" else "Showing all balances",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    androidx.compose.material3.Switch(
-                        checked = isPrivacyModeEnabled,
-                        onCheckedChange = { onTogglePrivacyMode() }
-                    )
-                }
-            }
+            SettingsToggleCard(
+                checked = isPrivacyModeEnabled,
+                onCheckedChange = { onTogglePrivacyMode() },
+                title = "Privacy Mode",
+                subtitle = if (isPrivacyModeEnabled) "Hiding sensitive balances" else "Showing all balances"
+            )
         }
 
         // Data Management Section
         item {
             SettingsSectionTitle(stringResource(R.string.data_management))
-
-            Surface(
+            SettingsClickableCard(
                 onClick = onNavigateToDataManagement,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 1.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.FileUpload,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Import & Export")
-                        Text(
-                            "CSV and JSON data handling",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Icon(Icons.Default.ChevronRight, contentDescription = null)
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            Card(
-                onClick = { exportBackup(context) },
-                modifier = Modifier
-                    .fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.Sync,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onTertiaryContainer
-                            )
-                        }
-                        Spacer(Modifier.width(16.dp))
-                        Column {
-                            Text(
-                                stringResource(R.string.full_backup),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                stringResource(R.string.backup_to_downloads),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
-                }
-            }
+                icon = Icons.Default.FileUpload,
+                title = "Import & Export",
+                subtitle = "CSV and JSON data handling"
+            )
         }
 
         item {
+            SettingsClickableCard(
+                onClick = { exportBackup(context) },
+                icon = Icons.Default.Sync,
+                title = stringResource(R.string.full_backup),
+                subtitle = stringResource(R.string.backup_to_downloads),
+                isLoading = isLoading
+            )
+        }
+
+        // Maintenance Section
+        item {
             SettingsSectionTitle("Maintenance")
-
-            Card(
+            SettingsClickableCard(
                 onClick = { viewModel.cleanTags() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(Modifier.width(16.dp))
-                        Column {
-                            Text(
-                                "Clean Orphaned Tags",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                "Remove tags not linked to any expense",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    Icon(Icons.Default.ChevronRight, contentDescription = null)
-                }
-            }
+                icon = Icons.Default.Delete,
+                title = "Clean Orphaned Tags",
+                subtitle = "Remove tags not linked to any expense"
+            )
+        }
 
-            Card(
-                onClick = { viewModel.reSyncBalances() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.Sync,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(Modifier.width(16.dp))
-                        Column {
-                            Text(
-                                "Re-sync Account Balances",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                "Recalculate from history (May overwrite manual changes)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error
+        item {
+            SettingsClickableCard(
+                onClick = onReSync,
+                icon = Icons.Default.Sync,
+                title = "Re-sync Account Balances",
+                subtitle = "Recalculate from history (May overwrite)"
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsClickableCard(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    title: String,
+    subtitle: String? = null,
+    containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surfaceVariant,
+    contentColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    isLoading: Boolean = false
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor,
+            contentColor = contentColor
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = contentColor
+                )
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = contentColor
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = contentColor.copy(alpha = 0.7f)
                     )
                 }
             }
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = contentColor.copy(alpha = 0.5f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsToggleCard(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    title: String,
+    subtitle: String? = null,
+    containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surfaceVariant,
+    contentColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor,
+            contentColor = contentColor
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = contentColor.copy(alpha = 0.7f)
+                    )
+                }
+            }
+            androidx.compose.material3.Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                modifier = Modifier.scale(0.8f)
+            )
         }
     }
 }
@@ -898,21 +763,16 @@ fun TagEditDialog(
 @Composable
 fun LanguageSelectionDialog(
     currentLanguage: String,
+    supportedLanguages: List<Pair<String, String>>,
     onDismiss: () -> Unit,
     onSelect: (String) -> Unit
 ) {
-    val languages = listOf(
-        "en" to "English",
-        "id" to "Indonesia",
-        "zh" to "中文 (Chinese)"
-    )
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.language)) },
         text = {
             Column {
-                languages.forEach { (code, name) ->
+                supportedLanguages.forEach { (code, name) ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -960,23 +820,25 @@ fun CurrencySelectionDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
-                            selected = currentCurrency == currency,
+                            selected = currency == currentCurrency,
                             onClick = { onSelect(currency) }
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text(
-                            when (currency) {
-                                "USD" -> "US Dollar (USD)"
-                                "IDR" -> "Indonesian Rupiah (IDR)"
-                                "CNY" -> "Chinese Yuan (CNY)"
-                                "EUR" -> "Euro (EUR)"
-                                "GBP" -> "British Pound (GBP)"
-                                "JPY" -> "Japanese Yen (JPY)"
-                                "SGD" -> "Singapore Dollar (SGD)"
-                                else -> currency
-                            },
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                        Column {
+                            Text(
+                                text = try {
+                                    java.util.Currency.getInstance(currency).displayName
+                                } catch (e: Exception) {
+                                    currency
+                                },
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                text = currency,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                        }
                     }
                 }
             }
@@ -984,6 +846,87 @@ fun CurrencySelectionDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AllCurrenciesDialog(
+    allCurrencies: List<String>,
+    enabledCurrencies: List<String>,
+    onDismiss: () -> Unit,
+    onToggle: (String) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredCurrencies = remember(searchQuery) {
+        allCurrencies.filter {
+            it.contains(searchQuery, ignoreCase = true) ||
+                    try {
+                        java.util.Currency.getInstance(it).displayName.contains(
+                            searchQuery,
+                            ignoreCase = true
+                        )
+                    } catch (e: Exception) {
+                        false
+                    }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Enable Currencies") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Search Currency") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.medium
+                )
+
+                LazyColumn(modifier = Modifier.height(300.dp)) {
+                    items(filteredCurrencies.size) { index ->
+                        val currency = filteredCurrencies[index]
+                        val isEnabled = enabledCurrencies.contains(currency)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onToggle(currency) }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            androidx.compose.material3.Checkbox(
+                                checked = isEnabled,
+                                onCheckedChange = { onToggle(currency) }
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = try {
+                                        java.util.Currency.getInstance(currency).displayName
+                                    } catch (e: Exception) {
+                                        currency
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = currency,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text("Done")
             }
         }
     )

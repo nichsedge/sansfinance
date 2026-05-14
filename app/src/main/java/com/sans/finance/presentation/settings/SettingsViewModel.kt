@@ -45,6 +45,10 @@ class SettingsViewModel @Inject constructor(
     private val _isPrivacyModeEnabled = mutableStateOf(localeManager.isPrivacyModeEnabled())
     val isPrivacyModeEnabled: State<Boolean> = _isPrivacyModeEnabled
 
+    val supportedLanguages = com.sans.finance.data.util.LocaleManager.SUPPORTED_LANGUAGES
+    val commonCurrencies = com.sans.finance.data.util.LocaleManager.COMMON_CURRENCIES
+    val allAvailableCurrencies = com.sans.finance.data.util.LocaleManager.getAllAvailableCurrencies()
+
     fun setLanguage(lang: String) {
         localeManager.setLocale(lang)
         _currentLanguage.value = lang
