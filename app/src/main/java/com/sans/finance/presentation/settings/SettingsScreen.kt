@@ -71,6 +71,7 @@ import com.sans.finance.R
 import com.sans.finance.domain.model.Category
 import com.sans.finance.domain.model.Tag
 import com.sans.finance.presentation.components.CategoryIcon
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,7 +87,7 @@ fun SettingsScreen(
 ) {
     val currentLanguage = viewModel.currentLanguage.value
     val snackbarHostState = remember { SnackbarHostState() }
-    val currentBudget by viewModel.monthlyBudget.collectAsState()
+    val currentBudget by viewModel.monthlyBudget.collectAsStateWithLifecycle()
 
     val isLoading by viewModel.isLoading
 

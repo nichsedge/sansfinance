@@ -60,6 +60,7 @@ import com.sans.finance.core.util.CurrencyFormatter
 import com.sans.finance.presentation.components.GlassCard
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,7 +68,7 @@ fun AccountStatsScreen(
     onBack: () -> Unit,
     viewModel: AccountStatsViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val monthYearFormat = remember { SimpleDateFormat("MMMM yyyy", Locale.US) }
 
     Scaffold(

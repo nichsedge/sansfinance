@@ -54,6 +54,7 @@ import com.sans.finance.core.util.DateFormatterUtils
 import com.sans.finance.domain.model.Installment
 import java.util.Date
 import java.util.Locale
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,7 +62,7 @@ fun InstallmentsScreen(
     onBack: () -> Unit,
     viewModel: InstallmentsViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {

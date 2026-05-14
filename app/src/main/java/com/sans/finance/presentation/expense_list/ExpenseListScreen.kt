@@ -70,6 +70,7 @@ import com.sans.finance.presentation.components.SummaryCard
 import com.sans.finance.presentation.components.TodaySeparator
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,7 +83,7 @@ fun ExpenseListScreen(
     onExpenseClick: (Long) -> Unit,
     viewModel: ExpenseListViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val haptic = LocalHapticFeedback.current
     LocalFocusManager.current
     val snackbarHostState = remember { SnackbarHostState() }

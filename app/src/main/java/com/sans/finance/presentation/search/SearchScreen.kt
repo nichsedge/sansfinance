@@ -65,6 +65,7 @@ import com.sans.finance.core.util.CalendarUtils
 import com.sans.finance.presentation.components.ExpenseItem
 import com.sans.finance.presentation.components.SummaryCard
 import com.sans.finance.presentation.expense_list.DateRangeFilter
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -73,7 +74,7 @@ fun SearchScreen(
     onExpenseClick: (Long) -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     var showFilterSheet by remember { mutableStateOf(false) }
     var expenseToDelete by remember { mutableStateOf<com.sans.finance.domain.model.Expense?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }

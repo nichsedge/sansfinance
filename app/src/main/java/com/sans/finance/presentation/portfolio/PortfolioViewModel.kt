@@ -99,9 +99,13 @@ class PortfolioViewModel @Inject constructor(
         _selectedTab,
         _xirr
     ) { args ->
+        @Suppress("UNCHECKED_CAST")
         val dates = args[0] as List<Long>
+        @Suppress("UNCHECKED_CAST")
         val history = args[1] as List<SnapshotTotal>
+        @Suppress("UNCHECKED_CAST")
         val dbTargets = args[2] as List<com.sans.finance.data.local.entity.PortfolioTargetEntity>
+        @Suppress("UNCHECKED_CAST")
         val goals = args[3] as List<com.sans.finance.data.local.entity.GoalEntity>
         val dateIndex = args[4] as Int
         val importMsg = args[5] as String?

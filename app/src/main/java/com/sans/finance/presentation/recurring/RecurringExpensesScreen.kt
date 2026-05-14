@@ -40,6 +40,7 @@ import com.sans.finance.R
 import com.sans.finance.core.util.CurrencyFormatter
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.presentation.components.ExpenseItem
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,7 +49,7 @@ fun RecurringExpensesScreen(
     onExpenseClick: (Long) -> Unit,
     viewModel: RecurringExpensesViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val expenseToDelete = remember {
         androidx.compose.runtime.mutableStateOf<com.sans.finance.domain.model.Expense?>(null)
     }

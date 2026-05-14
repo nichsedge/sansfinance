@@ -10,8 +10,6 @@
 -keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper
 -keep @dagger.hilt.android.lifecycle.HiltViewModel class *
 
-# LiteRT / TensorFlow Lite
--keep class com.google.ai.edge.litertlm.** { *; }
 
 # Kotlin Serialization
 -keepattributes *Annotation*, EnclosingMethod, InnerClasses, Signature

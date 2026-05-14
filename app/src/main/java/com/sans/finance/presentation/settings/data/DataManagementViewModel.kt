@@ -45,7 +45,7 @@ data class DataManagementState(
 class DataManagementViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val portfolioRepository: PortfolioRepository,
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DataManagementState())

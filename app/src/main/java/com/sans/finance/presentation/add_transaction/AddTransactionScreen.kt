@@ -64,6 +64,7 @@ import com.sans.finance.R
 import com.sans.finance.core.util.DateFormatterUtils
 import com.sans.finance.presentation.components.CategoryIcon
 import java.util.Date
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,8 +72,8 @@ fun AddTransactionScreen(
     onBack: () -> Unit,
     viewModel: AddTransactionViewModel = hiltViewModel()
 ) {
-    val categories by viewModel.categories.collectAsState()
-    val accounts by viewModel.accounts.collectAsState()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
+    val accounts by viewModel.accounts.collectAsStateWithLifecycle()
     val datePickerState =
         rememberDatePickerState(initialSelectedDateMillis = viewModel.selectedDate)
     var showDatePicker by remember { androidx.compose.runtime.mutableStateOf(false) }
@@ -506,7 +507,7 @@ fun AddTransactionScreen(
                 letterSpacing = 1.5.sp
             )
 
-            val allTags by viewModel.allTags.collectAsState()
+            val allTags by viewModel.allTags.collectAsStateWithLifecycle()
 
             @OptIn(ExperimentalLayoutApi::class)
             FlowRow(

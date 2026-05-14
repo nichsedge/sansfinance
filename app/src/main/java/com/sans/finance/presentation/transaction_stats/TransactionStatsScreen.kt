@@ -89,6 +89,7 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.sin
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 val pieChartColors = listOf(
     Color(0xFFFF6B6B), // Red/Salmon
@@ -111,7 +112,7 @@ fun TransactionStatsScreen(
     onBack: () -> Unit,
     viewModel: TransactionStatsViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     var showDatePicker by remember { mutableStateOf(false) }
 
     Scaffold(

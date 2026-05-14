@@ -8,7 +8,7 @@ import kotlin.math.ceil
 object CurrencyFormatter {
     private fun getFormatter(currencyCode: String = "USD"): NumberFormat {
         val locale = when (currencyCode) {
-            "IDR" -> Locale("id", "ID")
+            "IDR" -> Locale.forLanguageTag("id-ID")
             "CNY" -> Locale.CHINA
             "USD" -> Locale.US
             "EUR" -> Locale.GERMANY
@@ -56,7 +56,7 @@ object CurrencyFormatter {
         val symbol = try {
             val currency = java.util.Currency.getInstance(currencyCode)
             val displayLocale = when (currencyCode) {
-                "IDR" -> Locale("id", "ID")
+                "IDR" -> Locale.forLanguageTag("id-ID")
                 "CNY" -> Locale.CHINA
                 "USD" -> Locale.US
                 "EUR" -> Locale.GERMANY

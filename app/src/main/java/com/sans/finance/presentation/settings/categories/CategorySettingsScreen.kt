@@ -37,6 +37,7 @@ import com.sans.finance.R
 import com.sans.finance.domain.model.Category
 import com.sans.finance.presentation.settings.CategoryEditDialog
 import com.sans.finance.presentation.settings.SettingsItem
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -44,8 +45,8 @@ fun CategorySettingsScreen(
     onBack: () -> Unit,
     viewModel: CategorySettingsViewModel = hiltViewModel()
 ) {
-    val categories by viewModel.categories.collectAsState()
-    val selectedType by viewModel.selectedType.collectAsState()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
+    val selectedType by viewModel.selectedType.collectAsStateWithLifecycle()
 
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var categoryToEdit by remember { mutableStateOf<Category?>(null) }

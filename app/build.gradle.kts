@@ -14,7 +14,7 @@ android {
     defaultConfig {
         applicationId = "com.sans.finance"
         minSdk = 36
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 2
         versionName = "1.1"
 
@@ -29,7 +29,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Use debug signing for release for now if no release key is provided, 
+            // Use debug signing for release for now if no release key is provided,
             // or just let it fail if the user wants to set it up properly.
             // But for GitHub APK, we can just use debug signing if we want it to be easy.
             signingConfig = signingConfigs.getByName("debug")
@@ -53,13 +53,12 @@ dependencies {
     implementation(project(":shared"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
 
     // Room

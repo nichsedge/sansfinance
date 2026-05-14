@@ -34,6 +34,7 @@ import com.sans.finance.R
 import com.sans.finance.domain.model.Tag
 import com.sans.finance.presentation.settings.SettingsItem
 import com.sans.finance.presentation.settings.TagEditDialog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -41,7 +42,7 @@ fun TagSettingsScreen(
     onBack: () -> Unit,
     viewModel: TagSettingsViewModel = hiltViewModel()
 ) {
-    val tags by viewModel.tags.collectAsState()
+    val tags by viewModel.tags.collectAsStateWithLifecycle()
 
     var tagToEdit by remember { mutableStateOf<Tag?>(null) }
     var tagToDelete by remember { mutableStateOf<Tag?>(null) }

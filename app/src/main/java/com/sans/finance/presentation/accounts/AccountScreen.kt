@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.data.local.entity.AccountEntity
 import com.sans.finance.presentation.components.PrivacyText
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 data class AccountUpdateParams(
     val account: AccountEntity,
@@ -79,7 +80,7 @@ fun AccountScreen(
     onDebtStrategistClick: () -> Unit = {},
     viewModel: AccountViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var accountToEdit by remember { mutableStateOf<AccountEntity?>(null) }
     var showMenu by remember { mutableStateOf(false) }
