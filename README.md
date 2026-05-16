@@ -2,7 +2,7 @@
 
 Sans Finance is a premium, on-device AI-powered personal finance and wealth management application for Android. Designed with privacy and performance in mind, it provides a comprehensive dashboard to track your entire financial life—from daily expenses to long-term net worth.
 
-![Sans Finance Banner](https://raw.githubusercontent.com/nichsedge/sans-finance/main/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png)
+<img width="1376" height="3058" alt="Gemini_Generated_Image_mbod72mbod72mbod" src="https://github.com/user-attachments/assets/3fabaac4-d548-4f75-a6b2-9857826bda7a" />
 
 ## ✨ Features
 
