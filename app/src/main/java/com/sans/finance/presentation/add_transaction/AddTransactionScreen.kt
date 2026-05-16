@@ -183,6 +183,19 @@ fun AddTransactionScreen(
                 }
             )
         }
+
+        viewModel.validationMessage?.let { msg ->
+            AlertDialog(
+                onDismissRequest = { viewModel.clearValidationMessage() },
+                title = { Text("Can’t save yet") },
+                text = { Text(msg) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.clearValidationMessage() }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
         Column(
             modifier = Modifier
                 .padding(paddingValues)

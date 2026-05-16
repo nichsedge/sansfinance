@@ -76,6 +76,18 @@ interface PortfolioDao {
 
     @Query(
         """
+        SELECT account_id
+        FROM portfolio_holdings
+        WHERE account_key = :accountKey
+          AND account_id IS NOT NULL
+        ORDER BY snapshot_date DESC
+        LIMIT 1
+    """
+    )
+    suspend fun findLinkedAccountIdByKey(accountKey: String): Long?
+
+    @Query(
+        """
         SELECT asset_class as assetClass, SUM(value_idr) as totalIdr
         FROM portfolio_holdings
         WHERE snapshot_date = :date

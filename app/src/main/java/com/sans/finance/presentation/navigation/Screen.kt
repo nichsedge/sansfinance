@@ -38,10 +38,16 @@ sealed class Screen {
     object TagSettings : Screen()
 
     @Serializable
+    object AccountTypeSettings : Screen()
+
+    @Serializable
     object RecurringExpenses : Screen()
 
     @Serializable
     object Accounts : Screen()
+
+    @Serializable
+    object Wealth : Screen()
 
     @Serializable
     object AccountStats : Screen()
@@ -66,6 +72,9 @@ sealed class Screen {
 
     @Serializable
     object DataManagement : Screen()
+
+    @Serializable
+    object AiSettings : Screen()
 
     @Serializable
     data class MonthlyReview(val monthOffset: Int = 0) : Screen()

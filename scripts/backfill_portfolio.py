@@ -76,6 +76,50 @@ def main():
         # Insert Holdings
         for h in holdings:
             details = h.get("details")
+            account_key = (h.get("account_key") or "").strip() or None
+            account_name = (h.get("account_name") or "").strip() or None
+            legacy_account = (h.get("account") or "").strip() or None
+
+            # Link resolution order: account_key -> account_name -> legacy account
+            account_id = None
+            if account_key:
+                cursor.execute(
+                    """
+                    SELECT account_id
+                    FROM portfolio_holdings
+                    WHERE account_key = ? AND account_id IS NOT NULL
+                    ORDER BY snapshot_date DESC
+                    LIMIT 1
+                    """,
+                    (account_key,)
+                )
+                row = cursor.fetchone()
+                if row and row[0] is not None:
+                    cursor.execute("SELECT id FROM accounts WHERE id = ? LIMIT 1", (row[0],))
+                    verified = cursor.fetchone()
+                    if verified:
+                        account_id = verified[0]
+
+            lookup_name = account_name or legacy_account
+            if account_id is None and lookup_name:
+                cursor.execute("SELECT id FROM accounts WHERE name = ? LIMIT 1", (lookup_name,))
+                row = cursor.fetchone()
+                if row:
+                    account_id = row[0]
+
+            if account_id is None:
+                now_ms = int(time.time() * 1000)
+                new_name = lookup_name or account_key or "Imported Investment Account"
+                cursor.execute(
+                    """
+                    INSERT INTO accounts
+                    (name, type, balance, currency, interest_rate, min_payment, created_at, updated_at)
+                    VALUES (?, 'Investment', 0, 'IDR', 0.0, 0, ?, ?)
+                    """,
+                    (new_name, now_ms, now_ms)
+                )
+                account_id = cursor.lastrowid
+
             # Prioritize price field from JSON, fallback to extraction from details
             price = h.get("price")
             if price is None:
@@ -96,8 +140,8 @@ def main():
  
             cursor.execute("""
                 INSERT INTO portfolio_holdings 
-                (snapshot_date, source, category, asset, currency, quantity, price, value_idr, account, details, asset_class)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (snapshot_date, source, category, asset, currency, quantity, price, value_idr, account_id, account_key, account_name, account, details, asset_class)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 snapshot_date,
                 h.get("source") or "",
@@ -107,7 +151,10 @@ def main():
                 quantity,
                 price,
                 value_idr,
-                h.get("account") or "",
+                account_id,
+                account_key,
+                account_name,
+                legacy_account or account_name or account_key or "",
                 details,
                 h.get("asset_class") or "Other"
             ))

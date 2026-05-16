@@ -21,7 +21,8 @@ data class GoalState(
     val goals: List<GoalWithProgress> = emptyList(),
     val categories: List<String> = emptyList(),
     val assetClasses: List<String> = emptyList(),
-    val currentCurrency: String = "USD"
+    val currentCurrency: String = "USD",
+    val isPrivacyModeEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -35,8 +36,8 @@ class GoalViewModel @Inject constructor(
         goalRepository.getAllGoals(),
         portfolioRepository.getLatestSnapshot(),
         portfolioRepository.getLatestSnapshotHeader(),
-        kotlinx.coroutines.flow.flowOf(localeManager.getCurrency())
-    ) { goals, latestHoldings, latestHeader, currency ->
+        localeManager.privacyMode
+    ) { goals, latestHoldings, latestHeader, privacyMode ->
         val categories = latestHoldings.map { it.category }.distinct().sorted()
         val assetClasses = latestHoldings.map { it.assetClass }.distinct().sorted()
         val exchangeRate = latestHeader?.exchangeRateUsd ?: 16000.0
@@ -61,7 +62,13 @@ class GoalViewModel @Inject constructor(
 
             GoalWithProgress(goal, currentAmount)
         }
-        GoalState(goalsWithProgress, categories, assetClasses, currency)
+        GoalState(
+            goals = goalsWithProgress,
+            categories = categories,
+            assetClasses = assetClasses,
+            currentCurrency = localeManager.getCurrency(),
+            isPrivacyModeEnabled = privacyMode
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

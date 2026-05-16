@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -109,6 +110,9 @@ class AddTransactionViewModel @Inject constructor(
     var detailsSuggestions by mutableStateOf(emptyList<String>())
         private set
 
+    var validationMessage by mutableStateOf<String?>(null)
+        private set
+
     var newTagText by mutableStateOf("")
 
     val allTags = expenseRepository.getAllTags().stateIn(
@@ -124,6 +128,26 @@ class AddTransactionViewModel @Inject constructor(
     )
 
     init {
+        viewModelScope.launch {
+            accounts
+                .filter { it.isNotEmpty() }
+                .collect { list ->
+                    if (isEditMode) return@collect
+
+                    val primary = list.firstOrNull() ?: return@collect
+
+                    if (accountId == 1L && list.none { it.id == accountId }) {
+                        accountId = primary.id
+                    }
+                    if (currency.isBlank()) {
+                        currency = primary.currency
+                    }
+                    if (toAccountId == 2L && list.size >= 2) {
+                        toAccountId = list[1].id
+                    }
+                }
+        }
+
         editExpenseId?.let { id ->
             viewModelScope.launch {
                 getExpenseByIdUseCase(id)?.let { expense ->
@@ -237,6 +261,17 @@ class AddTransactionViewModel @Inject constructor(
 
     fun onSaveClick(onSuccess: () -> Unit) {
         val amountInCents = amount.toSafeLongCents() ?: 0L
+        val effectiveTitle = title.trim().ifBlank { buildDefaultTitle() }
+
+        if (amountInCents <= 0L) {
+            validationMessage = "Amount must be greater than 0"
+            return
+        }
+        if (transactionType == "TRANSFER" && accountId == toAccountId) {
+            validationMessage = "Transfer account cannot be the same"
+            return
+        }
+        title = effectiveTitle
 
         if (!isEditMode && !showDuplicateDialog) {
             viewModelScope.launch {
@@ -258,8 +293,13 @@ class AddTransactionViewModel @Inject constructor(
         }
     }
 
+    fun clearValidationMessage() {
+        validationMessage = null
+    }
+
     private fun saveTransaction(onSuccess: () -> Unit) {
         val amountInCents = amount.toSafeLongCents() ?: 0L
+        val effectiveTitle = title.trim().ifBlank { buildDefaultTitle() }
 
         val nextDueDateVal = if (isRecurring) {
             val calendar = java.util.Calendar.getInstance()
@@ -277,7 +317,7 @@ class AddTransactionViewModel @Inject constructor(
             val expense = Expense(
                 id = editExpenseId ?: 0,
                 date = selectedDate,
-                title = title.trim(),
+                title = effectiveTitle,
                 amount = amountInCents,
                 categoryId = categoryId,
                 accountId = accountId,
@@ -306,6 +346,23 @@ class AddTransactionViewModel @Inject constructor(
                 updateExpenseUseCase(expense, durationMonths.toIntOrNull())
             }
             onSuccess()
+        }
+    }
+
+    private fun buildDefaultTitle(): String {
+        if (transactionType == "TRANSFER") {
+            val toName = accounts.value.firstOrNull { it.id == toAccountId }?.name?.takeIf { it.isNotBlank() }
+            return if (toName != null) "Transfer → $toName" else "Transfer"
+        }
+
+        val categoryName = allCategories.value
+            .firstOrNull { it.id == categoryId }
+            ?.name
+            ?.trim()
+            .orEmpty()
+
+        return categoryName.ifBlank {
+            transactionType.lowercase().replaceFirstChar { it.uppercase() }
         }
     }
 

@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -38,7 +39,11 @@ data class DataManagementState(
     val message: String? = null,
     val activeImportType: ImportExportType? = null,
     val activeExportType: ImportExportType? = null,
-    val activeExportFormat: ExportFormat? = null
+    val activeExportFormat: ExportFormat? = null,
+    val latestPortfolioSnapshotDate: Long? = null,
+    val latestPortfolioHoldingsCount: Int = 0,
+    val latestPortfolioSources: List<Pair<String, Int>> = emptyList(),
+    val isPortfolioStale: Boolean = false
 )
 
 @HiltViewModel
@@ -50,6 +55,37 @@ class DataManagementViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(DataManagementState())
     val state: StateFlow<DataManagementState> = _state.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            combine(
+                portfolioRepository.getLatestSnapshotHeader(),
+                portfolioRepository.getLatestSnapshot()
+            ) { header, holdings ->
+                val sources = holdings
+                    .groupBy { it.source }
+                    .mapValues { it.value.size }
+                    .toList()
+                    .sortedByDescending { it.second }
+                val snapshotDate = header?.snapshotDate
+                val isStale =
+                    snapshotDate?.let { System.currentTimeMillis() - it > (31L * 24 * 60 * 60 * 1000) } ?: false
+                PortfolioStatus(
+                    snapshotDate = snapshotDate,
+                    holdingsCount = holdings.size,
+                    sources = sources,
+                    isStale = isStale
+                )
+            }.collect { status ->
+                _state.value = _state.value.copy(
+                    latestPortfolioSnapshotDate = status.snapshotDate,
+                    latestPortfolioHoldingsCount = status.holdingsCount,
+                    latestPortfolioSources = status.sources,
+                    isPortfolioStale = status.isStale
+                )
+            }
+        }
+    }
 
     fun setImportType(type: ImportExportType) {
         _state.value = _state.value.copy(activeImportType = type)
@@ -221,3 +257,10 @@ class DataManagementViewModel @Inject constructor(
         _state.value = _state.value.copy(message = null)
     }
 }
+
+private data class PortfolioStatus(
+    val snapshotDate: Long?,
+    val holdingsCount: Int,
+    val sources: List<Pair<String, Int>>,
+    val isStale: Boolean
+)

@@ -2,12 +2,15 @@ package com.sans.finance.di
 
 import android.app.Application
 import androidx.room.Room
-import androidx.room.migration.Migration
+import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.sans.finance.data.local.AppDatabase
+import com.sans.finance.data.local.DatabaseMigrations
 import com.sans.finance.data.local.dao.ExpenseDao
 import com.sans.finance.data.repository.ExpenseRepositoryImpl
 import com.sans.finance.domain.repository.ExpenseRepository
+import com.sans.finance.data.ai.AiSettingsRepository
+import com.sans.finance.data.ai.SecureAiSettingsRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,28 +22,6 @@ import okhttp3.OkHttpClient
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
-
-    private val MIGRATION_25_27 = object : Migration(25, 27) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            // 1. Update accounts table
-            db.execSQL("ALTER TABLE `accounts` ADD COLUMN `interest_rate` REAL NOT NULL DEFAULT 0.0")
-            db.execSQL("ALTER TABLE `accounts` ADD COLUMN `min_payment` INTEGER NOT NULL DEFAULT 0")
-
-            // 2. Create portfolio_targets table
-            db.execSQL(
-                """
-                CREATE TABLE IF NOT EXISTS `portfolio_targets` (
-                    `assetClass` TEXT NOT NULL,
-                    `targetPercentage` REAL NOT NULL,
-                    `description` TEXT NOT NULL DEFAULT '',
-                    `riskLevel` TEXT NOT NULL DEFAULT 'MEDIUM',
-                    PRIMARY KEY(`assetClass`)
-                )
-                """.trimIndent()
-            )
-        }
-    }
-
     @Provides
     @Singleton
     fun provideDatabase(
@@ -51,7 +32,20 @@ object AppModule {
             AppDatabase::class.java,
             "sans_finance_db"
         )
-            .addMigrations(MIGRATION_25_27)
+            .addMigrations(*DatabaseMigrations.ALL)
+            .addCallback(object : RoomDatabase.Callback() {
+                override fun onOpen(db: SupportSQLiteDatabase) {
+                    super.onOpen(db)
+                    db.execSQL(
+                        """
+                        INSERT INTO account_types (name, icon, isLiability, display_order, createdAt)
+                        SELECT a.type, 'AccountBalance', 0, 0, strftime('%s','now') * 1000
+                        FROM (SELECT DISTINCT TRIM(type) AS type FROM accounts WHERE TRIM(type) <> '') a
+                        WHERE NOT EXISTS (SELECT 1 FROM account_types)
+                        """.trimIndent()
+                    )
+                }
+            })
             .build()
     }
 
@@ -129,6 +123,21 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideAccountTypeDao(db: AppDatabase): com.sans.finance.data.local.dao.AccountTypeDao =
+        db.accountTypeDao
+
+    @Provides
+    @Singleton
+    fun provideAccountTypeRepository(dao: com.sans.finance.data.local.dao.AccountTypeDao): com.sans.finance.domain.repository.AccountTypeRepository =
+        com.sans.finance.data.repository.AccountTypeRepositoryImpl(dao)
+
+    @Provides
+    @Singleton
+    fun provideAccountAliasDao(db: AppDatabase): com.sans.finance.data.local.dao.AccountAliasDao =
+        db.accountAliasDao
+
+    @Provides
+    @Singleton
     fun provideCurrencyRepository(dao: com.sans.finance.data.local.dao.CurrencyDao): com.sans.finance.domain.repository.CurrencyRepository =
         com.sans.finance.data.repository.CurrencyRepositoryImpl(dao)
 
@@ -160,5 +169,9 @@ object AppModule {
     @Singleton
     fun provideLocaleManager(app: Application): com.sans.finance.data.util.LocaleManager =
         com.sans.finance.data.util.LocaleManager(app)
+
+    @Provides
+    @Singleton
+    fun provideAiSettingsRepository(repo: SecureAiSettingsRepository): AiSettingsRepository = repo
 
 }

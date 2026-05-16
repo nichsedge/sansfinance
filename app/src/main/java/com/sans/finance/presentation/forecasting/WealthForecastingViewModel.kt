@@ -3,6 +3,7 @@ package com.sans.finance.presentation.forecasting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.core.util.CalendarUtils
+import com.sans.finance.data.local.dao.CurrencyDao
 import com.sans.finance.domain.repository.ExpenseRepository
 import com.sans.finance.domain.repository.PortfolioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.stateIn
 import java.util.Calendar
 import javax.inject.Inject
 import kotlin.math.pow
+import kotlin.math.roundToLong
 
 data class ForecastingState(
     val currentNetWorth: Long = 0L,
@@ -38,7 +40,9 @@ data class ProjectionPoint(
 private data class ForecastingData(
     val portfolioHistory: List<com.sans.finance.data.local.dao.SnapshotTotal>,
     val transactions: List<com.sans.finance.domain.model.Expense>,
-    val accounts: List<com.sans.finance.data.local.entity.AccountEntity>
+    val accounts: List<com.sans.finance.data.local.entity.AccountEntity>,
+    val accountTypes: List<com.sans.finance.data.local.entity.AccountTypeEntity>,
+    val rates: List<com.sans.finance.data.local.entity.ExchangeRateEntity>
 )
 
 @HiltViewModel
@@ -46,6 +50,8 @@ class WealthForecastingViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val portfolioRepository: PortfolioRepository,
     private val accountRepository: com.sans.finance.domain.repository.AccountRepository,
+    private val accountTypeRepository: com.sans.finance.domain.repository.AccountTypeRepository,
+    private val currencyDao: CurrencyDao,
     private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
@@ -57,9 +63,11 @@ class WealthForecastingViewModel @Inject constructor(
         combine(
             portfolioRepository.getTotalValueOverTime(),
             expenseRepository.getExpensesBetween(0, Long.MAX_VALUE),
-            accountRepository.getAllAccounts()
-        ) { history, txns, accs ->
-            ForecastingData(history, txns, accs)
+            accountRepository.getAllAccounts(),
+            accountTypeRepository.getAllAccountTypes(),
+            currencyDao.getAllRates()
+        ) { history, txns, accs, types, rates ->
+            ForecastingData(history, txns, accs, types, rates)
         },
         _expectedRoi,
         _projectionYears,
@@ -68,9 +76,18 @@ class WealthForecastingViewModel @Inject constructor(
         val history = data.portfolioHistory
         val txns = data.transactions
         val accs = data.accounts
+        val liabilityTypeNames = data.accountTypes.filter { it.isLiability }.map { it.name }.toSet()
+        val ratesMap = data.rates.associate { it.code to it.rateToIdr }
+        val includedAccountCashIdr = accs
+            .filter { it.type !in liabilityTypeNames && it.type != "Investment" }
+            .sumOf { account ->
+                val amount = account.balance / 100.0
+                val rateToIdr = if (account.currency == "IDR") 1.0 else (ratesMap[account.currency] ?: 1.0)
+                amount * rateToIdr
+            }
 
         val latestPortfolioIdr = history.lastOrNull()?.totalIdr ?: 0.0
-        val currentNetWorth = (latestPortfolioIdr * 100).toLong()
+        val currentNetWorth = ((latestPortfolioIdr + includedAccountCashIdr) * 100).roundToLong()
 
         val cal = CalendarUtils.getInstance()
         cal.set(Calendar.DAY_OF_MONTH, 1)
@@ -101,7 +118,7 @@ class WealthForecastingViewModel @Inject constructor(
         val yearsToFire = projections.find { it.value >= fireNumber }?.year
 
         val emergencyFundTarget = avgMonthlyExpense * efMonths
-        val currentEmergencyFund = accs.filter { it.type == "Cash" || it.type == "Bank" }.sumOf { it.balance }
+        val currentEmergencyFund = (includedAccountCashIdr * 100).roundToLong()
 
         ForecastingState(
             currentNetWorth = currentNetWorth,

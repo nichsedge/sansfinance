@@ -21,6 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,6 +33,7 @@ fun DataManagementScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showAutomationHelp by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.message) {
         state.message?.let {
@@ -117,6 +121,16 @@ fun DataManagementScreen(
             }
 
             item {
+                PortfolioAutomationCard(
+                    snapshotDate = state.latestPortfolioSnapshotDate,
+                    holdingsCount = state.latestPortfolioHoldingsCount,
+                    sources = state.latestPortfolioSources,
+                    isStale = state.isPortfolioStale,
+                    onHowToUpdate = { showAutomationHelp = true }
+                )
+            }
+
+            item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -147,6 +161,39 @@ fun DataManagementScreen(
             text = {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
+                }
+            }
+        )
+    }
+
+    if (showAutomationHelp) {
+        AlertDialog(
+            onDismissRequest = { showAutomationHelp = false },
+            confirmButton = {
+                TextButton(onClick = { showAutomationHelp = false }) { Text("OK") }
+            },
+            title = { Text("Portfolio Automation (Your Setup)") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "Your fastest loop is to backfill snapshots directly into the on-device DB, then just open the app.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        "From your computer (repo root):",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "make backfill-portfolio",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    )
+                    Text(
+                        "If portfolio sources are missing/stale, fix the upstream pipeline (KSEI/Binance/wallets/manual CSV) and rerun.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         )
@@ -208,6 +255,57 @@ fun DataSection(
                     Spacer(Modifier.width(8.dp))
                     Text("JSON")
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PortfolioAutomationCard(
+    snapshotDate: Long?,
+    holdingsCount: Int,
+    sources: List<Pair<String, Int>>,
+    isStale: Boolean,
+    onHowToUpdate: () -> Unit
+) {
+    val dateText = snapshotDate?.let {
+        val df = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+        df.format(Date(it))
+    } ?: "No snapshot yet"
+
+    val sourcesText = if (sources.isEmpty()) {
+        "—"
+    } else {
+        sources.take(4).joinToString(" • ") { (src, count) -> "$src ($count)" }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isStale) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Automation status", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text(
+                "Latest snapshot: $dateText • $holdingsCount holdings",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                "Sources: $sourcesText",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (isStale) {
+                Text(
+                    "Snapshot looks older than a month. Run your backfill pipeline to refresh.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onHowToUpdate) { Text("How to update") }
             }
         }
     }

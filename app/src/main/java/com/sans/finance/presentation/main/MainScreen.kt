@@ -31,6 +31,7 @@ import com.sans.finance.presentation.expense_list.ExpenseListScreen
 import com.sans.finance.presentation.navigation.Screen
 import com.sans.finance.presentation.portfolio.PortfolioScreen
 import com.sans.finance.presentation.settings.SettingsScreen
+import com.sans.finance.presentation.wealth.WealthScreen
 
 @Composable
 fun MainScreen(
@@ -46,20 +47,13 @@ fun MainScreen(
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = Screen.ExpenseList,
+            startDestination = Screen.Dashboard,
             modifier = Modifier.padding(paddingValues)
         ) {
             composable<Screen.Dashboard> {
                 DashboardScreen(
                     onTransactionClick = { id ->
                         rootNavController.navigate(Screen.EditExpense(id))
-                    },
-                    onPortfolioClick = {
-                        navController.navigate(Screen.Portfolio) {
-                            popUpTo(Screen.Dashboard) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
                     },
                     onRecurringExpensesClick = {
                         rootNavController.navigate(Screen.RecurringExpenses)
@@ -92,6 +86,17 @@ fun MainScreen(
                     onExpenseClick = { id ->
                         rootNavController.navigate(Screen.EditExpense(id))
                     }
+                )
+            }
+            composable<Screen.Wealth> {
+                WealthScreen(
+                    onOpenAccounts = { navController.navigate(Screen.Accounts) },
+                    onOpenPortfolio = { navController.navigate(Screen.Portfolio) },
+                    onOpenDebts = { rootNavController.navigate(Screen.DebtStrategist) },
+                    onOpenGoals = { rootNavController.navigate(Screen.Goals) },
+                    onOpenBudgets = { rootNavController.navigate(Screen.Budgets) },
+                    onOpenForecasting = { rootNavController.navigate(Screen.WealthForecasting) },
+                    onOpenMonthlyReview = { rootNavController.navigate(Screen.MonthlyReview(0)) }
                 )
             }
             composable<Screen.Accounts> {
@@ -134,11 +139,17 @@ fun MainScreen(
                     onNavigateToTags = {
                         rootNavController.navigate(Screen.TagSettings)
                     },
+                    onNavigateToAccountTypes = {
+                        rootNavController.navigate(Screen.AccountTypeSettings)
+                    },
                     onNavigateToRecurringExpenses = {
                         rootNavController.navigate(Screen.RecurringExpenses)
                     },
                     onNavigateToDataManagement = {
                         rootNavController.navigate(Screen.DataManagement)
+                    },
+                    onNavigateToAiSettings = {
+                        rootNavController.navigate(Screen.AiSettings)
                     }
                 )
             }
@@ -158,18 +169,15 @@ fun BottomNavigationBar(navController: NavHostController) {
         val items = listOf(
             Triple(Screen.Dashboard, "Home", Icons.Default.Dashboard),
             Triple(Screen.ExpenseList, "Transactions", Icons.AutoMirrored.Filled.CompareArrows),
-            Triple(Screen.Accounts, "Accounts", Icons.Default.AccountBalanceWallet),
+            Triple(Screen.Wealth, "Wealth", Icons.Default.AccountBalanceWallet),
             Triple(Screen.Settings, "Settings", Icons.Default.Settings)
         )
 
         items.forEach { (screen, label, icon) ->
             val isSelected =
                 currentDestination?.hierarchy?.any { it.hasRoute(screen::class) } == true ||
-                    (screen is Screen.Dashboard && currentDestination?.hierarchy?.any {
-                        it.hasRoute(
-                            Screen.Portfolio::class
-                        )
-                    } == true)
+                    (screen is Screen.Wealth && currentDestination?.hierarchy?.any { it.hasRoute(Screen.Accounts::class) } == true) ||
+                    (screen is Screen.Wealth && currentDestination?.hierarchy?.any { it.hasRoute(Screen.Portfolio::class) } == true)
 
             NavigationBarItem(
                 icon = { Icon(icon, contentDescription = label) },

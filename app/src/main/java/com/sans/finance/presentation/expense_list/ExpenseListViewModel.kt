@@ -5,9 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.sans.finance.core.util.CalendarUtils
 import com.sans.finance.core.util.DateFormatterUtils
 import com.sans.finance.domain.model.Category
+import com.sans.finance.domain.model.ExpenseFilter
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.repository.BudgetRepository
-import com.sans.finance.domain.usecase.GetExpensesUseCase
+import com.sans.finance.domain.usecase.ObserveFilteredExpensesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,7 +65,7 @@ data class ExpenseListState(
 
 @HiltViewModel
 class ExpenseListViewModel @Inject constructor(
-    private val getExpensesUseCase: GetExpensesUseCase,
+    private val observeFilteredExpensesUseCase: ObserveFilteredExpensesUseCase,
     private val repository: com.sans.finance.domain.repository.ExpenseRepository,
     private val accountRepository: com.sans.finance.domain.repository.AccountRepository,
     private val installmentRepository: com.sans.finance.domain.repository.InstallmentRepository,
@@ -137,41 +138,26 @@ class ExpenseListViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun loadExpenses() {
         _state
-            .map {
-                listOf(
-                    it.startDate,
-                    it.endDate,
-                    it.searchQuery,
-                    it.selectedCategoryIds,
-                    it.selectedAccountIds,
-                    it.minAmount,
-                    it.maxAmount,
-                    it.selectedTags,
-                    it.selectedTypes
+            .map { state ->
+                ExpenseFilter(
+                    query = state.searchQuery,
+                    categoryIds = state.selectedCategoryIds,
+                    accountIds = state.selectedAccountIds,
+                    since = state.startDate,
+                    until = state.endDate,
+                    minAmount = state.minAmount,
+                    maxAmount = state.maxAmount,
+                    tags = state.selectedTags,
+                    types = state.selectedTypes
                 )
             }
             .distinctUntilChanged()
-            .flatMapLatest { _ ->
-                val s = _state.value
-                val expensesFlow = repository.getFilteredExpenses(
-                    query = s.searchQuery,
-                    categoryIds = s.selectedCategoryIds.toList(),
-                    accountIds = s.selectedAccountIds.toList(),
-                    since = s.startDate,
-                    until = s.endDate,
-                    minAmount = s.minAmount,
-                    maxAmount = s.maxAmount,
-                    tags = s.selectedTags.toList(),
-                    types = s.selectedTypes.toList()
-                )
-
-                val dailyFlow = repository.getDailySpendingBetween(s.startDate, s.endDate)
-
-                expensesFlow.combine(dailyFlow) { e, d -> Pair(e, d) }
-            }
-            .onEach { (expenses, dailySpending) ->
+            .flatMapLatest(observeFilteredExpensesUseCase::invoke)
+            .onEach { result ->
+                val expenses = result.expenses
+                val dailySpending = result.dailySpending
                 val dailyMap = dailySpending.associate { it.day to it.amount }
-                val grouped = groupExpensesByDate(expenses, dailyMap)
+                val grouped = groupExpensesByDate(expenses)
                 // Filtered item totals: normal items + installment payments (already in the list)
                 // We only exclude 'parent' installment plans to avoid double counting with their sub-payments
                 val validExpenses = expenses.filter { !it.isInstallment || it.isInstallmentPayment }
@@ -287,10 +273,7 @@ class ExpenseListViewModel @Inject constructor(
         }
     }
 
-    private fun groupExpensesByDate(
-        expenses: List<Expense>,
-        dailySpendingMap: Map<Long, Long> = emptyMap()
-    ): Map<Long, List<Expense>> {
+    private fun groupExpensesByDate(expenses: List<Expense>): Map<Long, List<Expense>> {
         val calendar = CalendarUtils.getInstance()
 
         return expenses.groupBy { expense ->

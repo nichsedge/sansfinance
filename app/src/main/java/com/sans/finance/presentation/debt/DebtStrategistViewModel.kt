@@ -35,18 +35,21 @@ data class DebtStrategistState(
 
 @HiltViewModel
 class DebtStrategistViewModel @Inject constructor(
-    private val accountRepository: AccountRepository
+    private val accountRepository: AccountRepository,
+    private val accountTypeRepository: com.sans.finance.domain.repository.AccountTypeRepository
 ) : ViewModel() {
 
     private val _additionalPayment = MutableStateFlow(0L)
 
     val state = combine(
         accountRepository.getAllAccounts(),
+        accountTypeRepository.getAllAccountTypes(),
         _additionalPayment
-    ) { accounts, additional ->
-        val loans = accounts.filter { it.type == "Loan" || it.type == "Credit Card" }
-            .filter { it.balance < 0 }
-            .map { it.copy(balance = -it.balance) } // Work with positive balances
+    ) { accounts, types, additional ->
+        val liabilityTypeNames = types.filter { it.isLiability }.map { it.name }.toSet()
+        val loans = accounts.filter { it.type in liabilityTypeNames }
+            .filter { it.balance > 0 } // Assuming liability balances are positive in the DB for loans/CC
+            .map { it.copy() } // Just work with it
 
         if (loans.isEmpty()) {
             return@combine DebtStrategistState(loans = emptyList(), isLoading = false)

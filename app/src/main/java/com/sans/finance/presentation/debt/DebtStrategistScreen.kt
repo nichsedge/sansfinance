@@ -1,5 +1,6 @@
 package com.sans.finance.presentation.debt
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,16 +24,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.core.util.CurrencyFormatter
+import com.sans.finance.presentation.components.GlassCard
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,18 +51,38 @@ fun DebtStrategistScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Debt Strategist", fontWeight = FontWeight.Bold) },
+                title = { 
+                    Text(
+                        "Debt Strategist", 
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold
+                    ) 
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                )
             )
         }
     ) { paddingValues ->
         if (state.loans.isEmpty()) {
             Column(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.surface,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                            )
+                        )
+                    )
+                    .padding(paddingValues),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -67,15 +92,30 @@ fun DebtStrategistScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.surface,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                            )
+                        )
+                    )
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                Text(
-                    "Compare strategies to pay off your ${state.loans.size} debts faster.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    alpha = 0.1f
+                ) {
+                    Text(
+                        "Compare strategies to pay off your ${state.loans.size} debts faster and save on interest.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
 
                 // Strategy Comparison
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -83,26 +123,39 @@ fun DebtStrategistScreen(
                     state.avalancheResult?.let { StrategyCard(it, Modifier.weight(1f), MaterialTheme.colorScheme.tertiary) }
                 }
 
-                Text("ACTIVE DEBTS", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    "ACTIVE DEBTS", 
+                    style = MaterialTheme.typography.labelMedium, 
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary,
+                    letterSpacing = 1.sp
+                )
 
-                state.loans.forEach { loan ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                    ) {
-                        Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column {
-                                Text(loan.name, fontWeight = FontWeight.Bold)
-                                Text("${loan.interestRate}% Interest", style = MaterialTheme.typography.labelSmall)
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    state.loans.forEach { loan ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.extraLarge,
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        ) {
+                            Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Column {
+                                    Text(loan.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                                    Text("${loan.interestRate}% Annual Interest", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Text(
+                                    CurrencyFormatter.formatAmount(loan.balance, loan.currency),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.error
+                                )
                             }
-                            Text(
-                                CurrencyFormatter.formatAmount(loan.balance, loan.currency),
-                                fontWeight = FontWeight.Black,
-                                color = MaterialTheme.colorScheme.error
-                            )
                         }
                     }
                 }
+                
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
@@ -112,15 +165,41 @@ fun DebtStrategistScreen(
 fun StrategyCard(result: DebtStrategyResult, modifier: Modifier, accentColor: Color) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = accentColor.copy(alpha = 0.1f))
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = accentColor.copy(alpha = 0.08f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.2f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(result.strategyName.uppercase(), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Black, color = accentColor)
-            Spacer(Modifier.height(8.dp))
-            Text("${result.monthsToDebtFree} Months", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
-            Text("to debt free", style = MaterialTheme.typography.labelSmall)
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = accentColor.copy(alpha = 0.2f))
-            Text("Interest: ${String.format("IDR %,.0f", result.totalInterestPaid)}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+            Text(
+                result.strategyName.uppercase(), 
+                style = MaterialTheme.typography.labelSmall, 
+                fontWeight = FontWeight.Black, 
+                color = accentColor,
+                letterSpacing = 1.sp
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "${result.monthsToDebtFree}", 
+                style = MaterialTheme.typography.headlineMedium, 
+                fontWeight = FontWeight.Black
+            )
+            Text(
+                "MONTHS", 
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text("to debt free", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = accentColor.copy(alpha = 0.1f))
+            Column {
+                Text("TOTAL INTEREST", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    CurrencyFormatter.formatAmount(result.totalInterestPaid.toLong(), "IDR"), 
+                    style = MaterialTheme.typography.bodySmall, 
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }

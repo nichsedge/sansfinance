@@ -18,6 +18,7 @@ data class AccountScreenState(
     val liabilities: Long = 0L,
     val total: Long = 0L,
     val accountsByType: Map<String, List<AccountEntity>> = emptyMap(),
+    val accountTypes: List<com.sans.finance.data.local.entity.AccountTypeEntity> = emptyList(),
     val currentCurrency: String = "USD",
     val isLoading: Boolean = true,
     val isPrivacyModeEnabled: Boolean = false
@@ -28,17 +29,21 @@ data class AccountScreenState(
 class AccountViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val expenseRepository: ExpenseRepository,
+    private val accountTypeRepository: com.sans.finance.domain.repository.AccountTypeRepository,
     private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
     val state = combine(
         accountRepository.getAllAccounts(),
         expenseRepository.getExpensesBetween(0, Long.MAX_VALUE),
+        accountTypeRepository.getAllAccountTypes(),
         localeManager.privacyMode
-    ) { accountsList, expensesList, privacyMode ->
-        val assets = accountsList.filter { it.type != "Credit Card" && it.type != "Loan" }
+    ) { accountsList, expensesList, accountTypesList, privacyMode ->
+        val liabilityTypeNames = accountTypesList.filter { it.isLiability }.map { it.name }.toSet()
+        
+        val assets = accountsList.filter { it.type !in liabilityTypeNames }
             .sumOf { it.balance }
-        val liabilities = accountsList.filter { it.type == "Credit Card" || it.type == "Loan" }
+        val liabilities = accountsList.filter { it.type in liabilityTypeNames }
             .sumOf { it.balance }
         val total = assets - liabilities
 
@@ -49,6 +54,7 @@ class AccountViewModel @Inject constructor(
             liabilities = liabilities,
             total = total,
             accountsByType = grouped,
+            accountTypes = accountTypesList,
             currentCurrency = localeManager.getCurrency(),
             isLoading = false,
             isPrivacyModeEnabled = privacyMode
@@ -68,6 +74,7 @@ class AccountViewModel @Inject constructor(
         minPayment: Long = 0
     ) {
         viewModelScope.launch {
+            val currentMax = state.value.accountsByType[type]?.maxOfOrNull { it.displayOrder } ?: 0
             accountRepository.insertAccount(
                 AccountEntity(
                     name = name,
@@ -75,7 +82,8 @@ class AccountViewModel @Inject constructor(
                     balance = initialBalance,
                     currency = currency,
                     interestRate = interestRate,
-                    minPayment = minPayment
+                    minPayment = minPayment,
+                    displayOrder = currentMax + 1
                 )
             )
         }
@@ -144,5 +152,51 @@ class AccountViewModel @Inject constructor(
 
     fun togglePrivacyMode() {
         localeManager.setPrivacyModeEnabled(!localeManager.isPrivacyModeEnabled())
+    }
+
+    fun moveAccountUp(account: AccountEntity) {
+        val list = state.value.accountsByType[account.type] ?: return
+        val index = list.indexOf(account)
+        if (index > 0) {
+            viewModelScope.launch {
+                val prev = list[index - 1]
+                if (account.displayOrder == prev.displayOrder) {
+                    list.forEachIndexed { i, item ->
+                        accountRepository.updateAccount(item.copy(displayOrder = i))
+                    }
+                    val refreshedList = list.mapIndexed { i, item -> item.copy(displayOrder = i) }
+                    val current = refreshedList[index]
+                    val previous = refreshedList[index - 1]
+                    accountRepository.updateAccount(current.copy(displayOrder = index - 1))
+                    accountRepository.updateAccount(previous.copy(displayOrder = index))
+                } else {
+                    accountRepository.updateAccount(account.copy(displayOrder = prev.displayOrder))
+                    accountRepository.updateAccount(prev.copy(displayOrder = account.displayOrder))
+                }
+            }
+        }
+    }
+
+    fun moveAccountDown(account: AccountEntity) {
+        val list = state.value.accountsByType[account.type] ?: return
+        val index = list.indexOf(account)
+        if (index < list.size - 1) {
+            viewModelScope.launch {
+                val next = list[index + 1]
+                if (account.displayOrder == next.displayOrder) {
+                    list.forEachIndexed { i, item ->
+                        accountRepository.updateAccount(item.copy(displayOrder = i))
+                    }
+                    val refreshedList = list.mapIndexed { i, item -> item.copy(displayOrder = i) }
+                    val current = refreshedList[index]
+                    val nextItem = refreshedList[index + 1]
+                    accountRepository.updateAccount(current.copy(displayOrder = index + 1))
+                    accountRepository.updateAccount(nextItem.copy(displayOrder = index))
+                } else {
+                    accountRepository.updateAccount(account.copy(displayOrder = next.displayOrder))
+                    accountRepository.updateAccount(next.copy(displayOrder = account.displayOrder))
+                }
+            }
+        }
     }
 }

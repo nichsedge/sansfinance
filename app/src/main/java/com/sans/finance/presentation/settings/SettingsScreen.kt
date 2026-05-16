@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Translate
 
@@ -81,8 +82,10 @@ fun SettingsScreen(
     onNavigateToBudgets: () -> Unit,
     onNavigateToCategories: () -> Unit,
     onNavigateToTags: () -> Unit,
+    onNavigateToAccountTypes: () -> Unit,
     onNavigateToRecurringExpenses: () -> Unit,
     onNavigateToDataManagement: () -> Unit,
+    onNavigateToAiSettings: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val currentLanguage = viewModel.currentLanguage.value
@@ -143,8 +146,10 @@ fun SettingsScreen(
             onBudget = onNavigateToBudgets,
             onNavigateToCategories = onNavigateToCategories,
             onNavigateToTags = onNavigateToTags,
+            onNavigateToAccountTypes = onNavigateToAccountTypes,
             onNavigateToRecurringExpenses = onNavigateToRecurringExpenses,
             onNavigateToDataManagement = onNavigateToDataManagement,
+            onNavigateToAiSettings = onNavigateToAiSettings,
             exportBackup = { viewModel.exportFullBackup(it) },
             onLanguageToggle = { showLanguageDialog = true },
             onCurrencyToggle = { showCurrencyDialog = true },
@@ -262,8 +267,10 @@ fun SettingsContent(
     onBudget: () -> Unit,
     onNavigateToCategories: () -> Unit,
     onNavigateToTags: () -> Unit,
+    onNavigateToAccountTypes: () -> Unit,
     onNavigateToRecurringExpenses: () -> Unit,
     onNavigateToDataManagement: () -> Unit,
+    onNavigateToAiSettings: () -> Unit,
     exportBackup: (android.content.Context) -> Unit,
     onLanguageToggle: () -> Unit,
     onCurrencyToggle: () -> Unit,
@@ -408,6 +415,14 @@ fun SettingsContent(
             )
         }
 
+        item {
+            SettingsClickableCard(
+                onClick = onNavigateToAccountTypes,
+                icon = Icons.Default.ChevronRight,
+                title = "Account Types"
+            )
+        }
+
         // Security Section
         item {
             SettingsSectionTitle("Security")
@@ -416,6 +431,15 @@ fun SettingsContent(
                 onCheckedChange = { onTogglePrivacyMode() },
                 title = "Privacy Mode",
                 subtitle = if (isPrivacyModeEnabled) "Hiding sensitive balances" else "Showing all balances"
+            )
+        }
+
+        item {
+            SettingsClickableCard(
+                onClick = onNavigateToAiSettings,
+                icon = Icons.Default.SmartToy,
+                title = "AI (Bring Your Own Key)",
+                subtitle = "Optional monthly review & insights"
             )
         }
 

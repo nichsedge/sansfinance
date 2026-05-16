@@ -35,7 +35,6 @@
 
 # Keep Application class and Hilt base class
 -keep class com.sans.finance.SansFinanceApp { *; }
--keep class com.sans.finance.Hilt_SansFinanceApp { *; }
 
 # Keep WorkManager Workers
 -keep class com.sans.finance.data.worker.** { *; }

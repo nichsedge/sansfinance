@@ -2,7 +2,6 @@ package com.sans.finance.data.util
 
 import com.sans.finance.domain.model.Expense
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 object CsvParser {
@@ -67,10 +66,12 @@ object CsvParser {
                         inQuotes = !inQuotes
                     }
                 }
+
                 char == ',' && !inQuotes -> {
                     result.add(current.toString())
                     current = StringBuilder()
                 }
+
                 else -> current.append(char)
             }
             i++

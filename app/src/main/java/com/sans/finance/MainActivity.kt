@@ -64,6 +64,11 @@ fun AppNavigation() {
                 onBack = { navController.popBackStack() }
             )
         }
+        composable<Screen.AccountTypeSettings> {
+            com.sans.finance.presentation.settings.accounts.AccountTypeSettingsScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
         composable<Screen.ExpenseList> {
             ExpenseListScreen(
                 onAddTransactionClick = {
@@ -120,8 +125,10 @@ fun AppNavigation() {
                 onNavigateToBudgets = { navController.navigate(Screen.Budgets) },
                 onNavigateToCategories = { navController.navigate(Screen.CategorySettings) },
                 onNavigateToTags = { navController.navigate(Screen.TagSettings) },
+                onNavigateToAccountTypes = { navController.navigate(Screen.AccountTypeSettings) },
                 onNavigateToRecurringExpenses = { navController.navigate(Screen.RecurringExpenses) },
-                onNavigateToDataManagement = { navController.navigate(Screen.DataManagement) }
+                onNavigateToDataManagement = { navController.navigate(Screen.DataManagement) },
+                onNavigateToAiSettings = { navController.navigate(Screen.AiSettings) }
             )
         }
         composable<Screen.RecurringExpenses> {
@@ -164,6 +171,16 @@ fun AppNavigation() {
         }
         composable<Screen.DataManagement> {
             DataManagementScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable<Screen.AiSettings> {
+            com.sans.finance.presentation.settings.ai.AiSettingsScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable<Screen.MonthlyReview> {
+            com.sans.finance.presentation.monthly_review.MonthlyReviewScreen(
                 onBack = { navController.popBackStack() }
             )
         }

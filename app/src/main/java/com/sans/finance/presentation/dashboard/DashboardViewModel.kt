@@ -5,11 +5,16 @@ import androidx.lifecycle.viewModelScope
 import com.sans.finance.core.util.CalendarUtils
 import com.sans.finance.data.local.dao.SnapshotTotal
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
+import com.sans.finance.data.local.entity.AccountEntity
 import com.sans.finance.domain.repository.AccountRepository
 import com.sans.finance.domain.repository.BudgetRepository
 import com.sans.finance.domain.repository.ExpenseRepository
 import com.sans.finance.domain.repository.GoalRepository
 import com.sans.finance.domain.repository.PortfolioRepository
+import com.sans.finance.domain.model.Expense
+import com.sans.finance.data.local.entity.BudgetEntity
+import com.sans.finance.data.local.entity.GoalEntity
+import com.sans.finance.data.local.entity.AccountTypeEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -22,7 +27,7 @@ data class DashboardState(
     val totalAssets: Long = 0L,
     val totalLiabilities: Long = 0L,
 
-    val upcomingBills: List<com.sans.finance.domain.model.Expense> = emptyList(),
+    val upcomingBills: List<Expense> = emptyList(),
     val goals: List<DashboardGoal> = emptyList(),
     val projectedBalance30Days: Long = 0L,
     val wealthDistribution: Map<String, Long> = emptyMap(),
@@ -47,7 +52,7 @@ data class DashboardState(
     val financialFreedomScore: Float = 0f,
     val isFireManualEnabled: Boolean = false,
     val manualFireAnnualExpense: Long = 0L,
-    val recentTransactions: List<com.sans.finance.domain.model.Expense> = emptyList()
+    val recentTransactions: List<Expense> = emptyList()
 )
 
 enum class WealthDistributionTab {
@@ -61,6 +66,7 @@ class DashboardViewModel @Inject constructor(
     private val goalRepository: GoalRepository,
     private val budgetRepository: BudgetRepository,
     private val portfolioRepository: PortfolioRepository,
+    private val accountTypeRepository: com.sans.finance.domain.repository.AccountTypeRepository,
     private val localeManager: com.sans.finance.data.util.LocaleManager,
     private val currencyDao: com.sans.finance.data.local.dao.CurrencyDao
 ) : ViewModel() {
@@ -70,14 +76,28 @@ class DashboardViewModel @Inject constructor(
 
     // Intermediate Contexts for better type safety and modularity
     private val financeContext = combine(
-        expenseRepository.getExpensesBetween(0, Long.MAX_VALUE),
-        expenseRepository.getRecurringExpenses(),
-        budgetRepository.getAllBudgets(),
-        goalRepository.getAllGoals(),
+        combine(
+            accountRepository.getAllAccounts(),
+            expenseRepository.getExpensesBetween(0, Long.MAX_VALUE),
+            expenseRepository.getRecurringExpenses(),
+            budgetRepository.getAllBudgets(),
+            goalRepository.getAllGoals()
+        ) { accounts, txns, recurring, budgets, goals ->
+            FinanceContextPartial(accounts, txns, recurring, budgets, goals, emptyList())
+        },
+        accountTypeRepository.getAllAccountTypes(),
         currencyDao.getAllRates()
-    ) { txns, recurring, budgets, goals, rates ->
+    ) { partial, types, rates ->
         val ratesMap = rates.associate { it.code to it.rateToIdr }
-        FinanceContext(txns, recurring, budgets, goals, ratesMap)
+        FinanceContext(
+            accounts = partial.accounts,
+            transactions = partial.transactions,
+            recurring = partial.recurring,
+            budgets = partial.budgets,
+            goals = partial.goals,
+            accountTypes = types,
+            rates = ratesMap
+        )
     }
 
     private val portfolioContext = combine(
@@ -131,8 +151,17 @@ class DashboardViewModel @Inject constructor(
         val portfolioAssets =
             if (baseRate > 0) ((latestPortfolioIdr / baseRate) * 100).toLong() else (latestPortfolioIdr * 100).toLong()
 
-        val assets = portfolioAssets
-        val liabilities = 0L
+        val liabilityTypeNames = finance.accountTypes.filter { it.isLiability }.map { it.name }.toSet()
+
+        val accountAssets = finance.accounts
+            .filter { it.type !in liabilityTypeNames && it.type != "Investment" }
+            .sumOf { convertToBase(it.balance, it.currency) }
+        val accountLiabilities = finance.accounts
+            .filter { it.type in liabilityTypeNames }
+            .sumOf { convertToBase(it.balance, it.currency) }
+
+        val assets = portfolioAssets + accountAssets
+        val liabilities = accountLiabilities
 
         val recurringNet = recurring.sumOf {
             val amt = convertToBase(it.amount, it.currency)
@@ -326,11 +355,22 @@ class DashboardViewModel @Inject constructor(
 
 // Type-safe Context wrappers
 private data class FinanceContext(
-    val transactions: List<com.sans.finance.domain.model.Expense>,
-    val recurring: List<com.sans.finance.domain.model.Expense>,
-    val budgets: List<com.sans.finance.data.local.entity.BudgetEntity>,
-    val goals: List<com.sans.finance.data.local.entity.GoalEntity>,
+    val accounts: List<AccountEntity>,
+    val transactions: List<Expense>,
+    val recurring: List<Expense>,
+    val budgets: List<BudgetEntity>,
+    val goals: List<GoalEntity>,
+    val accountTypes: List<AccountTypeEntity>,
     val rates: Map<String, Double>
+)
+
+private data class FinanceContextPartial(
+    val accounts: List<AccountEntity>,
+    val transactions: List<Expense>,
+    val recurring: List<Expense>,
+    val budgets: List<BudgetEntity>,
+    val goals: List<GoalEntity>,
+    val accountTypes: List<AccountTypeEntity>
 )
 
 private data class PortfolioContext(

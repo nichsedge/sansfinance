@@ -49,10 +49,30 @@ class PortfolioRepositoryImpl(
         items: List<PortfolioHoldingEntity>,
         exchangeRate: Double?
     ) {
-        val totalIdr = items.sumOf { it.valueIdr }
+        val normalizedItems = items.map { item ->
+            val accountKey = item.accountKey?.trim().takeUnless { it.isNullOrEmpty() }
+            val accountName =
+                item.accountName?.trim().takeUnless { it.isNullOrEmpty() }
+                    ?: item.account.trim().takeIf { it.isNotEmpty() }
+
+            val linkedAccountId = resolveOrCreateInvestmentAccountId(
+                accountKey = accountKey,
+                accountName = accountName
+            )
+
+            item.copy(
+                snapshotDate = date,
+                accountId = linkedAccountId,
+                accountKey = accountKey,
+                accountName = accountName,
+                account = accountName ?: accountKey ?: item.account
+            )
+        }
+
+        val totalIdr = normalizedItems.sumOf { it.valueIdr }
 
         // Estimate exchange rate if not provided (fallback to a reasonable default or calculate from items)
-        val rate = exchangeRate ?: items.filter { it.currency == "USD" && it.quantity > 0 }
+        val rate = exchangeRate ?: normalizedItems.filter { it.currency == "USD" && it.quantity > 0 }
             .map { it.valueIdr / it.quantity }
             .average()
             .takeIf { !it.isNaN() } ?: 16000.0 // Default fallback
@@ -66,7 +86,35 @@ class PortfolioRepositoryImpl(
             totalValueUsd = totalUsd
         )
 
-        dao.insertSnapshot(header, items)
+        dao.insertSnapshot(header, normalizedItems)
+    }
+
+    private suspend fun resolveOrCreateInvestmentAccountId(
+        accountKey: String?,
+        accountName: String?
+    ): Long {
+        if (!accountKey.isNullOrBlank()) {
+            val linkedId = dao.findLinkedAccountIdByKey(accountKey)
+            if (linkedId != null) {
+                val linkedAccount = accountDao.getAccountById(linkedId)
+                if (linkedAccount != null) return linkedId
+            }
+        }
+
+        if (!accountName.isNullOrBlank()) {
+            val byName = accountDao.getAccountByName(accountName)
+            if (byName != null) return byName.id
+        }
+
+        val displayName = accountName ?: accountKey ?: "Imported Investment Account"
+        return accountDao.insertAccount(
+            com.sans.finance.data.local.entity.AccountEntity(
+                name = displayName,
+                type = "Investment",
+                balance = 0L,
+                currency = "IDR"
+            )
+        )
     }
 
     override suspend fun deleteByDate(date: Long) =

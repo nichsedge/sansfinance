@@ -1,6 +1,7 @@
 package com.sans.finance.presentation.forecasting
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +31,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -56,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.core.util.CurrencyFormatter
+import com.sans.finance.presentation.components.GlassCard
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,39 +72,55 @@ fun WealthForecastingScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Wealth Trajectory", fontWeight = FontWeight.Bold) },
+                title = { 
+                    Text(
+                        "Wealth Trajectory", 
+                        style = MaterialTheme.typography.titleLarge, 
+                        fontWeight = FontWeight.ExtraBold
+                    ) 
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                )
             )
         }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                        )
+                    )
+                )
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Summary Card
-            Card(
+            GlassCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+                containerColor = MaterialTheme.colorScheme.primary,
+                alpha = 0.15f
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         "Future Wealth Projection",
                         style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -111,12 +130,12 @@ fun WealthForecastingScreen(
                         ),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         "Estimated in ${state.projectionYears} years",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 }
             }
@@ -124,25 +143,33 @@ fun WealthForecastingScreen(
             // Controls
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.extraLarge,
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
-                        alpha = 0.3f
-                    )
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp, 
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("Expected Annual ROI", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                "EXPECTED ANNUAL ROI", 
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
                             Text(
                                 "${(state.expectedRoi * 100).toInt()}% per year",
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Black
                             )
                         }
                     }
@@ -153,7 +180,7 @@ fun WealthForecastingScreen(
                         steps = 19
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -180,13 +207,16 @@ fun WealthForecastingScreen(
             // Chart
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                shape = MaterialTheme.shapes.extraLarge,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         "Growth Trajectory",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     TrajectoryChart(
@@ -199,23 +229,44 @@ fun WealthForecastingScreen(
             // FIRE Index
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f))
+                shape = MaterialTheme.shapes.extraLarge,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f))
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
+                        Icon(
+                            Icons.Default.Info, 
+                            contentDescription = null, 
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(20.dp)
+                        )
                         Spacer(Modifier.width(8.dp))
-                        Text("FIRE INDEX", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Black)
+                        Text(
+                            "FIRE INDEX", 
+                            style = MaterialTheme.typography.labelMedium, 
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp
+                        )
                     }
                     Spacer(Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Column {
                             Text("Target (25x Expenses)", style = MaterialTheme.typography.labelSmall)
-                            Text(CurrencyFormatter.formatAmountCompact(state.fireNumber, state.currentCurrency), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(
+                                CurrencyFormatter.formatAmountCompact(state.fireNumber, state.currentCurrency), 
+                                style = MaterialTheme.typography.titleMedium, 
+                                fontWeight = FontWeight.Black
+                            )
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text("Years to Freedom", style = MaterialTheme.typography.labelSmall)
-                            Text(state.yearsToFire?.let { "$it Years" } ?: "∞", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.tertiary)
+                            Text(
+                                state.yearsToFire?.let { "$it Years" } ?: "∞", 
+                                style = MaterialTheme.typography.titleMedium, 
+                                fontWeight = FontWeight.Black, 
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
                         }
                     }
                 }
@@ -224,24 +275,31 @@ fun WealthForecastingScreen(
             // Emergency Fund (Sinking Fund)
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.extraLarge,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Emergency Fund (Sinking Fund)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Black)
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "Emergency Fund (Sinking Fund)", 
+                        style = MaterialTheme.typography.titleSmall, 
+                        fontWeight = FontWeight.Black
+                    )
                     Spacer(Modifier.height(12.dp))
                     val progress = if (state.emergencyFundTarget > 0) (state.currentEmergencyFund.toFloat() / state.emergencyFundTarget).coerceIn(0f, 1f) else 0f
                     androidx.compose.material3.LinearProgressIndicator(
                         progress = { progress },
                         modifier = Modifier.fillMaxWidth().height(8.dp).clip(MaterialTheme.shapes.small),
-                        color = if (progress >= 1f) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
+                        color = if (progress >= 1f) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("${(progress * 100).toInt()}% Covered", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Text("${(progress * 100).toInt()}% Covered", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = if (progress >= 1f) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary)
                         Text(
                             "${CurrencyFormatter.formatAmountCompact(state.currentEmergencyFund, state.currentCurrency)} / ${CurrencyFormatter.formatAmountCompact(state.emergencyFundTarget, state.currentCurrency)}",
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -252,10 +310,12 @@ fun WealthForecastingScreen(
                 "KEY MILESTONES",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.secondary,
-                letterSpacing = 1.5.sp
+                letterSpacing = 1.5.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 4.dp)
             )
 
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 listOf(5, 10, 20).forEach { year ->
                     val value = state.projections.find { it.year == year }?.value ?: 0L
                     MilestoneItem(year, value, state.currentCurrency)
@@ -265,8 +325,9 @@ fun WealthForecastingScreen(
             // Educational Note
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f),
-                shape = MaterialTheme.shapes.medium
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f),
+                shape = MaterialTheme.shapes.large,
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f))
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -282,10 +343,13 @@ fun WealthForecastingScreen(
                     Text(
                         "This projection assumes constant monthly savings and a fixed annual ROI. Real-world returns will vary.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        lineHeight = 16.sp
                     )
                 }
             }
+            
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -294,11 +358,18 @@ fun WealthForecastingScreen(
 fun InfoItem(label: String, value: String) {
     Column {
         Text(
-            label,
+            label.uppercase(),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp
         )
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+        Text(
+            value, 
+            style = MaterialTheme.typography.bodyLarge, 
+            fontWeight = FontWeight.Black,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
@@ -306,33 +377,39 @@ fun InfoItem(label: String, value: String) {
 fun MilestoneItem(years: Int, amount: Long, currencyCode: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                     shape = MaterialTheme.shapes.small
                 ) {
                     Text(
                         "$years Y",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
                 Spacer(modifier = Modifier.width(16.dp))
-                Text("Net Worth", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    "Projected Net Worth", 
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
             }
             Text(
                 CurrencyFormatter.formatAmount(amount, currencyCode),
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.primary
             )
         }
@@ -370,7 +447,6 @@ fun TrajectoryChart(projections: List<ProjectionPoint>, currencyCode: String) {
                 .pointerInput(projections.size) {
                     detectDragGestures(
                         onDragStart = { offset ->
-                            val padding = 60f
                             val chartLeft = 80f
                             val chartRight = size.width - 20f
                             val chartWidth = chartRight - chartLeft
@@ -381,7 +457,6 @@ fun TrajectoryChart(projections: List<ProjectionPoint>, currencyCode: String) {
                             selectedIndex = index
                         },
                         onDrag = { change, _ ->
-                            val padding = 60f
                             val chartLeft = 80f
                             val chartRight = size.width - 20f
                             val chartWidth = chartRight - chartLeft
@@ -398,7 +473,6 @@ fun TrajectoryChart(projections: List<ProjectionPoint>, currencyCode: String) {
                 .pointerInput(projections.size) {
                     detectTapGestures(
                         onPress = { offset ->
-                            val padding = 60f
                             val chartLeft = 80f
                             val chartRight = size.width - 20f
                             val chartWidth = chartRight - chartLeft

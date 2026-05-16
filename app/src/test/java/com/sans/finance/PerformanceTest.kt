@@ -1,37 +1,26 @@
 package com.sans.finance
 
+import com.sans.finance.core.util.CalendarUtils
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.system.measureTimeMillis
 
 class PerformanceTest {
 
     @Test
-    fun benchmarkCalendarCreation() {
-        val duration = 10000
-        val startDate = System.currentTimeMillis()
+    fun calendarUtils_returnsDistinctInstancesPerCall() {
+        val first = CalendarUtils.getInstance()
+        val second = CalendarUtils.getInstance()
 
-        // Unoptimized
-        val unoptimizedTime = measureTimeMillis {
-            for (i in 1..duration) {
-                val calendar = java.util.Calendar.getInstance()
-                calendar.timeInMillis = startDate
-                calendar.add(java.util.Calendar.MONTH, i - 1)
-                calendar.timeInMillis
-            }
-        }
+        assertNotSame(first, second)
+    }
 
-        // Optimized
-        val optimizedTime = measureTimeMillis {
-            val calendar = java.util.Calendar.getInstance()
-            for (i in 1..duration) {
-                calendar.timeInMillis = startDate
-                calendar.add(java.util.Calendar.MONTH, i - 1)
-                calendar.timeInMillis
-            }
-        }
+    @Test
+    fun calendarUtils_resetsTimeToNowWindow() {
+        val before = System.currentTimeMillis()
+        val calendar = CalendarUtils.getInstance()
+        val after = System.currentTimeMillis()
 
-        println("Unoptimized time: $unoptimizedTime ms")
-        println("Optimized time: $optimizedTime ms")
-        assert(optimizedTime < unoptimizedTime)
+        assertTrue(calendar.timeInMillis in before..after)
     }
 }

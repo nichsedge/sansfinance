@@ -42,6 +42,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,12 +52,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.domain.model.Category
 import com.sans.finance.presentation.components.PrivacyText
+import com.sans.finance.presentation.components.GlassCard
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,14 +75,23 @@ fun BudgetScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Budgets", fontWeight = FontWeight.ExtraBold) },
+                title = { 
+                    Text(
+                        "Budgets", 
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold
+                    ) 
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
                 )
+            )
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -94,16 +107,28 @@ fun BudgetScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                        )
+                    )
+                )
                 .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            item {
+                BudgetSummaryHeader(state)
+            }
+
             if (state.budgetStatuses.isEmpty()) {
                 item {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 120.dp),
+                            .padding(vertical = 80.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -138,6 +163,8 @@ fun BudgetScreen(
                     onDelete = { viewModel.deleteBudget(status.budget) }
                 )
             }
+            
+            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
 
         if (showAddDialog) {
@@ -149,6 +176,61 @@ fun BudgetScreen(
                     viewModel.addBudget(amount, categoryId)
                     showAddDialog = false
                 }
+            )
+        }
+    }
+}
+
+@Composable
+fun BudgetSummaryHeader(state: BudgetState) {
+    val totalSpent = state.budgetStatuses.sumOf { it.spent }
+    val totalBudget = state.budgetStatuses.sumOf { it.budget.amount }
+    
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = MaterialTheme.colorScheme.primary,
+        alpha = 0.12f
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+            Text(
+                "Total Budget Utilization",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+            Row(verticalAlignment = Alignment.Bottom) {
+                PrivacyText(
+                    amount = totalSpent,
+                    currencyCode = state.currentCurrency,
+                    isVisible = !state.isPrivacyModeEnabled,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    " / ",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                PrivacyText(
+                    amount = totalBudget,
+                    currencyCode = state.currentCurrency,
+                    isVisible = !state.isPrivacyModeEnabled,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            val progress = if (totalBudget > 0L) (totalSpent.toFloat() / totalBudget.toFloat()).coerceIn(0f, 1f) else 0f
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                color = if (progress > 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         }
     }
@@ -215,7 +297,7 @@ fun BudgetItem(
 
                 IconButton(
                     onClick = onDelete,
-                    modifier = Modifier.background(
+                    modifier = Modifier.size(32.dp).background(
                         MaterialTheme.colorScheme.error.copy(alpha = 0.05f),
                         CircleShape
                     )
@@ -224,7 +306,7 @@ fun BudgetItem(
                         Icons.Default.Delete,
                         contentDescription = "Delete",
                         tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }

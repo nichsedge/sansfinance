@@ -28,7 +28,22 @@ class LocaleManager @Inject constructor(
         )
 
         val COMMON_CURRENCIES = listOf(
-            "USD", "IDR", "CNY", "EUR", "GBP", "JPY", "SGD", "AUD", "CAD", "CHF", "HKD", "KRW", "MYR", "PHP", "THB", "VND"
+            "USD",
+            "IDR",
+            "CNY",
+            "EUR",
+            "GBP",
+            "JPY",
+            "SGD",
+            "AUD",
+            "CAD",
+            "CHF",
+            "HKD",
+            "KRW",
+            "MYR",
+            "PHP",
+            "THB",
+            "VND"
         )
 
         fun getAllAvailableCurrencies(): List<String> {
@@ -69,7 +84,7 @@ class LocaleManager @Inject constructor(
     }
 
     fun getCurrency(): String {
-        return prefs.getString("currency", "USD") ?: "USD"
+        return prefs.getString("currency", "IDR") ?: "IDR"
     }
 
     fun getEnabledCurrencies(): List<String> {

@@ -2,7 +2,6 @@ package com.sans.finance.data.util
 
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
@@ -44,7 +43,7 @@ object PortfolioCsvParser {
                     account = if (values.size > 9) values[9] else "",
                     details = if (values.size > 10) values[10] else null
                 )
-                
+
                 holdingsByDate.getOrPut(currentLineDate) { mutableListOf() }.add(holding)
             } catch (e: Exception) {
                 // Skip malformed lines
@@ -75,10 +74,12 @@ object PortfolioCsvParser {
                         inQuotes = !inQuotes
                     }
                 }
+
                 char == ',' && !inQuotes -> {
                     result.add(current.toString())
                     current = StringBuilder()
                 }
+
                 else -> current.append(char)
             }
             i++

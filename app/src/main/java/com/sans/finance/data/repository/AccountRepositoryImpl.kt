@@ -10,7 +10,10 @@ class AccountRepositoryImpl(
 ) : AccountRepository {
     override fun getAllAccounts(): Flow<List<AccountEntity>> = dao.getAllAccounts()
     override suspend fun getAccountById(id: Long): AccountEntity? = dao.getAccountById(id)
+    override suspend fun countAccountsByType(typeName: String): Int = dao.countAccountsByType(typeName)
     override suspend fun insertAccount(account: AccountEntity): Long = dao.insertAccount(account)
     override suspend fun updateAccount(account: AccountEntity) = dao.updateAccount(account)
+    override suspend fun renameTypeForAccounts(oldType: String, newType: String) =
+        dao.renameTypeForAccounts(oldType, newType, System.currentTimeMillis())
     override suspend fun deleteAccountById(id: Long) = dao.deleteAccountById(id)
 }

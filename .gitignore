@@ -31,7 +31,7 @@ Thumbs.db
 /release/
 
 # Project specific
-sans_finance_db_snapshot.sqlite
+sans_finance_db*
 app/src/main/assets/seed_transactions.csv
 backup.sh.bak
 restore.sh.bak

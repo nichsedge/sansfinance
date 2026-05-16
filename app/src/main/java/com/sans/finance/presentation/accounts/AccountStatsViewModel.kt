@@ -30,6 +30,7 @@ data class AccountStatsState(
 class AccountStatsViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val expenseRepository: ExpenseRepository,
+    private val accountTypeRepository: com.sans.finance.domain.repository.AccountTypeRepository,
     private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
@@ -38,12 +39,14 @@ class AccountStatsViewModel @Inject constructor(
     val state: StateFlow<AccountStatsState> = combine(
         _selectedDate,
         accountRepository.getAllAccounts(),
-        expenseRepository.getExpensesBetween(0, Long.MAX_VALUE)
-    ) { date, accounts, transactions ->
+        expenseRepository.getExpensesBetween(0, Long.MAX_VALUE),
+        accountTypeRepository.getAllAccountTypes()
+    ) { date, accounts, transactions, types ->
+        val liabilityTypeNames = types.filter { it.isLiability }.map { it.name }.toSet()
         val currentAssets =
-            accounts.filter { it.type != "Credit Card" && it.type != "Loan" }.sumOf { it.balance }
+            accounts.filter { it.type !in liabilityTypeNames }.sumOf { it.balance }
         val currentLiabilities =
-            accounts.filter { it.type == "Credit Card" || it.type == "Loan" }.sumOf { it.balance }
+            accounts.filter { it.type in liabilityTypeNames }.sumOf { it.balance }
         val currentTotal = currentAssets - currentLiabilities
 
         val balanceHistory = mutableListOf<Pair<String, Long>>()

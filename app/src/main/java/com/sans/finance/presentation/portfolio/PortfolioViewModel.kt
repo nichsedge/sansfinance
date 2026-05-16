@@ -4,13 +4,17 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.data.local.dao.AssetClassTotal
+import com.sans.finance.data.local.dao.AccountAliasDao
 import com.sans.finance.data.local.dao.CategoryTotal
+import com.sans.finance.data.local.dao.CurrencyDao
 import com.sans.finance.data.local.dao.SnapshotTotal
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import com.sans.finance.data.util.LocaleManager
 import com.sans.finance.data.util.PortfolioJsonExporter
 import com.sans.finance.data.util.PortfolioJsonImporter
 import com.sans.finance.domain.model.AssetClassHealth
+import com.sans.finance.domain.repository.AccountRepository
+import com.sans.finance.domain.repository.AccountTypeRepository
 import com.sans.finance.domain.repository.GoalRepository
 import com.sans.finance.domain.repository.PortfolioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -43,7 +47,9 @@ data class PortfolioScreenState(
     val healthList: List<AssetClassHealth> = emptyList(),
     val selectedTab: Int = 0,
     val xirr: Double? = null,
-    val goals: List<com.sans.finance.presentation.goals.GoalWithProgress> = emptyList()
+    val goals: List<com.sans.finance.presentation.goals.GoalWithProgress> = emptyList(),
+    val accountAliases: Map<String, String> = emptyMap(),
+    val includedAccountCashIdr: Double = 0.0
 )
 
 private data class PortfolioData(
@@ -58,6 +64,10 @@ private data class PortfolioData(
 @HiltViewModel
 class PortfolioViewModel @Inject constructor(
     private val repository: PortfolioRepository,
+    private val accountRepository: AccountRepository,
+    private val accountTypeRepository: AccountTypeRepository,
+    private val currencyDao: CurrencyDao,
+    private val accountAliasDao: AccountAliasDao,
     private val goalRepository: GoalRepository,
     private val localeManager: LocaleManager,
     @param:ApplicationContext private val context: android.content.Context
@@ -97,7 +107,11 @@ class PortfolioViewModel @Inject constructor(
         _importMessage,
         localeManager.privacyMode,
         _selectedTab,
-        _xirr
+        _xirr,
+        accountRepository.getAllAccounts(),
+        accountTypeRepository.getAllAccountTypes(),
+        currencyDao.getAllRates(),
+        accountAliasDao.getAllAliases()
     ) { args ->
         @Suppress("UNCHECKED_CAST")
         val dates = args[0] as List<Long>
@@ -112,6 +126,14 @@ class PortfolioViewModel @Inject constructor(
         val privacyMode = args[6] as Boolean
         val selectedTab = args[7] as Int
         val xirrValue = args[8] as Double?
+        @Suppress("UNCHECKED_CAST")
+        val accounts = args[9] as List<com.sans.finance.data.local.entity.AccountEntity>
+        @Suppress("UNCHECKED_CAST")
+        val accountTypes = args[10] as List<com.sans.finance.data.local.entity.AccountTypeEntity>
+        @Suppress("UNCHECKED_CAST")
+        val rates = args[11] as List<com.sans.finance.data.local.entity.ExchangeRateEntity>
+        @Suppress("UNCHECKED_CAST")
+        val aliases = args[12] as List<com.sans.finance.data.local.entity.AccountAliasEntity>
 
         val currency = localeManager.getCurrency()
 
@@ -131,15 +153,51 @@ class PortfolioViewModel @Inject constructor(
         updateXirr(selectedDate)
 
         val holdings = repository.getSnapshotByDateSync(selectedDate)
-        val categoryTotals =
-            repository.getCategoryTotals(selectedDate).sortedByDescending { it.totalIdr }
-        val assetClassTotals =
-            repository.getAssetClassTotals(selectedDate).sortedByDescending { it.totalIdr }
+        val liabilityTypeNames = accountTypes.filter { it.isLiability }.map { it.name }.toSet()
+        val ratesMap = rates.associate { it.code to it.rateToIdr }
+        val accountCashHoldings = accounts
+            .filter { it.type !in liabilityTypeNames && it.type != "Investment" }
+            .map { account ->
+                val amount = account.balance / 100.0
+                val rateToIdr = if (account.currency == "IDR") 1.0 else (ratesMap[account.currency] ?: 1.0)
+                val valueIdr = amount * rateToIdr
+                PortfolioHoldingEntity(
+                    snapshotDate = selectedDate,
+                    source = "Accounts",
+                    category = account.type,
+                    asset = account.name,
+                    currency = account.currency,
+                    quantity = amount,
+                    price = if (account.currency == "IDR") 1.0 else null,
+                    valueIdr = valueIdr,
+                    assetClass = "Cash & Equivalents",
+                    accountId = account.id,
+                    accountKey = "account:${account.id}",
+                    accountName = account.name,
+                    account = account.name,
+                    details = "From account balance"
+                )
+            }
+            .filter { it.valueIdr != 0.0 }
+
+        val consolidatedHoldings = holdings + accountCashHoldings
+        val categoryTotals = consolidatedHoldings
+            .groupBy { it.category }
+            .map { (category, items) ->
+                CategoryTotal(category = category, totalIdr = items.sumOf { it.valueIdr }, totalUsd = 0.0)
+            }
+            .sortedByDescending { it.totalIdr }
+        val assetClassTotals = consolidatedHoldings
+            .groupBy { it.assetClass }
+            .map { (assetClass, items) ->
+                AssetClassTotal(assetClass = assetClass, totalIdr = items.sumOf { it.valueIdr })
+            }
+            .sortedByDescending { it.totalIdr }
 
         val totalValueIdr = assetClassTotals.sumOf { it.totalIdr }
         val healthList = calculateHealth(assetClassTotals, totalValueIdr, dbTargets)
 
-        val sortedHoldingsByCategory = holdings.groupBy { it.category }
+        val sortedHoldingsByCategory = consolidatedHoldings.groupBy { it.category }
             .mapValues { entry -> entry.value.sortedByDescending { it.valueIdr } }
             .toList()
             .sortedByDescending { it.second.sumOf { h -> h.valueIdr } }
@@ -151,17 +209,16 @@ class PortfolioViewModel @Inject constructor(
         } else null
 
         val currentTotal = history.find { it.snapshot_date == selectedDate }
+        val latestHeader = repository.getLatestSnapshotHeader().first()
+        val exchangeRate = latestHeader?.exchangeRateUsd ?: 16000.0
 
-        val goalsWithProgress = if (holdings.isNotEmpty()) {
-            val latestHeader = repository.getLatestSnapshotHeader().first()
-            val exchangeRate = latestHeader?.exchangeRateUsd ?: 16000.0
-
+        val goalsWithProgress = if (consolidatedHoldings.isNotEmpty()) {
             goals.map { goal ->
                 val currentAmountIdr = when (goal.targetType) {
-                    "TOTAL" -> holdings.sumOf { it.valueIdr }
-                    "CATEGORY" -> holdings.filter { it.category == goal.targetName }
+                    "TOTAL" -> consolidatedHoldings.sumOf { it.valueIdr }
+                    "CATEGORY" -> consolidatedHoldings.filter { it.category == goal.targetName }
                         .sumOf { it.valueIdr }
-                    "ASSET_CLASS" -> holdings.filter { it.assetClass == goal.targetName }
+                    "ASSET_CLASS" -> consolidatedHoldings.filter { it.assetClass == goal.targetName }
                         .sumOf { it.valueIdr }
                     else -> 0.0
                 }
@@ -177,11 +234,11 @@ class PortfolioViewModel @Inject constructor(
         } else emptyList()
 
         PortfolioScreenState(
-            holdings = holdings,
+            holdings = consolidatedHoldings,
             holdingsByCategory = sortedHoldingsByCategory,
             categoryTotals = categoryTotals,
-            totalValueIdr = currentTotal?.totalIdr ?: 0.0,
-            totalValueUsd = currentTotal?.totalUsd ?: 0.0,
+            totalValueIdr = totalValueIdr,
+            totalValueUsd = if (exchangeRate > 0) totalValueIdr / exchangeRate else (currentTotal?.totalUsd ?: 0.0),
             snapshotDates = dates,
             selectedDateIndex = validIndex,
             selectedDate = selectedDate,
@@ -195,7 +252,9 @@ class PortfolioViewModel @Inject constructor(
             healthList = healthList,
             xirr = xirrValue,
             selectedTab = selectedTab,
-            goals = goalsWithProgress
+            goals = goalsWithProgress,
+            accountAliases = aliases.associate { it.accountKey to it.aliasName },
+            includedAccountCashIdr = accountCashHoldings.sumOf { it.valueIdr }
         )
     }.stateIn(
         scope = viewModelScope,

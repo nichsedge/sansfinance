@@ -23,10 +23,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -76,14 +73,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun DashboardScreen(
     onTransactionClick: (Long) -> Unit,
-    onPortfolioClick: () -> Unit,
     onRecurringExpensesClick: () -> Unit,
     onInstallmentsClick: () -> Unit,
     onWealthForecastingClick: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var showMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -94,43 +89,6 @@ fun DashboardScreen(
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.ExtraBold
                     )
-                },
-                actions = {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More options"
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Dashboard") },
-                            onClick = { showMenu = false },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Dashboard,
-                                    contentDescription = null
-                                )
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Portfolio") },
-                            onClick = {
-                                showMenu = false
-                                onPortfolioClick()
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.PieChart,
-                                    contentDescription = null
-                                )
-                            }
-                        )
-                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
