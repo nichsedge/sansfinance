@@ -78,6 +78,7 @@ import java.util.Locale
 fun PortfolioScreen(
     onDashboardClick: () -> Unit,
     onForecastingClick: () -> Unit,
+    onBack: () -> Unit = {},
     viewModel: PortfolioViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -98,19 +99,23 @@ fun PortfolioScreen(
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    if (state.snapshotDates.isNotEmpty()) {
-                        IconButton(onClick = viewModel::onPreviousSnapshot) {
-                            Icon(
-                                Icons.Default.ChevronLeft,
-                                contentDescription = "Previous",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
                 },
                 title = {
                     if (state.snapshotDates.isNotEmpty()) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = viewModel::onPreviousSnapshot) {
+                                Icon(
+                                    Icons.Default.ChevronLeft,
+                                    contentDescription = "Previous",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                             Text(
                                 state.selectedDate?.let { dateFormat.format(Date(it)) } ?: "",
                                 style = MaterialTheme.typography.titleLarge,
@@ -132,43 +137,7 @@ fun PortfolioScreen(
                         )
                     }
                 },
-                actions = {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More options"
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Dashboard") },
-                            onClick = {
-                                showMenu = false
-                                onDashboardClick()
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Dashboard,
-                                    contentDescription = null
-                                )
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Portfolio") },
-                            onClick = { showMenu = false },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.PieChart,
-                                    contentDescription = null
-                                )
-                            }
-                        )
-                    }
-                },
+                actions = {},
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
                     scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)

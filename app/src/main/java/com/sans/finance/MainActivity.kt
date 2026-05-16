@@ -139,13 +139,15 @@ fun AppNavigation() {
         }
         composable<Screen.Accounts> {
             com.sans.finance.presentation.accounts.AccountScreen(
-                onStatsClick = { navController.navigate(Screen.AccountStats) }
+                onStatsClick = { navController.navigate(Screen.AccountStats) },
+                onBack = { navController.popBackStack() }
             )
         }
         composable<Screen.Portfolio> {
             com.sans.finance.presentation.portfolio.PortfolioScreen(
                 onDashboardClick = { navController.popBackStack() },
-                onForecastingClick = { navController.navigate(Screen.WealthForecasting) }
+                onForecastingClick = { navController.navigate(Screen.WealthForecasting) },
+                onBack = { navController.popBackStack() }
             )
         }
         composable<Screen.AccountStats> {

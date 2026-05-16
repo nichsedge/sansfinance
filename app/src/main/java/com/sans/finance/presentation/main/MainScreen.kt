@@ -106,6 +106,9 @@ fun MainScreen(
                     },
                     onDebtStrategistClick = {
                         rootNavController.navigate(Screen.DebtStrategist)
+                    },
+                    onBack = {
+                        navController.popBackStack()
                     }
                 )
             }
@@ -122,6 +125,9 @@ fun MainScreen(
                     },
                     onForecastingClick = {
                         rootNavController.navigate(Screen.WealthForecasting)
+                    },
+                    onBack = {
+                        navController.popBackStack()
                     }
                 )
             }
