@@ -86,6 +86,7 @@ fun SettingsScreen(
     onNavigateToRecurringExpenses: () -> Unit,
     onNavigateToDataManagement: () -> Unit,
     onNavigateToAiSettings: () -> Unit,
+    onNavigateToReSyncDryRun: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val currentLanguage = viewModel.currentLanguage.value
@@ -100,7 +101,6 @@ fun SettingsScreen(
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
     var showRestartDialog by remember { mutableStateOf(false) }
-    var showSyncConfirmation by remember { mutableStateOf(false) }
     var showAllCurrenciesDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.syncMessage.value) {
@@ -159,7 +159,7 @@ fun SettingsScreen(
             isLoading = isLoading,
             isPrivacyModeEnabled = viewModel.isPrivacyModeEnabled.value,
             onTogglePrivacyMode = { viewModel.togglePrivacyMode() },
-            onReSync = { showSyncConfirmation = true },
+            onReSync = onNavigateToReSyncDryRun,
             supportedLanguages = viewModel.supportedLanguages,
             commonCurrencies = viewModel.commonCurrencies,
             enabledCurrencies = viewModel.enabledCurrencies.value,
@@ -224,32 +224,6 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(onClick = { showRestartDialog = false }) {
                     Text("Later")
-                }
-            }
-        )
-    }
-
-    if (showSyncConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showSyncConfirmation = false },
-            title = { Text("Re-sync Balances?") },
-            text = { Text("This will recalculate all account balances from your transaction history. Manual adjustments may be overwritten. Continue?") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.reSyncBalances()
-                        showSyncConfirmation = false
-                    },
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Re-sync")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSyncConfirmation = false }) {
-                    Text("Cancel")
                 }
             }
         )

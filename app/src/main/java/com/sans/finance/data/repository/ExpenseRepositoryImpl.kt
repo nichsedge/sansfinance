@@ -1,6 +1,7 @@
 package com.sans.finance.data.repository
 
 import androidx.room.withTransaction
+import com.sans.finance.domain.model.AccountSyncDryRunResult
 import com.sans.finance.domain.model.Category
 import com.sans.finance.domain.model.CategorySpent
 import com.sans.finance.domain.model.DaySpent
@@ -398,6 +399,47 @@ class ExpenseRepositoryImpl(
 
     override suspend fun cleanOrphanedTags() {
         tagDao.deleteOrphanedTags()
+    }
+
+    override suspend fun getReSyncBalancesDryRun(): List<AccountSyncDryRunResult> {
+        val accounts = accountDao.getAllAccounts().first()
+        val balances = mutableMapOf<Long, Long>()
+        accounts.forEach { balances[it.id] = 0L }
+
+        val expenses = dao.getAllExpenseEntities()
+        expenses.forEach { exp ->
+            if (exp.type == "TRANSFER") {
+                balances[exp.accountId] = (balances[exp.accountId] ?: 0L) - exp.amount
+                val toId = exp.toAccountId
+                if (toId != null) {
+                    balances[toId] = (balances[toId] ?: 0L) + exp.amount
+                }
+            } else if (exp.type == "INCOME") {
+                balances[exp.accountId] = (balances[exp.accountId] ?: 0L) + exp.amount
+            } else {
+                balances[exp.accountId] = (balances[exp.accountId] ?: 0L) - exp.amount
+            }
+        }
+
+        // Add installment payments
+        val installmentItems =
+            installmentDao.getInstallmentPaymentsBetween(0, Long.MAX_VALUE).first()
+        installmentItems.forEach { item ->
+            if (item.status == "Paid") {
+                balances[item.accountId] = (balances[item.accountId] ?: 0L) - item.amount
+            }
+        }
+
+        return accounts.map { account ->
+            val calculated = balances[account.id] ?: 0L
+            AccountSyncDryRunResult(
+                accountId = account.id,
+                accountName = account.name,
+                currentBalance = account.balance,
+                calculatedBalance = calculated,
+                currency = account.currency
+            )
+        }
     }
 
     override suspend fun reSyncAccountBalances() {

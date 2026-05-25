@@ -77,5 +77,8 @@ sealed class Screen {
     object AiSettings : Screen()
 
     @Serializable
+    object ReSyncDryRun : Screen()
+
+    @Serializable
     data class MonthlyReview(val monthOffset: Int = 0) : Screen()
 }

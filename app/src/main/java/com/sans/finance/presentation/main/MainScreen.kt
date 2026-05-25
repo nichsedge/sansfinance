@@ -156,6 +156,9 @@ fun MainScreen(
                     },
                     onNavigateToAiSettings = {
                         rootNavController.navigate(Screen.AiSettings)
+                    },
+                    onNavigateToReSyncDryRun = {
+                        rootNavController.navigate(Screen.ReSyncDryRun)
                     }
                 )
             }

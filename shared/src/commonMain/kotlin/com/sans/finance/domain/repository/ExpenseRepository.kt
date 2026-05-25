@@ -83,5 +83,6 @@ interface ExpenseRepository {
     ): Flow<List<DaySpent>>
 
     suspend fun cleanOrphanedTags()
+    suspend fun getReSyncBalancesDryRun(): List<AccountSyncDryRunResult>
     suspend fun reSyncAccountBalances()
 }

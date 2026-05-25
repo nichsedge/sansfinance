@@ -128,7 +128,8 @@ fun AppNavigation() {
                 onNavigateToAccountTypes = { navController.navigate(Screen.AccountTypeSettings) },
                 onNavigateToRecurringExpenses = { navController.navigate(Screen.RecurringExpenses) },
                 onNavigateToDataManagement = { navController.navigate(Screen.DataManagement) },
-                onNavigateToAiSettings = { navController.navigate(Screen.AiSettings) }
+                onNavigateToAiSettings = { navController.navigate(Screen.AiSettings) },
+                onNavigateToReSyncDryRun = { navController.navigate(Screen.ReSyncDryRun) }
             )
         }
         composable<Screen.RecurringExpenses> {
@@ -178,6 +179,11 @@ fun AppNavigation() {
         }
         composable<Screen.AiSettings> {
             com.sans.finance.presentation.settings.ai.AiSettingsScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable<Screen.ReSyncDryRun> {
+            com.sans.finance.presentation.settings.resync.ReSyncDryRunScreen(
                 onBack = { navController.popBackStack() }
             )
         }
