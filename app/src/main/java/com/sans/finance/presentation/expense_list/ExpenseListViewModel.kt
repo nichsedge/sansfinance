@@ -162,7 +162,7 @@ class ExpenseListViewModel @Inject constructor(
                 // We only exclude 'parent' installment plans to avoid double counting with their sub-payments
                 val validExpenses = expenses.filter { !it.isInstallment || it.isInstallmentPayment }
                 val income = validExpenses.filter { it.type == "INCOME" }.sumOf { it.amount }
-                val expense = validExpenses.filter { it.type != "INCOME" }.sumOf { it.amount }
+                val expense = validExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
                 val periodTotal = income - expense
 
                 var avgMonthlyExpense = 0L

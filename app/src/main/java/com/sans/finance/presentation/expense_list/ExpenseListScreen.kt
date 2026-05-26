@@ -287,7 +287,7 @@ fun ExpenseListScreen(
 
                         val dayIncome = expenses.filter { it.type == "INCOME" }
                             .sumOf { if (it.isInstallment && it.monthlyPayment > 0) it.monthlyPayment else it.amount }
-                        val dayExpense = expenses.filter { it.type != "INCOME" }
+                        val dayExpense = expenses.filter { it.type == "EXPENSE" }
                             .sumOf { if (it.isInstallment && it.monthlyPayment > 0) it.monthlyPayment else it.amount }
 
                         Surface(
