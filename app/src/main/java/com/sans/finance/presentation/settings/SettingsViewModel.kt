@@ -8,6 +8,7 @@ import com.sans.finance.data.local.AppDatabase
 import com.sans.finance.data.local.entity.BudgetEntity
 import com.sans.finance.domain.repository.BudgetRepository
 import com.sans.finance.domain.repository.ExpenseRepository
+import com.sans.finance.domain.model.ReSyncMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
@@ -132,7 +133,7 @@ class SettingsViewModel @Inject constructor(
         _isLoading.value = true
         viewModelScope.launch {
             try {
-                repository.reSyncAccountBalances()
+                repository.reSyncAccountBalances(ReSyncMode.TRANSACTIONS_AS_TRUTH, System.currentTimeMillis())
                 _syncMessage.value = "Balances synchronized successfully"
             } catch (e: Exception) {
                 _error.value = "Failed to sync balances: ${e.message}"

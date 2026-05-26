@@ -3,6 +3,7 @@ package com.sans.finance.data.repository
 import androidx.room.withTransaction
 import com.sans.finance.domain.model.AccountSyncDryRunResult
 import com.sans.finance.domain.model.Category
+import com.sans.finance.domain.model.ReSyncMode
 import com.sans.finance.domain.model.CategorySpent
 import com.sans.finance.domain.model.DaySpent
 import com.sans.finance.domain.model.Expense
@@ -442,46 +443,92 @@ class ExpenseRepositoryImpl(
         }
     }
 
-    override suspend fun reSyncAccountBalances() {
+    override suspend fun reSyncAccountBalances(mode: ReSyncMode, adjustmentDate: Long) {
         db.withTransaction {
-            // Balance re-sync
             val accounts = accountDao.getAllAccounts().first()
-            val balances = mutableMapOf<Long, Long>()
-            accounts.forEach { balances[it.id] = 0L }
+            val dryRunResults = getReSyncBalancesDryRun()
 
-            val expenses = dao.getAllExpenseEntities()
-            expenses.forEach { exp ->
-                if (exp.type == "TRANSFER") {
-                    balances[exp.accountId] = (balances[exp.accountId] ?: 0L) - exp.amount
-                    val toId = exp.toAccountId
-                    if (toId != null) {
-                        balances[toId] = (balances[toId] ?: 0L) + exp.amount
-                    }
-                } else if (exp.type == "INCOME") {
-                    balances[exp.accountId] = (balances[exp.accountId] ?: 0L) + exp.amount
-                } else {
-                    balances[exp.accountId] = (balances[exp.accountId] ?: 0L) - exp.amount
-                }
-            }
-
-            // Add installment payments
-            val installmentItems =
-                installmentDao.getInstallmentPaymentsBetween(0, Long.MAX_VALUE).first()
-            installmentItems.forEach { item ->
-                if (item.status == "Paid") {
-                    balances[item.accountId] = (balances[item.accountId] ?: 0L) - item.amount
-                }
-            }
-
-            accounts.forEach { account ->
-                val newBalance = balances[account.id] ?: 0L
-                if (account.balance != newBalance) {
-                    accountDao.updateAccount(
-                        account.copy(
-                            balance = newBalance,
-                            updatedAt = System.currentTimeMillis()
+            if (mode == ReSyncMode.TRANSACTIONS_AS_TRUTH) {
+                // Balance re-sync (Transactions as truth)
+                accounts.forEach { account ->
+                    val calc = dryRunResults.firstOrNull { it.accountId == account.id }?.calculatedBalance ?: 0L
+                    if (account.balance != calc) {
+                        accountDao.updateAccount(
+                            account.copy(
+                                balance = calc,
+                                updatedAt = System.currentTimeMillis()
+                            )
                         )
-                    )
+                    }
+                }
+            } else {
+                // Balance re-sync (Account balance as truth)
+                val categories = categoryDao.getAllCategoriesSync()
+                dryRunResults.forEach { result ->
+                    if (result.isDifferenceExist) {
+                        val delta = result.delta // calculated - current
+                        
+                        // Check if an adjustment transaction already exists for this account on the target date
+                        val existingAdjustment = dao.getAllExpenseEntities().firstOrNull { exp ->
+                            exp.accountId == result.accountId &&
+                            exp.date == adjustmentDate &&
+                            exp.title == "Balance Adjustment"
+                        }
+
+                        if (existingAdjustment != null) {
+                            val existingEffect = if (existingAdjustment.type == "INCOME") existingAdjustment.amount else -existingAdjustment.amount
+                            // Target correction effect is `-delta`
+                            val newEffect = existingEffect - delta
+
+                            if (newEffect == 0L) {
+                                // Delta is perfectly neutralized, delete the adjustment transaction
+                                dao.deleteExpense(existingAdjustment)
+                            } else {
+                                val newType = if (newEffect > 0L) "INCOME" else "EXPENSE"
+                                val newAmount = kotlin.math.abs(newEffect)
+                                val targetCategory = categories.firstOrNull {
+                                    it.type == newType && (it.name.contains("Misc", ignoreCase = true) || it.name.contains("Other", ignoreCase = true))
+                                } ?: categories.firstOrNull { it.type == newType }
+
+                                dao.updateExpense(
+                                    existingAdjustment.copy(
+                                        amount = newAmount,
+                                        type = newType,
+                                        categoryId = targetCategory?.id ?: 1L,
+                                        updatedAt = System.currentTimeMillis()
+                                    )
+                                )
+                            }
+                        } else {
+                            // Insert a brand new adjustment row
+                            val isIncome = delta < 0L
+                            val type = if (isIncome) "INCOME" else "EXPENSE"
+                            val amount = kotlin.math.abs(delta)
+
+                            // Find matching category (Misc/Other if possible, otherwise first of type)
+                            val targetCategory = categories.firstOrNull {
+                                it.type == type && (it.name.contains("Misc", ignoreCase = true) || it.name.contains("Other", ignoreCase = true))
+                            } ?: categories.firstOrNull { it.type == type }
+
+                            val expenseEntity = com.sans.finance.data.local.entity.ExpenseEntity(
+                                date = adjustmentDate,
+                                title = "Balance Adjustment",
+                                details = "System generated to match actual account balance during re-sync.",
+                                amount = amount,
+                                categoryId = targetCategory?.id ?: 1L,
+                                accountId = result.accountId,
+                                type = type,
+                                currency = result.currency,
+                                status = "Paid",
+                                isRecurring = false,
+                                isInstallment = false
+                            )
+
+                            // Insert directly using DAO to bypass balance modification trigger
+                            val newId = dao.insertExpense(expenseEntity)
+                            syncTags(newId, listOf("Adjustment"))
+                        }
+                    }
                 }
             }
         }

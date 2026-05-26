@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.domain.model.AccountSyncDryRunResult
+import com.sans.finance.domain.model.ReSyncMode
 import com.sans.finance.domain.repository.ExpenseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -31,6 +32,27 @@ class ReSyncDryRunViewModel @Inject constructor(
     val currentCurrency = localeManager.getCurrency()
     val isPrivacyModeEnabled: Boolean get() = localeManager.isPrivacyModeEnabled()
 
+    private val _selectedMode = mutableStateOf(ReSyncMode.TRANSACTIONS_AS_TRUTH)
+    val selectedMode: State<ReSyncMode> = _selectedMode
+
+    private val _selectedDateOption = mutableStateOf("TODAY") // "TODAY", "EPOCH", "CUSTOM"
+    val selectedDateOption: State<String> = _selectedDateOption
+
+    private val _customDate = mutableStateOf(System.currentTimeMillis())
+    val customDate: State<Long> = _customDate
+
+    fun setSyncMode(mode: ReSyncMode) {
+        _selectedMode.value = mode
+    }
+
+    fun setDateOption(option: String) {
+        _selectedDateOption.value = option
+    }
+
+    fun setCustomDate(timestamp: Long) {
+        _customDate.value = timestamp
+    }
+
     init {
         loadDryRunData()
     }
@@ -55,9 +77,14 @@ class ReSyncDryRunViewModel @Inject constructor(
         _error.value = null
         viewModelScope.launch {
             try {
-                repository.reSyncAccountBalances()
+                val adjustmentDate = when (_selectedDateOption.value) {
+                    "EPOCH" -> 0L
+                    "CUSTOM" -> _customDate.value
+                    else -> System.currentTimeMillis()
+                }
+                repository.reSyncAccountBalances(_selectedMode.value, adjustmentDate)
                 _successMessage.value = "Balances synchronized successfully"
-                // Reload the dry run data to show the new synchronized state (all deltas should be 0)
+                // Reload the dry run data to show the new synchronized state
                 val results = repository.getReSyncBalancesDryRun()
                 _dryRunResults.value = results
             } catch (e: Exception) {

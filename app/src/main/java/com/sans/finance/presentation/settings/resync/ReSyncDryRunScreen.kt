@@ -27,6 +27,8 @@ import com.sans.finance.domain.model.AccountSyncDryRunResult
 import com.sans.finance.presentation.components.PrivacyText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.sans.finance.core.util.DateFormatterUtils
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,138 +98,322 @@ fun ReSyncDryRunScreen(
             )
         }
     ) { paddingValues ->
+        val selectedMode by viewModel.selectedMode
+        val selectedDateOption by viewModel.selectedDateOption
+        val customDate by viewModel.customDate
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Info Card
-                Card(
+                LazyColumn(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                    ),
-                    shape = MaterialTheme.shapes.large
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = "This dry run calculates what the correct account balances should be based on all recorded transactions. No changes have been applied yet.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
-
-                // Summary Stats
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (differencesCount > 0) {
-                                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
-                            } else {
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    item {
+                        // Info Card
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                            ),
+                            shape = MaterialTheme.shapes.large
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "Choose your source of truth. You can either fix account balances to match your transaction history, or keep balances and add automatic adjustments.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
                             }
-                        ),
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Out of Sync",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (differencesCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "$differencesCount Accounts",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = if (differencesCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                            )
                         }
                     }
 
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.2f)
-                        ),
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                    item {
+                        // Mode Selector
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text(
-                                text = "In Sync",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.tertiary
-                            )
-                            Text(
-                                text = "$inSyncCount Accounts",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.tertiary
-                            )
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                onClick = { viewModel.setSyncMode(com.sans.finance.domain.model.ReSyncMode.TRANSACTIONS_AS_TRUTH) },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (selectedMode == com.sans.finance.domain.model.ReSyncMode.TRANSACTIONS_AS_TRUTH) {
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    }
+                                ),
+                                border = if (selectedMode == com.sans.finance.domain.model.ReSyncMode.TRANSACTIONS_AS_TRUTH) {
+                                    androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                                } else null,
+                                shape = MaterialTheme.shapes.large
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "Fix Balances",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (selectedMode == com.sans.finance.domain.model.ReSyncMode.TRANSACTIONS_AS_TRUTH) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Adjust accounts to match transaction sum",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center,
+                                        minLines = 2
+                                    )
+                                }
+                            }
+
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                onClick = { viewModel.setSyncMode(com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) {
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    }
+                                ),
+                                border = if (selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) {
+                                    androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                                } else null,
+                                shape = MaterialTheme.shapes.large
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "Keep Balances",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Add adjustments to match account balances",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center,
+                                        minLines = 2
+                                    )
+                                }
+                            }
                         }
                     }
-                }
 
-                // Account Lists
-                if (dryRunResults.isEmpty() && isLoading) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
+                    if (selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) {
+                        item {
+                            // Date Picker row
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                                ),
+                                shape = MaterialTheme.shapes.large
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = "Adjustment Date Option",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        listOf("TODAY" to "Today", "EPOCH" to "Epoch (1970)", "CUSTOM" to "Custom...").forEach { (opt, label) ->
+                                            val isSelected = selectedDateOption == opt
+                                            FilterChip(
+                                                selected = isSelected,
+                                                onClick = { viewModel.setDateOption(opt) },
+                                                label = { Text(label) }
+                                            )
+                                        }
+                                    }
+
+                                    if (selectedDateOption == "CUSTOM") {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Selected Date: " + DateFormatterUtils.getStandardFormatter().format(Date(customDate)),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.SemiBold,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            var showDatePicker by remember { mutableStateOf(false) }
+                                            OutlinedButton(
+                                                onClick = { showDatePicker = true },
+                                                shape = MaterialTheme.shapes.medium
+                                            ) {
+                                                Text("Select Date", style = MaterialTheme.typography.bodySmall)
+                                            }
+
+                                            if (showDatePicker) {
+                                                val datePickerState = rememberDatePickerState(
+                                                    initialSelectedDateMillis = customDate
+                                                )
+                                                DatePickerDialog(
+                                                    onDismissRequest = { showDatePicker = false },
+                                                    confirmButton = {
+                                                        TextButton(
+                                                            onClick = {
+                                                                datePickerState.selectedDateMillis?.let {
+                                                                    viewModel.setCustomDate(it)
+                                                                }
+                                                                showDatePicker = false
+                                                            }
+                                                        ) {
+                                                            Text("OK")
+                                                        }
+                                                    },
+                                                    dismissButton = {
+                                                        TextButton(onClick = { showDatePicker = false }) {
+                                                            Text("Cancel")
+                                                        }
+                                                    }
+                                                ) {
+                                                    DatePicker(state = datePickerState)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
-                } else if (dryRunResults.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No accounts found.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
+
+                    item {
+                        // Summary Stats
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (differencesCount > 0) {
+                                        if (selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) {
+                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                        } else {
+                                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+                                        }
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                    }
+                                ),
+                                shape = MaterialTheme.shapes.medium
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = if (selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) "Need Adjustment" else "Out of Sync",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (differencesCount > 0) {
+                                            if (selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                        } else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "$differencesCount Accounts",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (differencesCount > 0) {
+                                            if (selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                        } else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.2f)
+                                ),
+                                shape = MaterialTheme.shapes.medium
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "In Sync",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.tertiary
+                                    )
+                                    Text(
+                                        text = "$inSyncCount Accounts",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.tertiary
+                                    )
+                                }
+                            }
+                        }
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
+
+                    if (isLoading && dryRunResults.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 40.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    } else if (dryRunResults.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 40.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "No accounts found.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    } else {
                         items(dryRunResults, key = { it.accountId }) { result ->
-                            AccountDryRunItem(result = result, isPrivacyMode = isPrivacyMode)
+                            AccountDryRunItem(
+                                result = result,
+                                isPrivacyMode = isPrivacyMode,
+                                syncMode = selectedMode
+                            )
                         }
                     }
                 }
@@ -259,7 +445,9 @@ fun ReSyncDryRunScreen(
                             modifier = Modifier.weight(1f),
                             shape = MaterialTheme.shapes.large,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (differencesCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                containerColor = if (differencesCount > 0) {
+                                    if (selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                } else MaterialTheme.colorScheme.primary
                             )
                         ) {
                             if (isLoading) {
@@ -269,7 +457,9 @@ fun ReSyncDryRunScreen(
                                     color = MaterialTheme.colorScheme.onPrimary
                                 )
                             } else {
-                                Text("Apply Re-sync")
+                                Text(
+                                    if (selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) "Apply Adjustments" else "Apply Re-sync"
+                                )
                             }
                         }
                     }
@@ -282,7 +472,8 @@ fun ReSyncDryRunScreen(
 @Composable
 private fun AccountDryRunItem(
     result: AccountSyncDryRunResult,
-    isPrivacyMode: Boolean
+    isPrivacyMode: Boolean,
+    syncMode: com.sans.finance.domain.model.ReSyncMode
 ) {
     val needsSync = result.isDifferenceExist
 
@@ -291,7 +482,11 @@ private fun AccountDryRunItem(
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = if (needsSync) {
-                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f)
+                if (syncMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+                } else {
+                    MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f)
+                }
             } else {
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             }
@@ -299,7 +494,11 @@ private fun AccountDryRunItem(
         border = if (needsSync) {
             androidx.compose.foundation.BorderStroke(
                 1.dp,
-                MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+                if (syncMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                } else {
+                    MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+                }
             )
         } else null
     ) {
@@ -315,7 +514,11 @@ private fun AccountDryRunItem(
                     .size(40.dp)
                     .background(
                         color = if (needsSync) {
-                            MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
+                            if (syncMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                            } else {
+                                MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
+                            }
                         } else {
                             MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)
                         },
@@ -324,9 +527,21 @@ private fun AccountDryRunItem(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (needsSync) Icons.Default.Warning else Icons.Default.CheckCircle,
+                    imageVector = if (needsSync) {
+                        if (syncMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) {
+                            Icons.Default.Info
+                        } else {
+                            Icons.Default.Warning
+                        }
+                    } else Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = if (needsSync) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary,
+                    tint = if (needsSync) {
+                        if (syncMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        }
+                    } else MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -348,10 +563,14 @@ private fun AccountDryRunItem(
                     )
 
                     Text(
-                        text = if (needsSync) "Needs Sync" else "In Sync",
+                        text = if (needsSync) {
+                            if (syncMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) "Needs Adjustment" else "Needs Sync"
+                        } else "In Sync",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (needsSync) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
+                        color = if (needsSync) {
+                            if (syncMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        } else MaterialTheme.colorScheme.tertiary
                     )
                 }
 
@@ -376,8 +595,8 @@ private fun AccountDryRunItem(
                                 currencyCode = result.currency,
                                 isVisible = !isPrivacyMode,
                                 style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                fontWeight = if (syncMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) FontWeight.Bold else FontWeight.SemiBold,
+                                color = if (syncMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                             )
                         }
 
@@ -392,8 +611,8 @@ private fun AccountDryRunItem(
                                 currencyCode = result.currency,
                                 isVisible = !isPrivacyMode,
                                 style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold,
-                                color = if (needsSync) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                fontWeight = if (syncMode == com.sans.finance.domain.model.ReSyncMode.TRANSACTIONS_AS_TRUTH) FontWeight.Bold else FontWeight.SemiBold,
+                                color = if (syncMode == com.sans.finance.domain.model.ReSyncMode.TRANSACTIONS_AS_TRUTH) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -403,8 +622,8 @@ private fun AccountDryRunItem(
                         modifier = Modifier
                             .background(
                                 color = when {
-                                    result.delta > 0L -> Color(0xFF10B981).copy(alpha = 0.15f) // Success/Emerald
-                                    result.delta < 0L -> Color(0xFFF43F5E).copy(alpha = 0.15f) // Error/Rose
+                                    result.delta > 0L -> if (syncMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) Color(0xFFF43F5E).copy(alpha = 0.15f) else Color(0xFF10B981).copy(alpha = 0.15f) // Red adjustment (Expense) / Green sync
+                                    result.delta < 0L -> if (syncMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFF43F5E).copy(alpha = 0.15f) // Green adjustment (Income) / Red sync
                                     else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)
                                 },
                                 shape = MaterialTheme.shapes.small
@@ -412,8 +631,20 @@ private fun AccountDryRunItem(
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         val deltaText = when {
-                            result.delta > 0L -> "+" + if (isPrivacyMode) "••••" else CurrencyFormatter.formatAmount(result.delta, result.currency)
-                            result.delta < 0L -> if (isPrivacyMode) "••••" else CurrencyFormatter.formatAmount(result.delta, result.currency)
+                            result.delta > 0L -> {
+                                if (syncMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) {
+                                    "Adjustment: -" + if (isPrivacyMode) "••••" else CurrencyFormatter.formatAmount(result.delta, result.currency) + " (Expense)"
+                                } else {
+                                    "+" + if (isPrivacyMode) "••••" else CurrencyFormatter.formatAmount(result.delta, result.currency)
+                                }
+                            }
+                            result.delta < 0L -> {
+                                if (syncMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) {
+                                    "Adjustment: +" + if (isPrivacyMode) "••••" else CurrencyFormatter.formatAmount(-result.delta, result.currency) + " (Income)"
+                                } else {
+                                    if (isPrivacyMode) "••••" else CurrencyFormatter.formatAmount(result.delta, result.currency)
+                                }
+                            }
                             else -> "No Change"
                         }
                         Text(
@@ -421,8 +652,8 @@ private fun AccountDryRunItem(
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = when {
-                                result.delta > 0L -> Color(0xFF10B981)
-                                result.delta < 0L -> Color(0xFFF43F5E)
+                                result.delta > 0L -> if (syncMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) Color(0xFFF43F5E) else Color(0xFF10B981)
+                                result.delta < 0L -> if (syncMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) Color(0xFF10B981) else Color(0xFFF43F5E)
                                 else -> MaterialTheme.colorScheme.onSurfaceVariant
                             }
                         )

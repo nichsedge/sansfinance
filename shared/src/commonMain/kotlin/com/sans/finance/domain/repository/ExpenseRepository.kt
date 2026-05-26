@@ -84,5 +84,5 @@ interface ExpenseRepository {
 
     suspend fun cleanOrphanedTags()
     suspend fun getReSyncBalancesDryRun(): List<AccountSyncDryRunResult>
-    suspend fun reSyncAccountBalances()
+    suspend fun reSyncAccountBalances(mode: ReSyncMode, adjustmentDate: Long)
 }
