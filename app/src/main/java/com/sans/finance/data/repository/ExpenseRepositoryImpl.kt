@@ -352,6 +352,12 @@ class ExpenseRepositoryImpl(
         }
     }
 
+    override fun getVisibleTags(): Flow<List<String>> {
+        return tagDao.getVisibleTags().map { entities ->
+            entities.map { it.name }
+        }
+    }
+
     override fun getAllCategories(): Flow<List<Category>> {
         return categoryDao.getAllCategories().map { entities ->
             entities.map { it.toDomain() }
@@ -688,13 +694,15 @@ class ExpenseRepositoryImpl(
     private fun com.sans.finance.data.local.entity.TagEntity.toDomain() = Tag(
         id = id,
         name = name,
-        orderIndex = orderIndex
+        orderIndex = orderIndex,
+        isVisible = isVisible
     )
 
     private fun Tag.toEntity() = com.sans.finance.data.local.entity.TagEntity(
         id = id,
         name = name,
-        orderIndex = orderIndex
+        orderIndex = orderIndex,
+        isVisible = isVisible
     )
 
     private fun com.sans.finance.data.local.entity.CategorySpent.toDomain() = CategorySpent(

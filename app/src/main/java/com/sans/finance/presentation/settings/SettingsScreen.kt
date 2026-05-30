@@ -588,6 +588,9 @@ fun SettingsItem(
     onDelete: () -> Unit,
     onMoveUp: (() -> Unit)? = null,
     onMoveDown: (() -> Unit)? = null,
+    subtitle: String? = null,
+    checked: Boolean? = null,
+    onCheckedChange: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -609,7 +612,25 @@ fun SettingsItem(
                 modifier = Modifier.size(24.dp)
             )
             Spacer(Modifier.width(16.dp))
-            Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge)
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            }
+
+            if (checked != null && onCheckedChange != null) {
+                androidx.compose.material3.Switch(
+                    checked = checked,
+                    onCheckedChange = onCheckedChange,
+                    modifier = Modifier.scale(0.8f)
+                )
+                Spacer(Modifier.width(8.dp))
+            }
 
             if (onMoveUp != null) {
                 IconButton(onClick = onMoveUp) {

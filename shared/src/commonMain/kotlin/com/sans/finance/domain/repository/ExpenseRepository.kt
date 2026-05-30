@@ -33,6 +33,7 @@ interface ExpenseRepository {
     fun getTotalSpentBetween(since: Long, until: Long): Flow<Long?>
     fun getAllTimeSpent(): Flow<Long?>
     fun getAllTags(): Flow<List<String>>
+    fun getVisibleTags(): Flow<List<String>>
 
     // Category management
     fun getAllCategories(): Flow<List<Category>>

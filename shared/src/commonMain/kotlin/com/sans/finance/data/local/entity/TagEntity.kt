@@ -7,5 +7,6 @@ import androidx.room.PrimaryKey
 data class TagEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val orderIndex: Int = 0
+    val orderIndex: Int = 0,
+    val isVisible: Boolean = true
 )

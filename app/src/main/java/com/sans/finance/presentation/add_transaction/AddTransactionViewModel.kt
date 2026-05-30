@@ -115,7 +115,7 @@ class AddTransactionViewModel @Inject constructor(
 
     var newTagText by mutableStateOf("")
 
-    val allTags = expenseRepository.getAllTags().stateIn(
+    val allTags = expenseRepository.getVisibleTags().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()

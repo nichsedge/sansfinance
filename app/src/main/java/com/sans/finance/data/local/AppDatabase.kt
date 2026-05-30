@@ -40,7 +40,7 @@ import com.sans.finance.data.local.entity.TagEntity
         com.sans.finance.data.local.entity.PortfolioTargetEntity::class,
         com.sans.finance.data.local.entity.AccountTypeEntity::class
     ],
-    version = 31,
+    version = 32,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

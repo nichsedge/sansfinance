@@ -111,6 +111,16 @@ class DatabaseMigrationsTest {
         assertHasColumn(db, "account_types", "display_order")
     }
 
+    @Test
+    fun migration31To32_addsIsVisibleToTags() {
+        val db = openDatabase("migration_31_32_test.db")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `tags` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `orderIndex` INTEGER NOT NULL DEFAULT 0)")
+
+        DatabaseMigrations.MIGRATION_31_32.migrate(db)
+
+        assertHasColumn(db, "tags", "isVisible")
+    }
+
     private fun openDatabase(name: String): SupportSQLiteDatabase {
         openedNames += name
         val configuration = androidx.sqlite.db.SupportSQLiteOpenHelper.Configuration.builder(context)

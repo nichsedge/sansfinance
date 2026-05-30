@@ -107,11 +107,18 @@ object DatabaseMigrations {
         }
     }
 
+    val MIGRATION_31_32 = object : Migration(31, 32) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `tags` ADD COLUMN `isVisible` INTEGER NOT NULL DEFAULT 1")
+        }
+    }
+
     val ALL = arrayOf(
         MIGRATION_25_27,
         MIGRATION_27_28,
         MIGRATION_28_29,
         MIGRATION_29_30,
-        MIGRATION_30_31
+        MIGRATION_30_31,
+        MIGRATION_31_32
     )
 }

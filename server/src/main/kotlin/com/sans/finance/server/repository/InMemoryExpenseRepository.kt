@@ -41,12 +41,12 @@ class InMemoryExpenseRepository : ExpenseRepository {
         return expenses.value.find { it.id == id }
     }
 
-    override suspend fun getNoteSuggestions(query: String): List<String> = emptyList()
-    override suspend fun getTopFrequentNotes(limit: Int): List<String> = emptyList()
-    override suspend fun getTopFrequentNotesByDay(dayOfWeek: Int, limit: Int): List<String> = emptyList()
-    override suspend fun getDescriptionSuggestions(query: String): List<String> = emptyList()
-    override suspend fun getPredictionForNote(note: String): Expense? = null
-    override suspend fun findPotentialDuplicate(note: String, amount: Long, date: Long, accountId: Long): Expense? = null
+    override suspend fun getTitleSuggestions(query: String): List<String> = emptyList()
+    override suspend fun getTopFrequentTitles(limit: Int): List<String> = emptyList()
+    override suspend fun getTopFrequentTitlesByDay(dayOfWeek: Int, limit: Int): List<String> = emptyList()
+    override suspend fun getDetailsSuggestions(query: String): List<String> = emptyList()
+    override suspend fun getPredictionForTitle(title: String): Expense? = null
+    override suspend fun findPotentialDuplicate(title: String, amount: Long, date: Long, accountId: Long): Expense? = null
 
     override suspend fun insertExpense(expense: Expense): Long {
         val newId = (expenses.value.maxOfOrNull { it.id } ?: 0L) + 1
@@ -75,6 +75,7 @@ class InMemoryExpenseRepository : ExpenseRepository {
     }
 
     override fun getAllTags(): Flow<List<String>> = MutableStateFlow(emptyList())
+    override fun getVisibleTags(): Flow<List<String>> = MutableStateFlow(emptyList())
     override fun getAllCategories(): Flow<List<Category>> = MutableStateFlow(emptyList())
     override fun getCategoriesByType(type: String): Flow<List<Category>> = MutableStateFlow(emptyList())
     override suspend fun insertCategory(category: Category) {}
@@ -85,7 +86,9 @@ class InMemoryExpenseRepository : ExpenseRepository {
     override suspend fun updateTag(tag: Tag) {}
     override suspend fun updateTags(tags: List<Tag>) {}
     override suspend fun deleteTag(tag: Tag) {}
-    override suspend fun performDatabaseMaintenance() {}
+    override suspend fun cleanOrphanedTags() {}
+    override suspend fun getReSyncBalancesDryRun(): List<AccountSyncDryRunResult> = emptyList()
+    override suspend fun reSyncAccountBalances(mode: ReSyncMode, adjustmentDate: Long) {}
     override fun getSpendingByCategoryBetween(since: Long, until: Long): Flow<List<CategorySpent>> = MutableStateFlow(emptyList())
     override fun getBreakdownByCategoryBetween(since: Long, until: Long, type: String): Flow<List<CategorySpent>> = MutableStateFlow(emptyList())
     override fun getTotalAmountByTypeBetween(since: Long, until: Long, type: String): Flow<Long?> = MutableStateFlow(0L)

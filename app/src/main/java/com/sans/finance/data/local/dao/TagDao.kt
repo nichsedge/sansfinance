@@ -14,6 +14,9 @@ interface TagDao {
     @Query("SELECT * FROM tags ORDER BY orderIndex ASC, id ASC")
     fun getAllTags(): Flow<List<TagEntity>>
 
+    @Query("SELECT * FROM tags WHERE isVisible = 1 ORDER BY orderIndex ASC, id ASC")
+    fun getVisibleTags(): Flow<List<TagEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTag(tag: TagEntity): Long
 
