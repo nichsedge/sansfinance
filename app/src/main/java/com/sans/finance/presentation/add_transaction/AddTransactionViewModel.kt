@@ -169,6 +169,7 @@ class AddTransactionViewModel @Inject constructor(
                     installmentMonth = expense.installmentMonth
                     installmentTotalMonths = expense.installmentTotalMonths
                     status = expense.status
+                    selectedTags = expense.tags
 
                     if (expense.isRecurring) {
                         installmentRepository.getInstallmentByExpenseId(id)?.let { installment ->
