@@ -4,6 +4,12 @@ Sans Finance is a premium, AI-powered personal finance and wealth management app
 
 <img width="1376" height="3058" alt="Gemini_Generated_Image_mbod72mbod72mbod" src="https://github.com/user-attachments/assets/3fabaac4-d548-4f75-a6b2-9857826bda7a" />
 
+## 📥 Download
+
+[![Download Latest APK](https://img.shields.io/badge/Download-Release%20v1.2-brightgreen?style=for-the-badge&logo=android)](https://github.com/nichsedge/sansfinance/releases/tag/v1.2)
+
+Get the latest release directly from [GitHub Releases](https://github.com/nichsedge/sansfinance/releases/latest).
+
 ## ✨ Features
 
 - **Comprehensive Dashboard:** Monitor your Net Worth, Total Assets, and Liabilities in a single, beautiful view.
@@ -45,14 +51,16 @@ Sans Finance is a premium, AI-powered personal finance and wealth management app
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/nichsedge/sans-finance.git
+   git clone https://github.com/nichsedge/sansfinance.git
    ```
 2. Open the project in Android Studio.
 3. Build and run the `app` module.
 
-Alternatively, use the provided build script:
+Alternatively, use the Makefile or build script:
 ```bash
-./build_release.sh
+make release
+# or
+./scripts/build_release.sh
 ```
 The release APK will be available in the `release/` folder.
 
