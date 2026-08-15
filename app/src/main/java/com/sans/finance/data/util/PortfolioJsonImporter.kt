@@ -28,15 +28,12 @@ data class HoldingJson(
     val category: String,
     val asset: String,
     val currency: String = "IDR",
-    val amount: Double? = null,
-    val quantity: Double? = null,
+    val quantity: Double = 0.0,
     val price: Double? = null,
     @SerialName("value_idr") val valueIdr: Double = 0.0,
     @SerialName("value_usd") val valueUsd: Double = 0.0,
     @SerialName("asset_class") val assetClass: String = "Other",
-    @SerialName("account_key") val accountKey: String? = null,
-    @SerialName("account_name") val accountName: String? = null,
-    val account: String? = null,
+    val account: String = "",
     val details: String? = null
 )
 
@@ -78,24 +75,15 @@ object PortfolioJsonImporter {
                 category = holding.category,
                 asset = holding.asset,
                 currency = holding.currency,
-                quantity = holding.quantity ?: holding.amount ?: 0.0,
-                price = holding.price ?: extractPrice(holding.details),
+                quantity = holding.quantity,
+                price = holding.price,
                 valueIdr = holding.valueIdr,
                 assetClass = holding.assetClass,
-                accountKey = holding.accountKey?.takeIf { it.isNotBlank() },
-                accountName = holding.accountName?.takeIf { it.isNotBlank() },
-                account = holding.account ?: holding.accountName ?: holding.accountKey ?: "",
+                account = holding.account,
                 details = holding.details
             )
         }
 
         return Triple(snapshotDate, entities, snapshot.metadata.exchangeRate)
-    }
-
-    private fun extractPrice(details: String?): Double? {
-        if (details == null) return null
-        val priceRegex = Regex("""Price:\s*\$?([\d,]+\.?\d*)""")
-        val match = priceRegex.find(details)
-        return match?.groupValues?.get(1)?.replace(",", "")?.toDoubleOrNull()
     }
 }

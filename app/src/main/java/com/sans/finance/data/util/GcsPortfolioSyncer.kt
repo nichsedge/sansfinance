@@ -6,7 +6,6 @@ import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -107,55 +106,22 @@ object GcsPortfolioSyncer {
         json.getString("access_token")
     }
 
-    // List and Fetch snapshot content from GCS
+    // Direct 1-shot fetch of latest snapshot from GCS
     suspend fun downloadLatestSnapshot(context: Context): Triple<Long, List<PortfolioHoldingEntity>, Double?> = withContext(Dispatchers.IO) {
         val token = getAccessToken(context)
 
-        // 1. List GCS objects to find the latest snapshot file
-        val listUrl = URL("https://storage.googleapis.com/storage/v1/b/$BUCKET_NAME/o?prefix=snapshots/")
-        val listConn = listUrl.openConnection() as HttpURLConnection
-        listConn.setRequestProperty("Authorization", "Bearer $token")
-        listConn.setRequestProperty("Accept", "application/json")
+        val latestUrl = URL("https://storage.googleapis.com/storage/v1/b/$BUCKET_NAME/o/snapshots%2Flatest.json?alt=media")
+        val conn = latestUrl.openConnection() as HttpURLConnection
+        conn.setRequestProperty("Authorization", "Bearer $token")
+        conn.connectTimeout = 5000
+        conn.readTimeout = 10000
 
-        if (listConn.responseCode != 200) {
-            val errStream = listConn.errorStream?.bufferedReader()?.readText() ?: ""
-            throw Exception("Failed to list snapshots: ${listConn.responseCode} - $errStream")
+        if (conn.responseCode != 200) {
+            val errStream = conn.errorStream?.bufferedReader()?.readText() ?: ""
+            throw Exception("Failed to download snapshots/latest.json from GCS: ${conn.responseCode} - $errStream")
         }
 
-        val listResponse = listConn.inputStream.bufferedReader().use { it.readText() }
-        val listJson = JSONObject(listResponse)
-        val items = listJson.optJSONArray("items") ?: throw Exception("No snapshots found in GCS bucket.")
-
-        // Find the latest snapshot by sorting name (which starts with date)
-        var latestSnapshotName: String? = null
-        for (i in 0 until items.length()) {
-            val item = items.getJSONObject(i)
-            val name = item.getString("name")
-            if (name.endsWith("_snapshot.json")) {
-                if (latestSnapshotName == null || name > latestSnapshotName) {
-                    latestSnapshotName = name
-                }
-            }
-        }
-
-        if (latestSnapshotName == null) {
-            throw Exception("No snapshot JSON file found in bucket.")
-        }
-
-        // 2. Download the contents of the latest snapshot file
-        val encodedName = URLEncoder.encode(latestSnapshotName, "UTF-8")
-        val downloadUrl = URL("https://storage.googleapis.com/storage/v1/b/$BUCKET_NAME/o/$encodedName?alt=media")
-        val downloadConn = downloadUrl.openConnection() as HttpURLConnection
-        downloadConn.setRequestProperty("Authorization", "Bearer $token")
-
-        if (downloadConn.responseCode != 200) {
-            val errStream = downloadConn.errorStream?.bufferedReader()?.readText() ?: ""
-            throw Exception("Failed to download snapshot: ${downloadConn.responseCode} - $errStream")
-        }
-
-        val jsonString = downloadConn.inputStream.bufferedReader().use { it.readText() }
-        
-        // Parse it using our existing importer
+        val jsonString = conn.inputStream.bufferedReader().use { it.readText() }
         PortfolioJsonImporter.parseContent(jsonString)
     }
 }
