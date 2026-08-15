@@ -208,6 +208,37 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun uploadBackupToCloud(context: android.content.Context) {
+        _isLoading.value = true
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                db.checkpoint()
+                val dbName = "sans_finance_db"
+                val dbFile = context.getDatabasePath(dbName)
+
+                if (!dbFile.exists()) {
+                    _error.value = "Database not found"
+                    _isLoading.value = false
+                    return@launch
+                }
+
+                val result = com.sans.finance.data.util.GcsPortfolioSyncer.uploadDatabaseBackup(context, dbFile)
+                result.fold(
+                    onSuccess = { msg ->
+                        _syncMessage.value = msg
+                    },
+                    onFailure = { err ->
+                        _error.value = err.message ?: "Failed to upload to cloud"
+                    }
+                )
+            } catch (e: Exception) {
+                _error.value = e.message
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun clearMessages() {
         _error.value = null
         _syncMessage.value = null

@@ -36,8 +36,6 @@ object PortfolioJsonExporter {
                 valueIdr = holding.valueIdr,
                 valueUsd = 0.0, // Assuming 0 for now as we mostly use IDR
                 assetClass = holding.assetClass,
-                accountKey = holding.accountKey,
-                accountName = holding.accountName ?: holding.account,
                 account = holding.account,
                 details = holding.details
             )

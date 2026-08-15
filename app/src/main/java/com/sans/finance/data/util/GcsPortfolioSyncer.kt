@@ -38,7 +38,7 @@ object GcsPortfolioSyncer {
 
         val claims = JSONObject().apply {
             put("iss", clientEmail)
-            put("scope", "https://www.googleapis.com/auth/devstorage.read_only")
+            put("scope", "https://www.googleapis.com/auth/devstorage.read_write")
             put("aud", OAUTH_TOKEN_URL)
             put("exp", exp)
             put("iat", iat)
@@ -123,5 +123,43 @@ object GcsPortfolioSyncer {
 
         val jsonString = conn.inputStream.bufferedReader().use { it.readText() }
         PortfolioJsonImporter.parseContent(jsonString)
+    }
+
+    // Direct upload of SQLite database to GCS
+    suspend fun uploadDatabaseBackup(context: Context, dbFile: java.io.File): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            if (!dbFile.exists()) {
+                return@withContext Result.failure(Exception("Database file not found: ${dbFile.absolutePath}"))
+            }
+
+            val token = getAccessToken(context)
+            val objectName = "db/sans_finance_latest.sqlite"
+            val encodedName = URLEncoder.encode(objectName, "UTF-8")
+            val uploadUrl = URL("https://storage.googleapis.com/upload/storage/v1/b/$BUCKET_NAME/o?uploadType=media&name=$encodedName")
+
+            val conn = uploadUrl.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.doOutput = true
+            conn.setRequestProperty("Authorization", "Bearer $token")
+            conn.setRequestProperty("Content-Type", "application/x-sqlite3")
+            conn.setFixedLengthStreamingMode(dbFile.length())
+            conn.connectTimeout = 10000
+            conn.readTimeout = 30000
+
+            dbFile.inputStream().use { input ->
+                conn.outputStream.use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            if (conn.responseCode in 200..299) {
+                Result.success("Cloud Backup Successful (gs://$BUCKET_NAME/$objectName)")
+            } else {
+                val errStream = conn.errorStream?.bufferedReader()?.readText() ?: ""
+                Result.failure(Exception("Upload failed (${conn.responseCode}): $errStream"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

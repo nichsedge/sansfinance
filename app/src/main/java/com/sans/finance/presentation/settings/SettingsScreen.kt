@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileUpload
@@ -434,6 +435,16 @@ fun SettingsContent(
                 icon = Icons.Default.Sync,
                 title = stringResource(R.string.full_backup),
                 subtitle = stringResource(R.string.backup_to_downloads),
+                isLoading = isLoading
+            )
+        }
+
+        item {
+            SettingsClickableCard(
+                onClick = { viewModel.uploadBackupToCloud(context) },
+                icon = Icons.Default.CloudUpload,
+                title = "Backup DB to Cloud (GCS)",
+                subtitle = "Upload latest SQLite state to GCS bucket",
                 isLoading = isLoading
             )
         }
