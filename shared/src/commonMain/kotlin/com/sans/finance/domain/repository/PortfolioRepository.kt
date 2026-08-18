@@ -24,6 +24,7 @@ interface PortfolioRepository {
 
     suspend fun deleteByDate(date: Long)
     suspend fun deleteAll()
+    suspend fun pruneSnapshotsMonthly(): Int
 
     // Targets and Performance
     fun getPortfolioTargets(): Flow<List<com.sans.finance.data.local.entity.PortfolioTargetEntity>>

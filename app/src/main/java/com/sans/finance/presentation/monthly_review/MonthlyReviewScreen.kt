@@ -137,7 +137,7 @@ fun MonthlyReviewScreen(
                     containerColor = MaterialTheme.colorScheme.surface,
                     alpha = 0.8f
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Text(
                             state.monthLabel.uppercase(), 
                             style = MaterialTheme.typography.labelSmall, 
@@ -156,17 +156,54 @@ fun MonthlyReviewScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text("INCOME", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(CurrencyFormatter.formatAmount(state.income, "IDR"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.tertiary)
+                                Text(CurrencyFormatter.formatAmount(state.income, state.currencyCode), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.tertiary)
                             }
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text("EXPENSE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(CurrencyFormatter.formatAmount(state.expense, "IDR"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.error)
+                                Text(CurrencyFormatter.formatAmount(state.expense, state.currencyCode), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.error)
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        // Savings Velocity Indicator
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), MaterialTheme.shapes.medium)
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            val srClamped = (state.savingsRate).coerceIn(0f, 1f)
+                            com.sans.finance.presentation.components.CircularGauge(
+                                progress = srClamped,
+                                size = 56.dp,
+                                strokeWidth = 7.dp,
+                                color = if (state.savingsRate >= 0.2f) MaterialTheme.colorScheme.tertiary else if (state.savingsRate >= 0f) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Savings Velocity: ${(state.savingsRate * 100).toInt()}%",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Black
+                                )
+                                val statusLabel = when {
+                                    state.savingsRate >= 0.3f -> "🚀 Super Saver Rate"
+                                    state.savingsRate >= 0.15f -> "⚖️ Healthy Compounding"
+                                    state.savingsRate >= 0f -> "⚠️ Tight Margin"
+                                    else -> "🚨 Deficit / High Burn"
+                                }
+                                Text(
+                                    statusLabel,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (state.savingsRate >= 0.2f) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                         
                         Button(
                             onClick = { viewModel.refresh(dontCallAi = false) },
@@ -197,6 +234,51 @@ fun MonthlyReviewScreen(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 modifier = Modifier.align(Alignment.CenterHorizontally)
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (state.topCategoryName != null && state.expense > 0L) {
+                item {
+                    val topPct = ((state.topCategoryAmount.toDouble() / state.expense.toDouble()) * 100).toInt()
+                    Surface(
+                        shape = MaterialTheme.shapes.extraLarge,
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    "TOP SPENDING SECTOR",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    state.topCategoryName ?: "",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Text(
+                                    "$topPct% of monthly expenses",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                CurrencyFormatter.formatAmount(state.topCategoryAmount, state.currencyCode),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Black,
+                                color = MaterialTheme.colorScheme.error
                             )
                         }
                     }

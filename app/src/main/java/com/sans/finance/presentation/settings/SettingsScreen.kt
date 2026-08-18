@@ -39,17 +39,23 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -95,6 +101,11 @@ fun SettingsScreen(
     val currentBudget by viewModel.monthlyBudget.collectAsStateWithLifecycle()
 
     val isLoading by viewModel.isLoading
+    val backupFrequency by viewModel.backupFrequency.collectAsStateWithLifecycle()
+    val backupWifiOnly by viewModel.backupWifiOnly.collectAsStateWithLifecycle()
+    val backupRequiresCharging by viewModel.backupRequiresCharging.collectAsStateWithLifecycle()
+    val lastBackupTime by viewModel.lastBackupTime.collectAsStateWithLifecycle()
+    val lastBackupSizeBytes by viewModel.lastBackupSizeBytes.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
 
@@ -103,6 +114,7 @@ fun SettingsScreen(
     var showCurrencyDialog by remember { mutableStateOf(false) }
     var showRestartDialog by remember { mutableStateOf(false) }
     var showAllCurrenciesDialog by remember { mutableStateOf(false) }
+    var showBackupFrequencyDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.syncMessage.value) {
         viewModel.syncMessage.value?.let {
@@ -165,7 +177,27 @@ fun SettingsScreen(
             commonCurrencies = viewModel.commonCurrencies,
             enabledCurrencies = viewModel.enabledCurrencies.value,
             onToggleEnabledCurrency = { viewModel.toggleEnabledCurrency(it) },
-            onShowAllCurrencies = { showAllCurrenciesDialog = true }
+            onShowAllCurrencies = { showAllCurrenciesDialog = true },
+            backupFrequency = backupFrequency,
+            backupWifiOnly = backupWifiOnly,
+            backupRequiresCharging = backupRequiresCharging,
+            lastBackupTime = lastBackupTime,
+            lastBackupSizeBytes = lastBackupSizeBytes,
+            onFrequencyClick = { showBackupFrequencyDialog = true },
+            onWifiOnlyToggle = { viewModel.setBackupWifiOnly(it, context) },
+            onRequiresChargingToggle = { viewModel.setBackupRequiresCharging(it, context) },
+            onBackupNow = { viewModel.uploadBackupToCloud(context) }
+        )
+    }
+
+    if (showBackupFrequencyDialog) {
+        BackupFrequencyDialog(
+            currentFrequency = backupFrequency,
+            onDismiss = { showBackupFrequencyDialog = false },
+            onSelect = { freq ->
+                viewModel.setBackupFrequency(freq, context)
+                showBackupFrequencyDialog = false
+            }
         )
     }
 
@@ -260,7 +292,16 @@ fun SettingsContent(
     commonCurrencies: List<String>,
     enabledCurrencies: List<String>,
     onToggleEnabledCurrency: (String) -> Unit,
-    onShowAllCurrencies: () -> Unit
+    onShowAllCurrencies: () -> Unit,
+    backupFrequency: String,
+    backupWifiOnly: Boolean,
+    backupRequiresCharging: Boolean,
+    lastBackupTime: Long,
+    lastBackupSizeBytes: Long,
+    onFrequencyClick: () -> Unit,
+    onWifiOnlyToggle: (Boolean) -> Unit,
+    onRequiresChargingToggle: (Boolean) -> Unit,
+    onBackupNow: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -421,11 +462,26 @@ fun SettingsContent(
         // Data Management Section
         item {
             SettingsSectionTitle(stringResource(R.string.data_management))
+            WhatsAppBackupSettingsCard(
+                frequency = backupFrequency,
+                wifiOnly = backupWifiOnly,
+                requiresCharging = backupRequiresCharging,
+                lastBackupTime = lastBackupTime,
+                lastBackupSizeBytes = lastBackupSizeBytes,
+                isLoading = isLoading,
+                onFrequencyClick = onFrequencyClick,
+                onWifiOnlyToggle = onWifiOnlyToggle,
+                onRequiresChargingToggle = onRequiresChargingToggle,
+                onBackupNow = onBackupNow
+            )
+        }
+
+        item {
             SettingsClickableCard(
                 onClick = onNavigateToDataManagement,
                 icon = Icons.Default.FileUpload,
-                title = "Import & Export",
-                subtitle = "CSV and JSON data handling"
+                title = "Import & Export (CSV / JSON)",
+                subtitle = "Custom files, spreadsheet transfer, and restores"
             )
         }
 
@@ -435,16 +491,6 @@ fun SettingsContent(
                 icon = Icons.Default.Sync,
                 title = stringResource(R.string.full_backup),
                 subtitle = stringResource(R.string.backup_to_downloads),
-                isLoading = isLoading
-            )
-        }
-
-        item {
-            SettingsClickableCard(
-                onClick = { viewModel.uploadBackupToCloud(context) },
-                icon = Icons.Default.CloudUpload,
-                title = "Backup DB to Cloud (GCS)",
-                subtitle = "Upload latest SQLite state to GCS bucket",
                 isLoading = isLoading
             )
         }
@@ -958,6 +1004,223 @@ fun AllCurrenciesDialog(
         confirmButton = {
             Button(onClick = onDismiss) {
                 Text("Done")
+            }
+        }
+    )
+}
+
+@Composable
+private fun WhatsAppBackupSettingsCard(
+    frequency: String,
+    wifiOnly: Boolean,
+    requiresCharging: Boolean,
+    lastBackupTime: Long,
+    lastBackupSizeBytes: Long,
+    isLoading: Boolean,
+    onFrequencyClick: () -> Unit,
+    onWifiOnlyToggle: (Boolean) -> Unit,
+    onRequiresChargingToggle: (Boolean) -> Unit,
+    onBackupNow: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CloudUpload,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Cloud Backup & Sync",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    val timeStr = if (lastBackupTime > 0L) {
+                        val sdf = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
+                        sdf.format(Date(lastBackupTime))
+                    } else "Never"
+                    val sizeStr = if (lastBackupSizeBytes > 0L) "${lastBackupSizeBytes / 1024} KB" else "0 KB"
+                    Text(
+                        text = "Last: $timeStr ($sizeStr)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Button(
+                    onClick = onBackupNow,
+                    enabled = !isLoading,
+                    shape = MaterialTheme.shapes.medium,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Back Up", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            Spacer(Modifier.height(6.dp))
+
+            // Frequency row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onFrequencyClick() }
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        "Auto-Backup Schedule",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    val freqLabel = when (frequency) {
+                        "DAILY" -> "Daily"
+                        "WEEKLY" -> "Weekly (Recommended)"
+                        "MONTHLY" -> "Monthly"
+                        "MANUAL" -> "Only when I tap \"Back up\""
+                        "OFF" -> "Off"
+                        else -> "Weekly"
+                    }
+                    Text(
+                        freqLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Wi-Fi Only toggle
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Back up over Wi-Fi only",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        "Prevents cellular data usage",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = wifiOnly,
+                    onCheckedChange = onWifiOnlyToggle
+                )
+            }
+
+            // Only while charging toggle
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Back up only while charging",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        "Zero battery drain during normal use",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = requiresCharging,
+                    onCheckedChange = onRequiresChargingToggle
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BackupFrequencyDialog(
+    currentFrequency: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
+) {
+    val options = listOf(
+        "OFF" to "Never / Off",
+        "MANUAL" to "Only when I tap \"Back up\"",
+        "DAILY" to "Daily",
+        "WEEKLY" to "Weekly (Recommended)",
+        "MONTHLY" to "Monthly"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Auto-Backup Schedule", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                options.forEach { (key, label) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(key) }
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (key == currentFrequency),
+                            onClick = { onSelect(key) }
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (key == currentFrequency) FontWeight.Bold else FontWeight.Normal,
+                            color = if (key == currentFrequency) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
             }
         }
     )

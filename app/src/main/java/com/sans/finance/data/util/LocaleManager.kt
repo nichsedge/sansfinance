@@ -134,4 +134,65 @@ class LocaleManager @Inject constructor(
         prefs.edit().putLong("fire_manual_annual_expense", amount).apply()
         _manualFireAnnualExpense.value = amount
     }
+
+    // Backup & Sync Preferences (WhatsApp style)
+    private val _backupFrequency = kotlinx.coroutines.flow.MutableStateFlow(getBackupFrequency())
+    val backupFrequency = _backupFrequency.asStateFlow()
+
+    private val _backupWifiOnly = kotlinx.coroutines.flow.MutableStateFlow(isBackupWifiOnly())
+    val backupWifiOnly = _backupWifiOnly.asStateFlow()
+
+    private val _backupRequiresCharging = kotlinx.coroutines.flow.MutableStateFlow(isBackupRequiresCharging())
+    val backupRequiresCharging = _backupRequiresCharging.asStateFlow()
+
+    private val _lastBackupTime = kotlinx.coroutines.flow.MutableStateFlow(getLastBackupTime())
+    val lastBackupTime = _lastBackupTime.asStateFlow()
+
+    private val _lastBackupSizeBytes = kotlinx.coroutines.flow.MutableStateFlow(getLastBackupSizeBytes())
+    val lastBackupSizeBytes = _lastBackupSizeBytes.asStateFlow()
+
+    fun getBackupFrequency(): String {
+        return prefs.getString("backup_frequency", "WEEKLY") ?: "WEEKLY"
+    }
+
+    fun setBackupFrequency(frequency: String) {
+        prefs.edit().putString("backup_frequency", frequency).apply()
+        _backupFrequency.value = frequency
+    }
+
+    fun isBackupWifiOnly(): Boolean {
+        return prefs.getBoolean("backup_wifi_only", true)
+    }
+
+    fun setBackupWifiOnly(wifiOnly: Boolean) {
+        prefs.edit().putBoolean("backup_wifi_only", wifiOnly).apply()
+        _backupWifiOnly.value = wifiOnly
+    }
+
+    fun isBackupRequiresCharging(): Boolean {
+        return prefs.getBoolean("backup_requires_charging", true)
+    }
+
+    fun setBackupRequiresCharging(requiresCharging: Boolean) {
+        prefs.edit().putBoolean("backup_requires_charging", requiresCharging).apply()
+        _backupRequiresCharging.value = requiresCharging
+    }
+
+    fun getLastBackupTime(): Long {
+        return prefs.getLong("last_backup_time", 0L)
+    }
+
+    fun setLastBackupTime(timestamp: Long) {
+        prefs.edit().putLong("last_backup_time", timestamp).apply()
+        _lastBackupTime.value = timestamp
+    }
+
+    fun getLastBackupSizeBytes(): Long {
+        return prefs.getLong("last_backup_size_bytes", 0L)
+    }
+
+    fun setLastBackupSizeBytes(bytes: Long) {
+        prefs.edit().putLong("last_backup_size_bytes", bytes).apply()
+        _lastBackupSizeBytes.value = bytes
+    }
 }

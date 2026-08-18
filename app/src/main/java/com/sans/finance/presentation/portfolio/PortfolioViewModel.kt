@@ -39,6 +39,8 @@ data class PortfolioScreenState(
     val selectedDateIndex: Int = 0,
     val selectedDate: Long? = null,
     val valueHistory: List<SnapshotTotal> = emptyList(),
+    val netWorthHistory: List<SnapshotTotal> = emptyList(),
+    val chartMode: Int = 0,
     val currentCurrency: String = "IDR",
     val isLoading: Boolean = true,
     val previousTotalIdr: Double? = null,
@@ -70,6 +72,7 @@ class PortfolioViewModel @Inject constructor(
     private val repository: PortfolioRepository,
     private val accountRepository: AccountRepository,
     private val accountTypeRepository: AccountTypeRepository,
+    private val expenseRepository: com.sans.finance.domain.repository.ExpenseRepository,
     private val currencyDao: CurrencyDao,
     private val accountAliasDao: AccountAliasDao,
     private val goalRepository: GoalRepository,
@@ -82,6 +85,7 @@ class PortfolioViewModel @Inject constructor(
     private val _selectedDateIndex = MutableStateFlow(0)
     private val _importMessage = MutableStateFlow<String?>(null)
     private val _selectedTab = MutableStateFlow(0)
+    private val _chartMode = MutableStateFlow(0)
     private val _xirr = MutableStateFlow<Double?>(null)
     private val _aiAnalysis = MutableStateFlow<com.sans.finance.data.ai.PortfolioAnalysisResult?>(null)
     private val _isAiAnalyzing = MutableStateFlow(false)
@@ -115,13 +119,15 @@ class PortfolioViewModel @Inject constructor(
         _importMessage,
         localeManager.privacyMode,
         _selectedTab,
+        _chartMode,
         _xirr,
         _aiAnalysis,
         _isAiAnalyzing,
         accountRepository.getAllAccounts(),
         accountTypeRepository.getAllAccountTypes(),
         currencyDao.getAllRates(),
-        accountAliasDao.getAllAliases()
+        accountAliasDao.getAllAliases(),
+        expenseRepository.getExpensesBetween(0, Long.MAX_VALUE)
     ) { args ->
         @Suppress("UNCHECKED_CAST")
         val dates = args[0] as List<Long>
@@ -135,17 +141,20 @@ class PortfolioViewModel @Inject constructor(
         val importMsg = args[5] as String?
         val privacyMode = args[6] as Boolean
         val selectedTab = args[7] as Int
-        val xirrValue = args[8] as Double?
-        val aiAnalysis = args[9] as com.sans.finance.data.ai.PortfolioAnalysisResult?
-        val isAiAnalyzing = args[10] as Boolean
+        val chartMode = args[8] as Int
+        val xirrValue = args[9] as Double?
+        val aiAnalysis = args[10] as com.sans.finance.data.ai.PortfolioAnalysisResult?
+        val isAiAnalyzing = args[11] as Boolean
         @Suppress("UNCHECKED_CAST")
-        val accounts = args[11] as List<com.sans.finance.data.local.entity.AccountEntity>
+        val accounts = args[12] as List<com.sans.finance.data.local.entity.AccountEntity>
         @Suppress("UNCHECKED_CAST")
-        val accountTypes = args[12] as List<com.sans.finance.data.local.entity.AccountTypeEntity>
+        val accountTypes = args[13] as List<com.sans.finance.data.local.entity.AccountTypeEntity>
         @Suppress("UNCHECKED_CAST")
-        val rates = args[13] as List<com.sans.finance.data.local.entity.ExchangeRateEntity>
+        val rates = args[14] as List<com.sans.finance.data.local.entity.ExchangeRateEntity>
         @Suppress("UNCHECKED_CAST")
-        val aliases = args[14] as List<com.sans.finance.data.local.entity.AccountAliasEntity>
+        val aliases = args[15] as List<com.sans.finance.data.local.entity.AccountAliasEntity>
+        @Suppress("UNCHECKED_CAST")
+        val allExpenses = args[16] as List<com.sans.finance.domain.model.Expense>
 
         val currency = localeManager.getCurrency()
 
@@ -154,7 +163,8 @@ class PortfolioViewModel @Inject constructor(
                 currentCurrency = currency,
                 isLoading = false,
                 importMessage = importMsg,
-                isPrivacyModeEnabled = privacyMode
+                isPrivacyModeEnabled = privacyMode,
+                chartMode = chartMode
             )
         }
 
@@ -247,6 +257,56 @@ class PortfolioViewModel @Inject constructor(
             }
         } else emptyList()
 
+        val nonLiabilityAccounts = accounts.filter { it.type !in liabilityTypeNames && it.type != "Investment" }
+        val currentAccountBalances = nonLiabilityAccounts.associate { it.id to it.balance }
+
+        val netWorthHistory = history.map { snapshot ->
+            val snapshotDate = snapshot.snapshot_date
+            val balancesAtSnapshot = currentAccountBalances.toMutableMap()
+
+            // Walk backward through transactions that occurred after snapshotDate
+            for (tx in allExpenses) {
+                if (tx.date > snapshotDate) {
+                    when (tx.type.uppercase()) {
+                        "EXPENSE" -> {
+                            val cur = balancesAtSnapshot[tx.accountId]
+                            if (cur != null) balancesAtSnapshot[tx.accountId] = cur + tx.amount
+                        }
+                        "INCOME" -> {
+                            val cur = balancesAtSnapshot[tx.accountId]
+                            if (cur != null) balancesAtSnapshot[tx.accountId] = cur - tx.amount
+                        }
+                        "TRANSFER" -> {
+                            val fromBal = balancesAtSnapshot[tx.accountId]
+                            if (fromBal != null) balancesAtSnapshot[tx.accountId] = fromBal + tx.amount
+                            val toAccId = tx.toAccountId
+                            if (toAccId != null) {
+                                val toBal = balancesAtSnapshot[toAccId]
+                                if (toBal != null) balancesAtSnapshot[toAccId] = toBal - tx.amount
+                            }
+                        }
+                    }
+                }
+            }
+
+            val totalCashAtSnapshotIdr = nonLiabilityAccounts.sumOf { account ->
+                val balanceCents = balancesAtSnapshot[account.id] ?: 0L
+                val amount = balanceCents / 100.0
+                val rateToIdr = if (account.currency == "IDR") 1.0 else (ratesMap[account.currency] ?: 1.0)
+                amount * rateToIdr
+            }
+
+            val totalNetWorthIdr = snapshot.totalIdr + totalCashAtSnapshotIdr
+            val rate = if (snapshot.totalUsd > 0) snapshot.totalIdr / snapshot.totalUsd else exchangeRate
+            val totalNetWorthUsd = totalNetWorthIdr / rate
+
+            SnapshotTotal(
+                snapshot_date = snapshotDate,
+                totalIdr = totalNetWorthIdr,
+                totalUsd = totalNetWorthUsd
+            )
+        }
+
         PortfolioScreenState(
             holdings = consolidatedHoldings,
             holdingsByCategory = sortedHoldingsByCategory,
@@ -257,6 +317,8 @@ class PortfolioViewModel @Inject constructor(
             selectedDateIndex = validIndex,
             selectedDate = selectedDate,
             valueHistory = history,
+            netWorthHistory = netWorthHistory,
+            chartMode = chartMode,
             currentCurrency = currency,
             isLoading = false,
             importMessage = importMsg,
@@ -278,6 +340,10 @@ class PortfolioViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = PortfolioScreenState()
     )
+
+    fun setChartMode(mode: Int) {
+        _chartMode.value = mode
+    }
 
     private fun updateXirr(date: Long) {
         viewModelScope.launch {
@@ -473,5 +539,21 @@ class PortfolioViewModel @Inject constructor(
 
     fun clearAiAnalysis() {
         _aiAnalysis.value = null
+    }
+
+    fun pruneMonthlySnapshots() {
+        viewModelScope.launch {
+            try {
+                val pruned = repository.pruneSnapshotsMonthly()
+                if (pruned > 0) {
+                    _importMessage.value = "Pruned $pruned snapshot(s). Kept latest per month."
+                    _selectedDateIndex.value = 0
+                } else {
+                    _importMessage.value = "Snapshots already clean (1 per month)."
+                }
+            } catch (e: Exception) {
+                _importMessage.value = "Pruning failed: ${e.message}"
+            }
+        }
     }
 }

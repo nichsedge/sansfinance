@@ -55,7 +55,7 @@ class PortfolioRepositoryImpl(
                 item.accountName?.trim().takeUnless { it.isNullOrEmpty() }
                     ?: item.account.trim().takeIf { it.isNotEmpty() }
 
-            val linkedAccountId = resolveOrCreateInvestmentAccountId(
+            val linkedAccountId = resolveExistingAccountId(
                 accountKey = accountKey,
                 accountName = accountName
             )
@@ -89,10 +89,10 @@ class PortfolioRepositoryImpl(
         dao.insertSnapshot(header, normalizedItems)
     }
 
-    private suspend fun resolveOrCreateInvestmentAccountId(
+    private suspend fun resolveExistingAccountId(
         accountKey: String?,
         accountName: String?
-    ): Long {
+    ): Long? {
         if (!accountKey.isNullOrBlank()) {
             val linkedId = dao.findLinkedAccountIdByKey(accountKey)
             if (linkedId != null) {
@@ -106,15 +106,7 @@ class PortfolioRepositoryImpl(
             if (byName != null) return byName.id
         }
 
-        val displayName = accountName ?: accountKey ?: "Imported Investment Account"
-        return accountDao.insertAccount(
-            com.sans.finance.data.local.entity.AccountEntity(
-                name = displayName,
-                type = "Investment",
-                balance = 0L,
-                currency = "IDR"
-            )
-        )
+        return null
     }
 
     override suspend fun deleteByDate(date: Long) =
@@ -122,6 +114,31 @@ class PortfolioRepositoryImpl(
 
     override suspend fun deleteAll() =
         dao.deleteAll()
+
+    override suspend fun pruneSnapshotsMonthly(): Int {
+        val allDates = dao.getAllSnapshotDates().first()
+        if (allDates.isEmpty()) return 0
+
+        val calendar = java.util.Calendar.getInstance()
+        val monthToLatestDate = mutableMapOf<String, Long>()
+
+        // Group dates by year-month and retain only the latest timestamp per month
+        allDates.sorted().forEach { dateMillis ->
+            calendar.timeInMillis = dateMillis
+            val yearMonth = "${calendar.get(java.util.Calendar.YEAR)}-${calendar.get(java.util.Calendar.MONTH)}"
+            monthToLatestDate[yearMonth] = dateMillis
+        }
+
+        val keepDates = monthToLatestDate.values.toList()
+        val pruneDates = allDates.filter { it !in keepDates }
+
+        if (pruneDates.isNotEmpty()) {
+            dao.deleteHeadersExceptDates(keepDates)
+            dao.deleteHoldingsExceptDates(keepDates)
+        }
+
+        return pruneDates.size
+    }
 
     override fun getPortfolioTargets(): Flow<List<com.sans.finance.data.local.entity.PortfolioTargetEntity>> =
         targetDao.getAllTargets()

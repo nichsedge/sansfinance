@@ -1,6 +1,7 @@
 package com.sans.finance.presentation.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,12 +31,22 @@ fun SummaryCard(
     total: Long,
     currencyCode: String,
     avgMonthlyExpense: Long = 0L,
-    isPrivacyModeEnabled: Boolean = false
+    isPrivacyModeEnabled: Boolean = false,
+    onTogglePrivacyMode: (() -> Unit)? = null
 ) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(12.dp),
+            .padding(12.dp)
+            .then(
+                if (onTogglePrivacyMode != null) {
+                    Modifier.clickable {
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        onTogglePrivacyMode()
+                    }
+                } else Modifier
+            ),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = androidx.compose.foundation.BorderStroke(

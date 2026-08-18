@@ -1,5 +1,6 @@
 package com.sans.finance.presentation.dashboard
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -32,6 +34,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,6 +42,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,6 +53,7 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -118,7 +124,8 @@ fun DashboardScreen(
                     assets = state.totalAssets,
                     liabilities = state.totalLiabilities,
                     currencyCode = state.currentCurrency,
-                    isPrivacyModeEnabled = state.isPrivacyModeEnabled
+                    isPrivacyModeEnabled = state.isPrivacyModeEnabled,
+                    onTogglePrivacyMode = viewModel::togglePrivacyMode
                 )
             }
 
@@ -296,10 +303,18 @@ fun NetWorthCard(
     assets: Long,
     liabilities: Long,
     currencyCode: String,
-    isPrivacyModeEnabled: Boolean
+    isPrivacyModeEnabled: Boolean,
+    onTogglePrivacyMode: () -> Unit = {}
 ) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     GlassCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.extraLarge)
+            .clickable {
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                onTogglePrivacyMode()
+            },
         containerColor = MaterialTheme.colorScheme.primary,
         alpha = 0.15f
     ) {
@@ -316,6 +331,7 @@ fun NetWorthCard(
                 amount = netWorth,
                 currencyCode = currencyCode,
                 isVisible = !isPrivacyModeEnabled,
+                animate = true,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.onSurface
@@ -1288,6 +1304,160 @@ fun FinancialFreedomCard(
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
                 )
+            }
+
+            var isSandboxExpanded by remember { mutableStateOf(false) }
+            var selectedSwr by remember { mutableFloatStateOf(0.04f) }
+            var expenseMultiplier by remember { mutableFloatStateOf(1.0f) }
+
+            val effectiveExpense = if (isManualEnabled && manualAnnualExpense > 0) manualAnnualExpense else annualExpense
+            val simulatedAnnualExpense = (effectiveExpense * expenseMultiplier).toLong()
+            val simulatedTargetFire = if (selectedSwr > 0f) (simulatedAnnualExpense / selectedSwr).toLong() else 0L
+            val simulatedYearsOfCover = if (simulatedAnnualExpense > 0) totalAssets.toDouble() / simulatedAnnualExpense else 0.0
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Surface(
+                onClick = { isSandboxExpanded = !isSandboxExpanded },
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.25f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Tune,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            "FIRE Runway Sandbox",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+                    Text(
+                        if (isSandboxExpanded) "Hide ▲" else "Simulate ▼",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            AnimatedVisibility(visible = isSandboxExpanded) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Safe Withdrawal Rate Tabs
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "SWR:",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        listOf(0.03f to "3.0%", 0.035f to "3.5%", 0.04f to "4.0% (Standard)").forEach { (swr, label) ->
+                            val isSelected = selectedSwr == swr
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { selectedSwr = swr },
+                                label = { Text(label, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) }
+                            )
+                        }
+                    }
+
+                    // Spend Multiplier Slider
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                "Spending: ${(expenseMultiplier * 100).toInt()}% (${String.format(Locale.US, "%.1f", simulatedYearsOfCover)} yrs)",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                if (isPrivacyModeEnabled) "••••••" else CurrencyFormatter.formatAmount(simulatedAnnualExpense / 12, currencyCode) + "/mo",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Slider(
+                            value = expenseMultiplier,
+                            onValueChange = { expenseMultiplier = it },
+                            valueRange = 0.5f..1.5f,
+                            steps = 9
+                        )
+                    }
+
+                    // Target Nest Egg & Milestone Badge
+                    val milestoneBadge = when {
+                        simulatedYearsOfCover >= (1.0 / selectedSwr) -> "👑 Full Financial Independence"
+                        simulatedYearsOfCover >= 12.5 -> "🏔️ Lean FIRE Range"
+                        simulatedYearsOfCover >= 6.0 -> "🧭 Half FI Milestone"
+                        simulatedYearsOfCover >= 1.0 -> "⛵ Coast Cushion"
+                        else -> "🛡️ Emergency Shield"
+                    }
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    "Simulated Nest Egg Goal",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                PrivacyText(
+                                    amount = simulatedTargetFire,
+                                    currencyCode = currencyCode,
+                                    isVisible = !isPrivacyModeEnabled,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                            }
+                            Surface(
+                                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
+                                shape = MaterialTheme.shapes.small
+                            ) {
+                                Text(
+                                    milestoneBadge,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

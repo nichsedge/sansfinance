@@ -2,6 +2,7 @@ package com.sans.finance.presentation.wealth
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -100,11 +102,21 @@ fun WealthScreen(
                     assets = state.cashAssets + state.portfolioValue,
                     liabilities = state.liabilities,
                     currencyCode = state.currencyCode,
-                    isPrivacyModeEnabled = state.isPrivacyModeEnabled
+                    isPrivacyModeEnabled = state.isPrivacyModeEnabled,
+                    onTogglePrivacyMode = viewModel::togglePrivacyMode
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(8.dp)) }
+            item {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                CloudSyncCard(
+                    lastSnapshotDate = state.lastSnapshotDate,
+                    isSyncing = state.isSyncing,
+                    onSyncClick = { viewModel.triggerCloudSync(context) }
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(4.dp)) }
 
             item { SectionHeader("FINANCIAL HUB") }
 
@@ -192,10 +204,18 @@ private fun WealthSummaryCard(
     assets: Long,
     liabilities: Long,
     currencyCode: String,
-    isPrivacyModeEnabled: Boolean
+    isPrivacyModeEnabled: Boolean,
+    onTogglePrivacyMode: () -> Unit = {}
 ) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     GlassCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.extraLarge)
+            .clickable {
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                onTogglePrivacyMode()
+            },
         containerColor = MaterialTheme.colorScheme.primary,
         alpha = 0.12f
     ) {
@@ -212,6 +232,7 @@ private fun WealthSummaryCard(
                 amount = netWorth,
                 currencyCode = currencyCode,
                 isVisible = !isPrivacyModeEnabled,
+                animate = true,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.onSurface
@@ -327,6 +348,88 @@ private fun WealthNavCard(
                 tint = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.size(20.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun CloudSyncCard(
+    lastSnapshotDate: Long?,
+    isSyncing: Boolean,
+    onSyncClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Sync,
+                        contentDescription = "Cloud Sync",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Column {
+                    Text(
+                        text = "Cloud Sync & Backup",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = if (lastSnapshotDate != null) {
+                            "Snapshot: ${com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter().format(java.util.Date(lastSnapshotDate))}"
+                        } else {
+                            "Portfolio & DB in Sync"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (isSyncing) {
+                androidx.compose.material3.CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.5.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                androidx.compose.material3.FilledTonalButton(
+                    onClick = onSyncClick,
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text(
+                        "Sync Now",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+            }
         }
     }
 }

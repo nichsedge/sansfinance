@@ -78,6 +78,8 @@ fun NetWorthTrendChart(
         color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
     )
 
+    val haptic = LocalHapticFeedback.current
+
     Box(modifier = modifier) {
         Canvas(
             modifier = Modifier
@@ -89,13 +91,19 @@ fun NetWorthTrendChart(
                             val stepX = size.width / (history.size - 1)
                             val index =
                                 (offset.x / stepX).roundToInt().coerceIn(0, history.size - 1)
-                            selectedIndex = index
+                            if (selectedIndex != index) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                selectedIndex = index
+                            }
                         },
                         onDrag = { change, _ ->
                             val stepX = size.width / (history.size - 1)
                             val index = (change.position.x / stepX).roundToInt()
                                 .coerceIn(0, history.size - 1)
-                            selectedIndex = index
+                            if (selectedIndex != index) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                selectedIndex = index
+                            }
                         },
                         onDragEnd = { selectedIndex = null },
                         onDragCancel = { selectedIndex = null }
@@ -107,7 +115,10 @@ fun NetWorthTrendChart(
                             val stepX = size.width / (history.size - 1)
                             val index =
                                 (offset.x / stepX).roundToInt().coerceIn(0, history.size - 1)
-                            selectedIndex = index
+                            if (selectedIndex != index) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                selectedIndex = index
+                            }
                             tryAwaitRelease()
                             selectedIndex = null
                         }

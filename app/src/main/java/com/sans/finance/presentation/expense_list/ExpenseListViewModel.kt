@@ -411,6 +411,32 @@ class ExpenseListViewModel @Inject constructor(
         }
     }
 
+    fun restoreExpense(expense: Expense) {
+        viewModelScope.launch {
+            repository.insertExpense(expense)
+        }
+    }
+
+    fun addQuickExpense(
+        title: String,
+        amount: Long,
+        categoryId: Long?,
+        accountId: Long
+    ) {
+        viewModelScope.launch {
+            val expense = Expense(
+                date = System.currentTimeMillis(),
+                title = title,
+                amount = amount,
+                categoryId = categoryId ?: 1L,
+                accountId = accountId,
+                type = "EXPENSE",
+                currency = localeManager.getCurrency()
+            )
+            repository.insertExpense(expense)
+        }
+    }
+
     fun togglePrivacyMode() {
         localeManager.setPrivacyModeEnabled(!localeManager.isPrivacyModeEnabled())
     }

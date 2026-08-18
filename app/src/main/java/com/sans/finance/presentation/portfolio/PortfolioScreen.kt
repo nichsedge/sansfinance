@@ -3,6 +3,7 @@ package com.sans.finance.presentation.portfolio
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -110,62 +111,55 @@ fun PortfolioScreen(
                     }
                 },
                 title = {
-                    if (state.snapshotDates.isNotEmpty()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = viewModel::onPreviousSnapshot) {
-                                Icon(
-                                    Icons.Default.ChevronLeft,
-                                    contentDescription = "Previous",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            Text(
-                                state.selectedDate?.let { dateFormat.format(Date(it)) } ?: "",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                            IconButton(onClick = viewModel::onNextSnapshot) {
-                                Icon(
-                                    Icons.Default.ChevronRight,
-                                    contentDescription = "Next",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    } else {
-                        Text(
-                            "Portfolio",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
+                    Text(
+                        "Portfolio",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 },
                 actions = {
-                    IconButton(
-                        onClick = viewModel::syncFromGcs
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Sync,
-                            contentDescription = "Sync from Cloud",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    if (state.snapshotDates.isNotEmpty()) {
-                        IconButton(
-                            onClick = viewModel::analyzePortfolioWithAi,
-                            enabled = !state.isAiAnalyzing
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "More Options",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
                         ) {
-                            if (state.isAiAnalyzing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary
+                            DropdownMenuItem(
+                                text = { Text("Sync from Cloud") },
+                                onClick = {
+                                    showMenu = false
+                                    viewModel.syncFromGcs()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Sync, contentDescription = null)
+                                }
+                            )
+                            if (state.snapshotDates.isNotEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text("Analyze with AI") },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.analyzePortfolioWithAi()
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.AutoAwesome, contentDescription = null)
+                                    }
                                 )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = "Analyze with AI",
-                                    tint = MaterialTheme.colorScheme.primary
+                                DropdownMenuItem(
+                                    text = { Text("Prune Monthly (Keep Latest/Mo)") },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.pruneMonthlySnapshots()
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.PieChart, contentDescription = null)
+                                    }
                                 )
                             }
                         }
@@ -213,10 +207,19 @@ fun PortfolioScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            "Import a snapshot to start tracking",
+                            "Sync snapshots from Cloud Storage to start tracking",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.outline
                         )
+                        Spacer(Modifier.height(16.dp))
+                        Button(
+                            onClick = { viewModel.syncFromGcs() },
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Sync from Cloud", fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             } else {
@@ -255,12 +258,68 @@ fun PortfolioScreen(
                             contentPadding = PaddingValues(12.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            if (state.snapshotDates.size > 1) {
+                                item {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 2.dp),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        IconButton(
+                                            onClick = viewModel::onPreviousSnapshot,
+                                            modifier = Modifier.size(36.dp),
+                                            enabled = state.selectedDateIndex < state.snapshotDates.size - 1
+                                        ) {
+                                            Icon(
+                                                Icons.Default.ChevronLeft,
+                                                contentDescription = "Previous Snapshot",
+                                                tint = if (state.selectedDateIndex < state.snapshotDates.size - 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                                            )
+                                        }
+
+                                        Card(
+                                            shape = MaterialTheme.shapes.extraLarge,
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                            ),
+                                            border = androidx.compose.foundation.BorderStroke(
+                                                1.dp,
+                                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                            )
+                                        ) {
+                                            Text(
+                                                text = state.selectedDate?.let { dateFormat.format(Date(it)) } ?: "",
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                                            )
+                                        }
+
+                                        IconButton(
+                                            onClick = viewModel::onNextSnapshot,
+                                            modifier = Modifier.size(36.dp),
+                                            enabled = state.selectedDateIndex > 0
+                                        ) {
+                                            Icon(
+                                                Icons.Default.ChevronRight,
+                                                contentDescription = "Next Snapshot",
+                                                tint = if (state.selectedDateIndex > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
                             item {
                                 PortfolioHeader(state, onForecastingClick)
                             }
 
-                            if (state.valueHistory.size >= 2) {
+                            if (state.valueHistory.size >= 2 || state.netWorthHistory.size >= 2) {
                                 item {
+                                    val activeHistory = if (state.chartMode == 0 && state.netWorthHistory.isNotEmpty()) state.netWorthHistory else state.valueHistory
                                     Card(
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = MaterialTheme.shapes.extraLarge,
@@ -271,15 +330,71 @@ fun PortfolioScreen(
                                         )
                                     ) {
                                         Column(modifier = Modifier.padding(16.dp)) {
-                                            Text(
-                                                "Net Worth Trend",
-                                                style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = FontWeight.Black,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        if (state.chartMode == 0) "Net Worth Trend" else "Investments Trend",
+                                                        style = MaterialTheme.typography.titleSmall,
+                                                        fontWeight = FontWeight.Black,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    Text(
+                                                        if (state.chartMode == 0) "Includes liquid cash & accounts" else "Market holdings only",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                                    )
+                                                }
+
+                                                Row(
+                                                    modifier = Modifier
+                                                        .background(
+                                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                                            CircleShape
+                                                        )
+                                                        .padding(3.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(CircleShape)
+                                                            .background(
+                                                                if (state.chartMode == 0) MaterialTheme.colorScheme.primary else Color.Transparent
+                                                            )
+                                                            .clickable { viewModel.setChartMode(0) }
+                                                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                                                    ) {
+                                                        Text(
+                                                            "Total",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            fontWeight = if (state.chartMode == 0) FontWeight.Bold else FontWeight.Medium,
+                                                            color = if (state.chartMode == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(CircleShape)
+                                                            .background(
+                                                                if (state.chartMode == 1) MaterialTheme.colorScheme.primary else Color.Transparent
+                                                            )
+                                                            .clickable { viewModel.setChartMode(1) }
+                                                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                                                    ) {
+                                                        Text(
+                                                            "Investments",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            fontWeight = if (state.chartMode == 1) FontWeight.Bold else FontWeight.Medium,
+                                                            color = if (state.chartMode == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                            }
                                             Spacer(Modifier.height(16.dp))
                                             NetWorthTrendChart(
-                                                history = state.valueHistory,
+                                                history = activeHistory,
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .height(160.dp),

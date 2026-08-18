@@ -52,12 +52,8 @@ fun ExpenseItem(
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
-        color = if (expense.isInstallmentPayment) {
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
-        } else {
-            MaterialTheme.colorScheme.surface
-        },
-        tonalElevation = if (expense.isInstallmentPayment) 1.dp else 0.dp
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp
     ) {
         Row(
             modifier = Modifier

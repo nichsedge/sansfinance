@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -150,6 +151,15 @@ fun BudgetScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.outlineVariant
                             )
+                            Spacer(Modifier.height(16.dp))
+                            Button(
+                                onClick = { showAddDialog = true },
+                                shape = MaterialTheme.shapes.medium
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Create Monthly Budget", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }

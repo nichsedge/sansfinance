@@ -153,6 +153,15 @@ fun GoalScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.outlineVariant
                             )
+                            Spacer(Modifier.height(16.dp))
+                            Button(
+                                onClick = { showAddDialog = true },
+                                shape = MaterialTheme.shapes.medium
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Set Your First Goal", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }

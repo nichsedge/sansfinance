@@ -208,24 +208,46 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    val backupFrequency = localeManager.backupFrequency
+    val backupWifiOnly = localeManager.backupWifiOnly
+    val backupRequiresCharging = localeManager.backupRequiresCharging
+    val lastBackupTime = localeManager.lastBackupTime
+    val lastBackupSizeBytes = localeManager.lastBackupSizeBytes
+
+    fun setBackupFrequency(freq: String, context: android.content.Context) {
+        localeManager.setBackupFrequency(freq)
+        com.sans.finance.SansFinanceApp.rescheduleBackupWork(context, localeManager)
+    }
+
+    fun setBackupWifiOnly(wifiOnly: Boolean, context: android.content.Context) {
+        localeManager.setBackupWifiOnly(wifiOnly)
+        com.sans.finance.SansFinanceApp.rescheduleBackupWork(context, localeManager)
+    }
+
+    fun setBackupRequiresCharging(requiresCharging: Boolean, context: android.content.Context) {
+        localeManager.setBackupRequiresCharging(requiresCharging)
+        com.sans.finance.SansFinanceApp.rescheduleBackupWork(context, localeManager)
+    }
+
     fun uploadBackupToCloud(context: android.content.Context) {
         _isLoading.value = true
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val snapshotFile = java.io.File(context.cacheDir, "sans_finance_backup.sqlite")
             try {
-                db.checkpoint()
-                val dbName = "sans_finance_db"
-                val dbFile = context.getDatabasePath(dbName)
-
-                if (!dbFile.exists()) {
-                    _error.value = "Database not found"
+                db.createBackupSnapshot(snapshotFile)
+                if (!snapshotFile.exists() || snapshotFile.length() == 0L) {
+                    _error.value = "Failed to create database snapshot"
                     _isLoading.value = false
                     return@launch
                 }
 
-                val result = com.sans.finance.data.util.GcsPortfolioSyncer.uploadDatabaseBackup(context, dbFile)
+                val fileSize = snapshotFile.length()
+                val result = com.sans.finance.data.util.GcsPortfolioSyncer.uploadDatabaseBackup(context, snapshotFile)
                 result.fold(
                     onSuccess = { msg ->
                         _syncMessage.value = msg
+                        localeManager.setLastBackupTime(System.currentTimeMillis())
+                        localeManager.setLastBackupSizeBytes(fileSize)
                     },
                     onFailure = { err ->
                         _error.value = err.message ?: "Failed to upload to cloud"
@@ -234,6 +256,9 @@ class SettingsViewModel @Inject constructor(
             } catch (e: Exception) {
                 _error.value = e.message
             } finally {
+                if (snapshotFile.exists()) {
+                    snapshotFile.delete()
+                }
                 _isLoading.value = false
             }
         }

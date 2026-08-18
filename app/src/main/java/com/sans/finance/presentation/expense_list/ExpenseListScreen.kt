@@ -1,7 +1,9 @@
 package com.sans.finance.presentation.expense_list
 
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,12 +17,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -38,8 +43,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -51,18 +58,22 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
+import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.R
+import com.sans.finance.core.util.CurrencyFormatter
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.presentation.components.ExpenseItem
 import com.sans.finance.presentation.components.PrivacyText
@@ -87,6 +98,7 @@ fun ExpenseListScreen(
     val haptic = LocalHapticFeedback.current
     LocalFocusManager.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     var expenseToDelete by remember { mutableStateOf<Expense?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
@@ -261,13 +273,9 @@ fun ExpenseListScreen(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 var hasShownTodaySeparator = false
-                var hasFutureTransactions = false
+                val hasFutureTransactions = state.groupedExpenses.keys.any { it > todayMillis }
 
                 state.groupedExpenses.forEach { (date, expenses) ->
-                    if (date > todayMillis) {
-                        hasFutureTransactions = true
-                    }
-
                     if (!hasShownTodaySeparator && date <= todayMillis && hasFutureTransactions) {
                         item(key = "today-separator") {
                             TodaySeparator()
@@ -355,7 +363,7 @@ fun ExpenseListScreen(
 
                     items(
                         items = expenses,
-                        key = { it.id },
+                        key = { "exp_${it.id}_${it.installmentMonth}_${it.date}_${it.amount}" },
                         contentType = { "expense" }
                     ) { expense ->
                         val category = state.categories.find { it.id == expense.categoryId }

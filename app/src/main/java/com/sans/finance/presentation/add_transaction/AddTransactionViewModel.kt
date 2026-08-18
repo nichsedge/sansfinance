@@ -367,9 +367,27 @@ class AddTransactionViewModel @Inject constructor(
         }
     }
 
+    fun evaluateAmountExpression() {
+        if (com.sans.finance.core.util.MathExpressionEvaluator.hasArithmetic(amount)) {
+            com.sans.finance.core.util.MathExpressionEvaluator.evaluate(amount)?.let { result ->
+                amount = if (result % 1.0 == 0.0) {
+                    result.toLong().toString()
+                } else {
+                    String.format(java.util.Locale.US, "%.2f", result).trimEnd('0').trimEnd('.')
+                }
+            }
+        }
+    }
+
     private fun String.toSafeLongCents(): Long? {
+        val trimmed = this.trim()
+        if (com.sans.finance.core.util.MathExpressionEvaluator.hasArithmetic(trimmed)) {
+            val evaluatedCents = com.sans.finance.core.util.MathExpressionEvaluator.evaluateToCents(trimmed)
+            if (evaluatedCents != null) return evaluatedCents
+        }
+
         return try {
-            val cleanStr = this.replace(",", ".")
+            val cleanStr = trimmed.replace(",", ".")
             val pieces = cleanStr.split(".")
             val major = pieces[0].toLongOrNull() ?: 0L
             val minor = if (pieces.size > 1) {

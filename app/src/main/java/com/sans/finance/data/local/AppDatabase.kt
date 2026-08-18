@@ -65,4 +65,22 @@ abstract class AppDatabase : RoomDatabase() {
         }
         cursor.close()
     }
+
+    fun createBackupSnapshot(targetFile: java.io.File) {
+        if (targetFile.exists()) {
+            targetFile.delete()
+        }
+        targetFile.parentFile?.mkdirs()
+        checkpoint()
+        try {
+            openHelper.writableDatabase.execSQL("VACUUM INTO '${targetFile.absolutePath}'")
+        } catch (e: Exception) {
+            // Fallback to direct file copy after WAL checkpoint
+            checkpoint()
+            val dbPath = openHelper.writableDatabase.path
+            if (dbPath != null) {
+                java.io.File(dbPath).copyTo(targetFile, overwrite = true)
+            }
+        }
+    }
 }
