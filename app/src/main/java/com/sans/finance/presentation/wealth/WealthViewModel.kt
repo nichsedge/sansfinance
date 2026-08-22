@@ -39,14 +39,18 @@ class WealthViewModel @Inject constructor(
 
     private val _isSyncing = MutableStateFlow(false)
 
+    private val portfolioState = combine(
+        portfolioRepository.getLatestSnapshotHeader(),
+        portfolioRepository.getLatestSnapshot()
+    ) { latestHeader, latestHoldings -> latestHeader to latestHoldings }
+
     private val baseState = combine(
         accountRepository.getAllAccounts(),
-        portfolioRepository.getLatestSnapshotHeader(),
-        portfolioRepository.getLatestSnapshot(),
+        portfolioState,
         accountTypeRepository.getAllAccountTypes(),
         currencyDao.getAllRates(),
         localeManager.privacyMode
-    ) { accounts, latestHeader, latestHoldings, types, rates, privacyMode ->
+    ) { accounts, (latestHeader, latestHoldings), types, rates, privacyMode ->
         val liabilityTypeNames = types.filter { it.isLiability }.map { it.name }.toSet()
         val baseCurrency = localeManager.getCurrency()
         val ratesMap = rates.associate { it.code to it.rateToIdr }
