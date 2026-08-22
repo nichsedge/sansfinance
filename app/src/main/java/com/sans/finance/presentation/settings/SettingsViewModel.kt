@@ -213,6 +213,25 @@ class SettingsViewModel @Inject constructor(
     val backupRequiresCharging = localeManager.backupRequiresCharging
     val lastBackupTime = localeManager.lastBackupTime
     val lastBackupSizeBytes = localeManager.lastBackupSizeBytes
+    val cloudBackupProvider = localeManager.cloudBackupProvider
+
+    fun getCloudBackupProvider(): String = localeManager.getCloudBackupProvider()
+
+    fun setCloudBackupProvider(provider: String) {
+        localeManager.setCloudBackupProvider(provider)
+    }
+
+    fun getR2AccountId(): String = localeManager.getR2AccountId()
+    fun getR2AccessKeyId(): String = localeManager.getR2AccessKeyId()
+    fun getR2SecretAccessKey(): String = localeManager.getR2SecretAccessKey()
+    fun getR2BucketName(): String = localeManager.getR2BucketName()
+
+    fun saveR2Config(accountId: String, accessKeyId: String, secretAccessKey: String, bucketName: String) {
+        localeManager.setR2AccountId(accountId)
+        localeManager.setR2AccessKeyId(accessKeyId)
+        localeManager.setR2SecretAccessKey(secretAccessKey)
+        localeManager.setR2BucketName(bucketName)
+    }
 
     fun setBackupFrequency(freq: String, context: android.content.Context) {
         localeManager.setBackupFrequency(freq)
@@ -242,7 +261,7 @@ class SettingsViewModel @Inject constructor(
                 }
 
                 val fileSize = snapshotFile.length()
-                val result = com.sans.finance.data.util.GcsPortfolioSyncer.uploadDatabaseBackup(context, snapshotFile)
+                val result = com.sans.finance.data.util.CloudStorageSyncer.uploadDatabaseBackup(context, snapshotFile, localeManager)
                 result.fold(
                     onSuccess = { msg ->
                         _syncMessage.value = msg
@@ -269,3 +288,4 @@ class SettingsViewModel @Inject constructor(
         _syncMessage.value = null
     }
 }
+

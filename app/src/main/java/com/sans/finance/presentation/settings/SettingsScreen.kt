@@ -106,6 +106,7 @@ fun SettingsScreen(
     val backupRequiresCharging by viewModel.backupRequiresCharging.collectAsStateWithLifecycle()
     val lastBackupTime by viewModel.lastBackupTime.collectAsStateWithLifecycle()
     val lastBackupSizeBytes by viewModel.lastBackupSizeBytes.collectAsStateWithLifecycle()
+    val cloudBackupProvider by viewModel.cloudBackupProvider.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
 
@@ -115,6 +116,8 @@ fun SettingsScreen(
     var showRestartDialog by remember { mutableStateOf(false) }
     var showAllCurrenciesDialog by remember { mutableStateOf(false) }
     var showBackupFrequencyDialog by remember { mutableStateOf(false) }
+    var showCloudProviderDialog by remember { mutableStateOf(false) }
+    var showR2ConfigDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.syncMessage.value) {
         viewModel.syncMessage.value?.let {
@@ -183,7 +186,10 @@ fun SettingsScreen(
             backupRequiresCharging = backupRequiresCharging,
             lastBackupTime = lastBackupTime,
             lastBackupSizeBytes = lastBackupSizeBytes,
+            cloudBackupProvider = cloudBackupProvider,
             onFrequencyClick = { showBackupFrequencyDialog = true },
+            onProviderClick = { showCloudProviderDialog = true },
+            onConfigureR2Click = { showR2ConfigDialog = true },
             onWifiOnlyToggle = { viewModel.setBackupWifiOnly(it, context) },
             onRequiresChargingToggle = { viewModel.setBackupRequiresCharging(it, context) },
             onBackupNow = { viewModel.uploadBackupToCloud(context) }
@@ -197,6 +203,34 @@ fun SettingsScreen(
             onSelect = { freq ->
                 viewModel.setBackupFrequency(freq, context)
                 showBackupFrequencyDialog = false
+            }
+        )
+    }
+
+    if (showCloudProviderDialog) {
+        CloudProviderDialog(
+            currentProvider = cloudBackupProvider,
+            onDismiss = { showCloudProviderDialog = false },
+            onSelect = { provider ->
+                viewModel.setCloudBackupProvider(provider)
+                showCloudProviderDialog = false
+                if (provider == "CLOUDFLARE_R2" && viewModel.getR2AccountId().isBlank()) {
+                    showR2ConfigDialog = true
+                }
+            }
+        )
+    }
+
+    if (showR2ConfigDialog) {
+        R2ConfigDialog(
+            currentAccountId = viewModel.getR2AccountId(),
+            currentAccessKeyId = viewModel.getR2AccessKeyId(),
+            currentSecretAccessKey = viewModel.getR2SecretAccessKey(),
+            currentBucketName = viewModel.getR2BucketName(),
+            onDismiss = { showR2ConfigDialog = false },
+            onSave = { accId, keyId, secKey, bucket ->
+                viewModel.saveR2Config(accId, keyId, secKey, bucket)
+                showR2ConfigDialog = false
             }
         )
     }
@@ -298,7 +332,10 @@ fun SettingsContent(
     backupRequiresCharging: Boolean,
     lastBackupTime: Long,
     lastBackupSizeBytes: Long,
+    cloudBackupProvider: String,
     onFrequencyClick: () -> Unit,
+    onProviderClick: () -> Unit,
+    onConfigureR2Click: () -> Unit,
     onWifiOnlyToggle: (Boolean) -> Unit,
     onRequiresChargingToggle: (Boolean) -> Unit,
     onBackupNow: () -> Unit
@@ -464,12 +501,15 @@ fun SettingsContent(
             SettingsSectionTitle(stringResource(R.string.data_management))
             WhatsAppBackupSettingsCard(
                 frequency = backupFrequency,
+                provider = cloudBackupProvider,
                 wifiOnly = backupWifiOnly,
                 requiresCharging = backupRequiresCharging,
                 lastBackupTime = lastBackupTime,
                 lastBackupSizeBytes = lastBackupSizeBytes,
                 isLoading = isLoading,
                 onFrequencyClick = onFrequencyClick,
+                onProviderClick = onProviderClick,
+                onConfigureR2Click = onConfigureR2Click,
                 onWifiOnlyToggle = onWifiOnlyToggle,
                 onRequiresChargingToggle = onRequiresChargingToggle,
                 onBackupNow = onBackupNow
@@ -1012,12 +1052,15 @@ fun AllCurrenciesDialog(
 @Composable
 private fun WhatsAppBackupSettingsCard(
     frequency: String,
+    provider: String,
     wifiOnly: Boolean,
     requiresCharging: Boolean,
     lastBackupTime: Long,
     lastBackupSizeBytes: Long,
     isLoading: Boolean,
     onFrequencyClick: () -> Unit,
+    onProviderClick: () -> Unit,
+    onConfigureR2Click: () -> Unit,
     onWifiOnlyToggle: (Boolean) -> Unit,
     onRequiresChargingToggle: (Boolean) -> Unit,
     onBackupNow: () -> Unit
@@ -1083,6 +1126,48 @@ private fun WhatsAppBackupSettingsCard(
             Spacer(Modifier.height(14.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             Spacer(Modifier.height(6.dp))
+
+            // Storage Provider row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onProviderClick() }
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Cloud Storage Provider",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    val providerLabel = if (provider.equals("CLOUDFLARE_R2", ignoreCase = true) || provider.equals("R2", ignoreCase = true)) {
+                        "Cloudflare R2 (Free Tier / Zero Egress)"
+                    } else {
+                        "Google Cloud Storage (GCS)"
+                    }
+                    Text(
+                        providerLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                if (provider.equals("CLOUDFLARE_R2", ignoreCase = true) || provider.equals("R2", ignoreCase = true)) {
+                    TextButton(
+                        onClick = onConfigureR2Click,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("Configure", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             // Frequency row
             Row(
@@ -1177,6 +1262,124 @@ private fun WhatsAppBackupSettingsCard(
 }
 
 @Composable
+private fun CloudProviderDialog(
+    currentProvider: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
+) {
+    val options = listOf(
+        "GCS" to "Google Cloud Storage (GCS)",
+        "CLOUDFLARE_R2" to "Cloudflare R2 (10 GB Free / $0 Egress)"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select Cloud Storage Provider", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                options.forEach { (key, label) ->
+                    val isSelected = (key == currentProvider || (key == "CLOUDFLARE_R2" && currentProvider == "R2"))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(key) }
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = isSelected,
+                            onClick = { onSelect(key) }
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun R2ConfigDialog(
+    currentAccountId: String,
+    currentAccessKeyId: String,
+    currentSecretAccessKey: String,
+    currentBucketName: String,
+    onDismiss: () -> Unit,
+    onSave: (accountId: String, accessKeyId: String, secretAccessKey: String, bucketName: String) -> Unit
+) {
+    var accountId by remember { mutableStateOf(currentAccountId) }
+    var accessKeyId by remember { mutableStateOf(currentAccessKeyId) }
+    var secretAccessKey by remember { mutableStateOf(currentSecretAccessKey) }
+    var bucketName by remember { mutableStateOf(if (currentBucketName.isBlank()) "ichsanul-dev" else currentBucketName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Cloudflare R2 Configuration", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "Enter your Cloudflare R2 API credentials or leave configured in assets/r2_cred.json.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = accountId,
+                    onValueChange = { accountId = it },
+                    label = { Text("Account ID") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = bucketName,
+                    onValueChange = { bucketName = it },
+                    label = { Text("Bucket Name (e.g. ichsanul-dev)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = accessKeyId,
+                    onValueChange = { accessKeyId = it },
+                    label = { Text("Access Key ID") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = secretAccessKey,
+                    onValueChange = { secretAccessKey = it },
+                    label = { Text("Secret Access Key") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onSave(accountId, accessKeyId, secretAccessKey, bucketName) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
 private fun BackupFrequencyDialog(
     currentFrequency: String,
     onDismiss: () -> Unit,
@@ -1225,3 +1428,4 @@ private fun BackupFrequencyDialog(
         }
     )
 }
+

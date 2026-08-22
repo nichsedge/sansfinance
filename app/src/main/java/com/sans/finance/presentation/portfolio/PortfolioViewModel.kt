@@ -389,18 +389,24 @@ class PortfolioViewModel @Inject constructor(
     }
 
     fun syncFromGcs() {
+        syncFromCloud()
+    }
+
+    fun syncFromCloud() {
         viewModelScope.launch {
             try {
-                _importMessage.value = "Connecting to GCS..."
-                val (date, items, exchangeRate) = GcsPortfolioSyncer.downloadLatestSnapshot(context)
+                val provider = com.sans.finance.data.util.CloudStorageSyncer.getActiveProvider(localeManager)
+                val providerLabel = if (provider == com.sans.finance.data.util.CloudStorageProvider.CLOUDFLARE_R2) "Cloudflare R2" else "GCS"
+                _importMessage.value = "Connecting to $providerLabel..."
+                val (date, items, exchangeRate) = com.sans.finance.data.util.CloudStorageSyncer.downloadLatestSnapshot(context, localeManager)
 
                 if (items.isEmpty()) {
-                    _importMessage.value = "No valid entries found in GCS"
+                    _importMessage.value = "No valid entries found in $providerLabel"
                     return@launch
                 }
                 repository.importSnapshot(date, items, exchangeRate)
                 _selectedDateIndex.value = 0
-                _importMessage.value = "Synced ${items.size} holdings from GCS"
+                _importMessage.value = "Synced ${items.size} holdings from $providerLabel"
             } catch (e: Exception) {
                 _importMessage.value = "Sync failed: ${e.message}"
             }

@@ -28,47 +28,47 @@ class CloudSyncAndBackupWorker @AssistedInject constructor(
         var uploadSuccess = false
         var syncSuccess = false
 
-        // 1. Upload SQLite Database Backup to GCS
+        // 1. Upload SQLite Database Backup to Cloud (GCS or Cloudflare R2)
         val snapshotFile = java.io.File(context.cacheDir, "sans_finance_backup.sqlite")
         try {
             db.createBackupSnapshot(snapshotFile)
             if (snapshotFile.exists() && snapshotFile.length() > 0) {
                 val fileSize = snapshotFile.length()
-                val uploadResult = GcsPortfolioSyncer.uploadDatabaseBackup(context, snapshotFile)
+                val uploadResult = com.sans.finance.data.util.CloudStorageSyncer.uploadDatabaseBackup(context, snapshotFile, localeManager)
                 uploadResult.fold(
                     onSuccess = { msg ->
-                        Log.i(TAG, "Database successfully backed up to GCS: $msg")
+                        Log.i(TAG, "Database successfully backed up: $msg")
                         localeManager.setLastBackupTime(System.currentTimeMillis())
                         localeManager.setLastBackupSizeBytes(fileSize)
                         uploadSuccess = true
                     },
                     onFailure = { err ->
-                        Log.e(TAG, "Failed to upload database to GCS", err)
+                        Log.e(TAG, "Failed to upload database to cloud storage", err)
                     }
                 )
             } else {
                 Log.w(TAG, "Snapshot file creation failed or is empty at ${snapshotFile.absolutePath}")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Exception during GCS database backup", e)
+            Log.e(TAG, "Exception during cloud database backup", e)
         } finally {
             if (snapshotFile.exists()) {
                 snapshotFile.delete()
             }
         }
 
-        // 2. Download and Import Latest Portfolio Snapshot from GCS
+        // 2. Download and Import Latest Portfolio Snapshot from Cloud (GCS or Cloudflare R2)
         try {
-            val (date, items, exchangeRate) = GcsPortfolioSyncer.downloadLatestSnapshot(context)
+            val (date, items, exchangeRate) = com.sans.finance.data.util.CloudStorageSyncer.downloadLatestSnapshot(context, localeManager)
             if (items.isNotEmpty()) {
                 portfolioRepository.importSnapshot(date, items, exchangeRate)
-                Log.i(TAG, "Successfully synced ${items.size} portfolio holdings from GCS (snapshot: $date)")
+                Log.i(TAG, "Successfully synced ${items.size} portfolio holdings from cloud storage (snapshot: $date)")
                 syncSuccess = true
             } else {
-                Log.w(TAG, "No portfolio items found in GCS snapshot")
+                Log.w(TAG, "No portfolio items found in cloud snapshot")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Exception during GCS portfolio sync", e)
+            Log.e(TAG, "Exception during cloud portfolio sync", e)
         }
 
         if (uploadSuccess || syncSuccess) {

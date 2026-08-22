@@ -151,6 +151,58 @@ class LocaleManager @Inject constructor(
     private val _lastBackupSizeBytes = kotlinx.coroutines.flow.MutableStateFlow(getLastBackupSizeBytes())
     val lastBackupSizeBytes = _lastBackupSizeBytes.asStateFlow()
 
+    private val _cloudBackupProvider = kotlinx.coroutines.flow.MutableStateFlow(getCloudBackupProvider())
+    val cloudBackupProvider = _cloudBackupProvider.asStateFlow()
+
+    fun getCloudBackupProvider(): String {
+        return prefs.getString("cloud_backup_provider", "CLOUDFLARE_R2") ?: "CLOUDFLARE_R2"
+    }
+
+    fun setCloudBackupProvider(provider: String) {
+        prefs.edit().putString("cloud_backup_provider", provider).apply()
+        _cloudBackupProvider.value = provider
+    }
+
+    fun getR2AccountId(): String {
+        return prefs.getString("r2_account_id", "") ?: ""
+    }
+
+    fun setR2AccountId(accountId: String) {
+        prefs.edit().putString("r2_account_id", accountId.trim()).apply()
+    }
+
+    fun getR2AccessKeyId(): String {
+        return prefs.getString("r2_access_key_id", "") ?: ""
+    }
+
+    fun setR2AccessKeyId(keyId: String) {
+        prefs.edit().putString("r2_access_key_id", keyId.trim()).apply()
+    }
+
+    fun getR2SecretAccessKey(): String {
+        return prefs.getString("r2_secret_access_key", "") ?: ""
+    }
+
+    fun setR2SecretAccessKey(secret: String) {
+        prefs.edit().putString("r2_secret_access_key", secret.trim()).apply()
+    }
+
+    fun getR2BucketName(): String {
+        return prefs.getString("r2_bucket_name", "ichsanul-dev") ?: "ichsanul-dev"
+    }
+
+    fun setR2BucketName(bucketName: String) {
+        prefs.edit().putString("r2_bucket_name", bucketName.trim()).apply()
+    }
+
+    fun getGcsBucketName(): String {
+        return prefs.getString("gcs_bucket_name", "ichsanul-portfolio-snapshots") ?: "ichsanul-portfolio-snapshots"
+    }
+
+    fun setGcsBucketName(bucketName: String) {
+        prefs.edit().putString("gcs_bucket_name", bucketName.trim()).apply()
+    }
+
     fun getBackupFrequency(): String {
         return prefs.getString("backup_frequency", "WEEKLY") ?: "WEEKLY"
     }
