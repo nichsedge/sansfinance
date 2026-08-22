@@ -32,9 +32,18 @@ import javax.inject.Inject
 data class PortfolioScreenState(
     val holdings: List<PortfolioHoldingEntity> = emptyList(),
     val holdingsByCategory: Map<String, List<PortfolioHoldingEntity>> = emptyMap(),
+    val valuedHoldings: List<com.sans.finance.domain.model.ValuedHolding> = emptyList(),
+    val valuation: com.sans.finance.domain.model.MultiCurrencyPortfolioValuation? = null,
     val categoryTotals: List<CategoryTotal> = emptyList(),
     val totalValueIdr: Double = 0.0,
     val totalValueUsd: Double = 0.0,
+    val totalValueInBase: Double = 0.0,
+    val totalHistoricalCostInBase: Double = 0.0,
+    val totalFxGainInBase: Double = 0.0,
+    val totalPriceGainInBase: Double = 0.0,
+    val totalGainInBase: Double = 0.0,
+    val totalGainPercentage: Double = 0.0,
+    val currencyBreakdowns: List<com.sans.finance.domain.model.CurrencyValuationSummary> = emptyList(),
     val snapshotDates: List<Long> = emptyList(),
     val selectedDateIndex: Int = 0,
     val selectedDate: Long? = null,
@@ -78,6 +87,7 @@ class PortfolioViewModel @Inject constructor(
     private val goalRepository: GoalRepository,
     private val localeManager: LocaleManager,
     private val getRebalanceSuggestionsUseCase: com.sans.finance.domain.usecase.GetRebalanceSuggestionsUseCase,
+    private val valuatePortfolioUseCase: com.sans.finance.domain.usecase.ValuatePortfolioUseCase,
     private val aiProviderFactory: com.sans.finance.data.ai.AiProviderFactory,
     @param:ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
@@ -203,26 +213,40 @@ class PortfolioViewModel @Inject constructor(
             .filter { it.valueIdr != 0.0 }
 
         val consolidatedHoldings = holdings + accountCashHoldings
-        val categoryTotals = consolidatedHoldings
-            .groupBy { it.category }
+
+        // Perform multi-currency valuation using historical FX rates
+        val valuation = valuatePortfolioUseCase(
+            holdings = consolidatedHoldings,
+            baseCurrency = currency,
+            snapshotDate = selectedDate
+        )
+
+        val valuedMap = valuation.valuedHoldings.associateBy { it.holding.id }
+
+        val categoryTotals = valuation.valuedHoldings
+            .groupBy { it.holding.category }
             .map { (category, items) ->
-                CategoryTotal(category = category, totalIdr = items.sumOf { it.valueIdr }, totalUsd = 0.0)
+                CategoryTotal(category = category, totalIdr = items.sumOf { it.currentValueInBase }, totalUsd = 0.0)
             }
             .sortedByDescending { it.totalIdr }
-        val assetClassTotals = consolidatedHoldings
-            .groupBy { it.assetClass }
+        val assetClassTotals = valuation.valuedHoldings
+            .groupBy { it.holding.assetClass }
             .map { (assetClass, items) ->
-                AssetClassTotal(assetClass = assetClass, totalIdr = items.sumOf { it.valueIdr })
+                AssetClassTotal(assetClass = assetClass, totalIdr = items.sumOf { it.currentValueInBase })
             }
             .sortedByDescending { it.totalIdr }
 
-        val totalValueIdr = assetClassTotals.sumOf { it.totalIdr }
-        val healthList = calculateHealth(assetClassTotals, totalValueIdr, dbTargets)
+        val totalValueInBase = valuation.totalValueInBase
+        val healthList = calculateHealth(assetClassTotals, totalValueInBase, dbTargets)
 
         val sortedHoldingsByCategory = consolidatedHoldings.groupBy { it.category }
-            .mapValues { entry -> entry.value.sortedByDescending { it.valueIdr } }
+            .mapValues { entry ->
+                entry.value.sortedByDescending { h ->
+                    valuedMap[h.id]?.currentValueInBase ?: h.valueIdr
+                }
+            }
             .toList()
-            .sortedByDescending { it.second.sumOf { h -> h.valueIdr } }
+            .sortedByDescending { it.second.sumOf { h -> valuedMap[h.id]?.currentValueInBase ?: h.valueIdr } }
             .toMap()
 
         val rebalanceSuggestions = getRebalanceSuggestionsUseCase(healthList)
@@ -238,19 +262,13 @@ class PortfolioViewModel @Inject constructor(
 
         val goalsWithProgress = if (consolidatedHoldings.isNotEmpty()) {
             goals.map { goal ->
-                val currentAmountIdr = when (goal.targetType) {
-                    "TOTAL" -> consolidatedHoldings.sumOf { it.valueIdr }
-                    "CATEGORY" -> consolidatedHoldings.filter { it.category == goal.targetName }
-                        .sumOf { it.valueIdr }
-                    "ASSET_CLASS" -> consolidatedHoldings.filter { it.assetClass == goal.targetName }
-                        .sumOf { it.valueIdr }
+                val currentAmount = when (goal.targetType) {
+                    "TOTAL" -> totalValueInBase
+                    "CATEGORY" -> valuation.valuedHoldings.filter { it.holding.category == goal.targetName }
+                        .sumOf { it.currentValueInBase }
+                    "ASSET_CLASS" -> valuation.valuedHoldings.filter { it.holding.assetClass == goal.targetName }
+                        .sumOf { it.currentValueInBase }
                     else -> 0.0
-                }
-
-                val currentAmount = if (goal.currency == "USD") {
-                    currentAmountIdr / exchangeRate
-                } else {
-                    currentAmountIdr
                 }
 
                 com.sans.finance.presentation.goals.GoalWithProgress(goal, currentAmount)
@@ -259,6 +277,8 @@ class PortfolioViewModel @Inject constructor(
 
         val nonLiabilityAccounts = accounts.filter { it.type !in liabilityTypeNames && it.type != "Investment" }
         val currentAccountBalances = nonLiabilityAccounts.associate { it.id to it.balance }
+
+        val baseRate = if (currency == "IDR") 1.0 else (ratesMap[currency] ?: 1.0)
 
         val netWorthHistory = history.map { snapshot ->
             val snapshotDate = snapshot.snapshot_date
@@ -297,32 +317,44 @@ class PortfolioViewModel @Inject constructor(
             }
 
             val totalNetWorthIdr = snapshot.totalIdr + totalCashAtSnapshotIdr
+            val totalNetWorthBase = if (baseRate > 0) totalNetWorthIdr / baseRate else totalNetWorthIdr
             val rate = if (snapshot.totalUsd > 0) snapshot.totalIdr / snapshot.totalUsd else exchangeRate
             val totalNetWorthUsd = totalNetWorthIdr / rate
 
             SnapshotTotal(
                 snapshot_date = snapshotDate,
-                totalIdr = totalNetWorthIdr,
+                totalIdr = totalNetWorthBase,
                 totalUsd = totalNetWorthUsd
             )
         }
 
+        val totalValueIdr = assetClassTotals.sumOf { it.totalIdr }
+
         PortfolioScreenState(
             holdings = consolidatedHoldings,
             holdingsByCategory = sortedHoldingsByCategory,
+            valuedHoldings = valuation.valuedHoldings,
+            valuation = valuation,
             categoryTotals = categoryTotals,
             totalValueIdr = totalValueIdr,
             totalValueUsd = if (exchangeRate > 0) totalValueIdr / exchangeRate else (currentTotal?.totalUsd ?: 0.0),
+            totalValueInBase = totalValueInBase,
+            totalHistoricalCostInBase = valuation.totalHistoricalCostInBase,
+            totalFxGainInBase = valuation.totalFxGainInBase,
+            totalPriceGainInBase = valuation.totalPriceGainInBase,
+            totalGainInBase = valuation.totalGainInBase,
+            totalGainPercentage = valuation.totalGainPercentage,
+            currencyBreakdowns = valuation.currencyBreakdowns.values.toList(),
             snapshotDates = dates,
             selectedDateIndex = validIndex,
             selectedDate = selectedDate,
-            valueHistory = history,
+            valueHistory = history.map { it.copy(totalIdr = if (baseRate > 0) it.totalIdr / baseRate else it.totalIdr) },
             netWorthHistory = netWorthHistory,
             chartMode = chartMode,
             currentCurrency = currency,
             isLoading = false,
             importMessage = importMsg,
-            previousTotalIdr = previousTotalIdr,
+            previousTotalIdr = previousTotalIdr?.let { if (baseRate > 0) it / baseRate else it },
             isPrivacyModeEnabled = privacyMode,
             assetClassTotals = assetClassTotals,
             healthList = healthList,

@@ -39,3 +39,4 @@ restore.sh.bak
 sync.sh.bak
 push_portfolio.sh.bak
 .env
+.wrangler/

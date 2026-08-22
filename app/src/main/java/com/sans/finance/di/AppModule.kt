@@ -18,7 +18,6 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import okhttp3.OkHttpClient
 
-
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
@@ -48,7 +47,6 @@ object AppModule {
             })
             .build()
     }
-
 
     @Provides
     @Singleton
@@ -138,8 +136,11 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideCurrencyRepository(dao: com.sans.finance.data.local.dao.CurrencyDao): com.sans.finance.domain.repository.CurrencyRepository =
-        com.sans.finance.data.repository.CurrencyRepositoryImpl(dao)
+    fun provideCurrencyRepository(
+        dao: com.sans.finance.data.local.dao.CurrencyDao,
+        httpClient: OkHttpClient
+    ): com.sans.finance.domain.repository.CurrencyRepository =
+        com.sans.finance.data.repository.CurrencyRepositoryImpl(dao, httpClient)
 
     @Provides
     @Singleton
@@ -178,4 +179,18 @@ object AppModule {
     @Singleton
     fun provideGetRebalanceSuggestionsUseCase(): com.sans.finance.domain.usecase.GetRebalanceSuggestionsUseCase =
         com.sans.finance.domain.usecase.GetRebalanceSuggestionsUseCase()
+
+    @Provides
+    @Singleton
+    fun provideValuatePortfolioUseCase(
+        currencyRepository: com.sans.finance.domain.repository.CurrencyRepository
+    ): com.sans.finance.domain.usecase.ValuatePortfolioUseCase =
+        com.sans.finance.domain.usecase.ValuatePortfolioUseCase(currencyRepository)
+
+    @Provides
+    @Singleton
+    fun provideConvertCurrencyUseCase(
+        currencyRepository: com.sans.finance.domain.repository.CurrencyRepository
+    ): com.sans.finance.domain.usecase.ConvertCurrencyUseCase =
+        com.sans.finance.domain.usecase.ConvertCurrencyUseCase(currencyRepository)
 }

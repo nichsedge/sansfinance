@@ -474,7 +474,7 @@ fun AddTransactionScreen(
                     singleLine = true,
                     visualTransformation = com.sans.finance.core.util.ThousandsSeparatorVisualTransformation(),
                     keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Text,
+                        keyboardType = KeyboardType.Decimal,
                         imeAction = ImeAction.Next
                     ),
                     keyboardActions = KeyboardActions(

@@ -78,6 +78,17 @@ class WealthForecastingViewModel @Inject constructor(
         val accs = data.accounts
         val liabilityTypeNames = data.accountTypes.filter { it.isLiability }.map { it.name }.toSet()
         val ratesMap = data.rates.associate { it.code to it.rateToIdr }
+        val baseCurrency = localeManager.getCurrency()
+        val baseRate = if (baseCurrency == "IDR") 1.0 else (ratesMap[baseCurrency] ?: 1.0)
+
+        fun convertToBase(amount: Long, from: String): Long {
+            if (from == baseCurrency) return amount
+            val fromRate = if (from == "IDR") 1.0 else (ratesMap[from] ?: 1.0)
+            val toRate = baseRate
+            if (toRate == 0.0) return amount
+            return ((amount * fromRate) / toRate).toLong()
+        }
+
         val includedAccountCashIdr = accs
             .filter { it.type !in liabilityTypeNames && it.type != "Investment" }
             .sumOf { account ->
@@ -87,7 +98,8 @@ class WealthForecastingViewModel @Inject constructor(
             }
 
         val latestPortfolioIdr = history.lastOrNull()?.totalIdr ?: 0.0
-        val currentNetWorth = ((latestPortfolioIdr + includedAccountCashIdr) * 100).roundToLong()
+        val totalNetWorthIdr = latestPortfolioIdr + includedAccountCashIdr
+        val currentNetWorth = if (baseRate > 0) ((totalNetWorthIdr / baseRate) * 100).roundToLong() else (totalNetWorthIdr * 100).roundToLong()
 
         val cal = CalendarUtils.getInstance()
         cal.set(Calendar.DAY_OF_MONTH, 1)
@@ -99,17 +111,17 @@ class WealthForecastingViewModel @Inject constructor(
         cal.add(Calendar.MONTH, 1)
         val nextMonthStart = cal.timeInMillis
 
-        // Calculate average monthly expenses over last 3 months
+        // Calculate average monthly expenses over last 3 months converted to base currency
         val threeMonthsAgo = CalendarUtils.getInstance().apply { add(Calendar.MONTH, -3) }.timeInMillis
         val recentTransactions = txns.filter { it.date >= threeMonthsAgo }
-        val totalRecentExpenses = recentTransactions.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+        val totalRecentExpenses = recentTransactions.filter { it.type == "EXPENSE" }.sumOf { convertToBase(it.amount, it.currency) }
         val avgMonthlyExpense = if (totalRecentExpenses > 0) totalRecentExpenses / 3 else 0L
 
         val monthlyTxns = txns.filter {
             it.date >= monthStart && it.date < nextMonthStart && (!it.isInstallment || it.isInstallmentPayment)
         }
-        val monthlyIncome = monthlyTxns.filter { it.type == "INCOME" }.sumOf { it.amount }
-        val monthlyExpense = monthlyTxns.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+        val monthlyIncome = monthlyTxns.filter { it.type == "INCOME" }.sumOf { convertToBase(it.amount, it.currency) }
+        val monthlyExpense = monthlyTxns.filter { it.type == "EXPENSE" }.sumOf { convertToBase(it.amount, it.currency) }
         val monthlySavings = (monthlyIncome - monthlyExpense).coerceAtLeast(0)
 
         val projections = calculateProjections(currentNetWorth, monthlySavings, roi, years)
@@ -118,7 +130,7 @@ class WealthForecastingViewModel @Inject constructor(
         val yearsToFire = projections.find { it.value >= fireNumber }?.year
 
         val emergencyFundTarget = avgMonthlyExpense * efMonths
-        val currentEmergencyFund = (includedAccountCashIdr * 100).roundToLong()
+        val currentEmergencyFund = if (baseRate > 0) ((includedAccountCashIdr / baseRate) * 100).roundToLong() else (includedAccountCashIdr * 100).roundToLong()
 
         ForecastingState(
             currentNetWorth = currentNetWorth,
@@ -128,7 +140,7 @@ class WealthForecastingViewModel @Inject constructor(
             projectionYears = years,
             projections = projections,
             isLoading = false,
-            currentCurrency = localeManager.getCurrency(),
+            currentCurrency = baseCurrency,
             fireNumber = fireNumber,
             yearsToFire = yearsToFire,
             emergencyFundTarget = emergencyFundTarget,

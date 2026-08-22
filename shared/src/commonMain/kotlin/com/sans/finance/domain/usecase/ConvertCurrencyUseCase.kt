@@ -6,15 +6,27 @@ import javax.inject.Inject
 class ConvertCurrencyUseCase @Inject constructor(
     private val currencyRepository: CurrencyRepository
 ) {
-    suspend operator fun invoke(amount: Long, from: String, to: String): Long {
+    suspend operator fun invoke(
+        amount: Long,
+        from: String,
+        to: String,
+        dateMillis: Long? = null
+    ): Long {
         if (from == to) return amount
-        
-        // Base currency is IDR in our ExchangeRateEntity
+
+        if (dateMillis != null) {
+            val histRate = currencyRepository.getHistoricalRate(from, to, dateMillis)
+            if (histRate != null && histRate > 0.0) {
+                return (amount * histRate).toLong()
+            }
+        }
+
+        // Base currency is IDR in our ExchangeRateEntity fallback
         val fromRate = if (from == "IDR") 1.0 else currencyRepository.getRateToIdr(from) ?: 1.0
         val toRate = if (to == "IDR") 1.0 else currencyRepository.getRateToIdr(to) ?: 1.0
-        
+
         if (toRate == 0.0) return amount
-        
+
         // (amount * fromRate) gives IDR value
         // (IDR value / toRate) gives TO value
         val idrValue = amount * fromRate

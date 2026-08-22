@@ -113,12 +113,29 @@ object DatabaseMigrations {
         }
     }
 
+    val MIGRATION_32_33 = object : Migration(32, 33) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `fx_rates` (
+                    `currency_pair` TEXT NOT NULL,
+                    `date` TEXT NOT NULL,
+                    `rate` REAL NOT NULL,
+                    `created_at` INTEGER NOT NULL,
+                    PRIMARY KEY(`currency_pair`, `date`)
+                )
+                """.trimIndent()
+            )
+        }
+    }
+
     val ALL = arrayOf(
         MIGRATION_25_27,
         MIGRATION_27_28,
         MIGRATION_28_29,
         MIGRATION_29_30,
         MIGRATION_30_31,
-        MIGRATION_31_32
+        MIGRATION_31_32,
+        MIGRATION_32_33
     )
 }

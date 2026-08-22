@@ -30,6 +30,7 @@ class AccountViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val expenseRepository: ExpenseRepository,
     private val accountTypeRepository: com.sans.finance.domain.repository.AccountTypeRepository,
+    private val currencyDao: com.sans.finance.data.local.dao.CurrencyDao,
     private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
@@ -37,14 +38,26 @@ class AccountViewModel @Inject constructor(
         accountRepository.getAllAccounts(),
         expenseRepository.getExpensesBetween(0, Long.MAX_VALUE),
         accountTypeRepository.getAllAccountTypes(),
+        currencyDao.getAllRates(),
         localeManager.privacyMode
-    ) { accountsList, expensesList, accountTypesList, privacyMode ->
+    ) { accountsList, expensesList, accountTypesList, rates, privacyMode ->
         val liabilityTypeNames = accountTypesList.filter { it.isLiability }.map { it.name }.toSet()
-        
+        val baseCurrency = localeManager.getCurrency()
+        val ratesMap = rates.associate { it.code to it.rateToIdr }
+        val baseRate = if (baseCurrency == "IDR") 1.0 else (ratesMap[baseCurrency] ?: 1.0)
+
+        fun convertToBase(amount: Long, from: String): Long {
+            if (from == baseCurrency) return amount
+            val fromRate = if (from == "IDR") 1.0 else (ratesMap[from] ?: 1.0)
+            val toRate = baseRate
+            if (toRate == 0.0) return amount
+            return ((amount * fromRate) / toRate).toLong()
+        }
+
         val assets = accountsList.filter { it.type !in liabilityTypeNames }
-            .sumOf { it.balance }
+            .sumOf { convertToBase(it.balance, it.currency) }
         val liabilities = accountsList.filter { it.type in liabilityTypeNames }
-            .sumOf { it.balance }
+            .sumOf { convertToBase(it.balance, it.currency) }
         val total = assets - liabilities
 
         val grouped = accountsList.groupBy { it.type }
@@ -55,7 +68,7 @@ class AccountViewModel @Inject constructor(
             total = total,
             accountsByType = grouped,
             accountTypes = accountTypesList,
-            currentCurrency = localeManager.getCurrency(),
+            currentCurrency = baseCurrency,
             isLoading = false,
             isPrivacyModeEnabled = privacyMode
         )

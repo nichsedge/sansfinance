@@ -33,6 +33,7 @@ class WealthViewModel @Inject constructor(
     accountRepository: AccountRepository,
     portfolioRepository: PortfolioRepository,
     accountTypeRepository: com.sans.finance.domain.repository.AccountTypeRepository,
+    private val currencyDao: com.sans.finance.data.local.dao.CurrencyDao,
     private val localeManager: LocaleManager
 ) : ViewModel() {
 
@@ -43,18 +44,31 @@ class WealthViewModel @Inject constructor(
         portfolioRepository.getLatestSnapshotHeader(),
         portfolioRepository.getLatestSnapshot(),
         accountTypeRepository.getAllAccountTypes(),
+        currencyDao.getAllRates(),
         localeManager.privacyMode
-    ) { accounts, latestHeader, latestHoldings, types, privacyMode ->
+    ) { accounts, latestHeader, latestHoldings, types, rates, privacyMode ->
         val liabilityTypeNames = types.filter { it.isLiability }.map { it.name }.toSet()
+        val baseCurrency = localeManager.getCurrency()
+        val ratesMap = rates.associate { it.code to it.rateToIdr }
+        val baseRate = if (baseCurrency == "IDR") 1.0 else (ratesMap[baseCurrency] ?: 1.0)
+
+        fun convertToBase(amount: Long, from: String): Long {
+            if (from == baseCurrency) return amount
+            val fromRate = if (from == "IDR") 1.0 else (ratesMap[from] ?: 1.0)
+            val toRate = baseRate
+            if (toRate == 0.0) return amount
+            return ((amount * fromRate) / toRate).toLong()
+        }
 
         val cashAssets = accounts
             .filter { it.type !in liabilityTypeNames && it.type != "Investment" }
-            .sumOf { it.balance }
+            .sumOf { convertToBase(it.balance, it.currency) }
         val liabilities = accounts
             .filter { it.type in liabilityTypeNames }
-            .sumOf { it.balance }
+            .sumOf { convertToBase(it.balance, it.currency) }
 
-        val portfolioValue = latestHoldings.sumOf { it.valueIdr }.toLong() * 100
+        val portfolioValueIdr = latestHoldings.sumOf { it.valueIdr }
+        val portfolioValue = if (baseRate > 0) ((portfolioValueIdr / baseRate) * 100).toLong() else (portfolioValueIdr * 100).toLong()
         val sources = latestHoldings
             .groupBy { it.source }
             .mapValues { it.value.size }
@@ -67,7 +81,7 @@ class WealthViewModel @Inject constructor(
             portfolioValue = portfolioValue,
             lastSnapshotDate = latestHeader?.snapshotDate,
             portfolioSources = sources,
-            currencyCode = localeManager.getCurrency(),
+            currencyCode = baseCurrency,
             isPrivacyModeEnabled = privacyMode,
             isSyncing = false,
             isLoading = false

@@ -19,6 +19,7 @@ import com.sans.finance.data.local.entity.NetWorthSnapshotEntity
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import com.sans.finance.data.local.entity.PortfolioSnapshotHeaderEntity
 import com.sans.finance.data.local.entity.TagEntity
+import com.sans.finance.data.local.entity.FxRateEntity
 
 @Database(
     entities = [
@@ -38,9 +39,10 @@ import com.sans.finance.data.local.entity.TagEntity
         GoalEntity::class,
         BudgetEntity::class,
         com.sans.finance.data.local.entity.PortfolioTargetEntity::class,
-        com.sans.finance.data.local.entity.AccountTypeEntity::class
+        com.sans.finance.data.local.entity.AccountTypeEntity::class,
+        FxRateEntity::class
     ],
-    version = 32,
+    version = 33,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

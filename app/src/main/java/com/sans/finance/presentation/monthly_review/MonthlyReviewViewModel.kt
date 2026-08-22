@@ -41,6 +41,7 @@ data class MonthlyReviewState(
 class MonthlyReviewViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val getCategoriesUseCase: GetCategoriesUseCase,
+    private val convertCurrencyUseCase: com.sans.finance.domain.usecase.ConvertCurrencyUseCase,
     private val localeManager: LocaleManager,
     private val aiProviderFactory: AiProviderFactory,
     savedStateHandle: SavedStateHandle
@@ -76,8 +77,15 @@ class MonthlyReviewViewModel @Inject constructor(
                 val monthLabel = java.text.SimpleDateFormat("MMM yyyy", java.util.Locale.getDefault())
                     .format(java.util.Date(start))
 
-                val txns = expenseRepository.getExpensesBetween(start, end).first()
+                val baseCurrency = localeManager.getCurrency()
+
+                val rawTxns = expenseRepository.getExpensesBetween(start, end).first()
                     .filter { !it.isInstallment || it.isInstallmentPayment }
+
+                val txns = rawTxns.map { txn ->
+                    val convertedAmount = convertCurrencyUseCase(txn.amount, txn.currency, baseCurrency, txn.date)
+                    txn.copy(amount = convertedAmount, currency = baseCurrency)
+                }
 
                 val income = txns.filter { it.type == "INCOME" }.sumOf { it.amount }
                 val expense = txns.filter { it.type == "EXPENSE" }.sumOf { it.amount }
@@ -101,7 +109,7 @@ class MonthlyReviewViewModel @Inject constructor(
                     savingsRate = savingsRate,
                     topCategoryName = topCats.firstOrNull()?.first,
                     topCategoryAmount = topCats.firstOrNull()?.second ?: 0L,
-                    currencyCode = localeManager.getCurrency(),
+                    currencyCode = baseCurrency,
                     headline = deterministic.headline,
                     insights = deterministic.insights,
                     rawText = null,

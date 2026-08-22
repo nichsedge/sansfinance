@@ -436,13 +436,29 @@ fun PortfolioScreen(
                                 }
                             }
 
+                            if (state.currencyBreakdowns.size > 1) {
+                                item {
+                                    MultiCurrencyBreakdownCard(
+                                        summaries = state.currencyBreakdowns,
+                                        baseCurrency = state.currentCurrency,
+                                        isPrivacyModeEnabled = state.isPrivacyModeEnabled
+                                    )
+                                }
+                            }
+
                             state.holdingsByCategory.forEach { (category, holdings) ->
                                 item {
-                                    val categoryTotal = holdings.sumOf { it.valueIdr }
+                                    val categoryValued = state.valuedHoldings.filter { it.holding.category == category }
+                                    val categoryTotal = if (categoryValued.isNotEmpty()) {
+                                        categoryValued.sumOf { it.currentValueInBase }
+                                    } else {
+                                        holdings.sumOf { it.valueIdr }
+                                    }
                                     AssetCategoryGroup(
                                         category = category,
                                         total = categoryTotal,
                                         holdings = holdings,
+                                        valuedHoldings = state.valuedHoldings,
                                         currentCurrency = state.currentCurrency,
                                         isPrivacyModeEnabled = state.isPrivacyModeEnabled,
                                         accountAliases = state.accountAliases
@@ -496,6 +512,114 @@ fun PortfolioScreen(
 }
 
 @Composable
+fun MultiCurrencyBreakdownCard(
+    summaries: List<com.sans.finance.domain.model.CurrencyValuationSummary>,
+    baseCurrency: String,
+    isPrivacyModeEnabled: Boolean
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Multi-Currency FX Valuation",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    "Base: $baseCurrency",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            summaries.forEachIndexed { index, summary ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f), MaterialTheme.shapes.small)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    summary.currency,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "${summary.count} holding${if (summary.count > 1) "s" else ""}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (summary.currency != baseCurrency) {
+                            Text(
+                                "FX: 1 ${summary.currency} = ${String.format(Locale.US, "%,.2f", summary.currentFxRate)} $baseCurrency",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        PrivacyText(
+                            amount = (summary.totalInBaseCurrency * 100).toLong(),
+                            currencyCode = baseCurrency,
+                            isVisible = !isPrivacyModeEnabled,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (summary.currency != baseCurrency && summary.fxGainInBase != 0.0) {
+                            val fxColor = if (summary.fxGainInBase >= 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+                            val fxSign = if (summary.fxGainInBase >= 0) "+" else ""
+                            Text(
+                                text = "FX: $fxSign${com.sans.finance.core.util.CurrencyFormatter.formatAmountCompact((summary.fxGainInBase * 100).toLong(), baseCurrency)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = fxColor,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                if (index < summaries.size - 1) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun TargetEditDialog(
     target: com.sans.finance.domain.model.AssetClassHealth,
     onDismiss: () -> Unit,
@@ -541,10 +665,15 @@ fun AssetCategoryGroup(
     category: String,
     total: Double,
     holdings: List<PortfolioHoldingEntity>,
+    valuedHoldings: List<com.sans.finance.domain.model.ValuedHolding> = emptyList(),
     currentCurrency: String,
     isPrivacyModeEnabled: Boolean,
     accountAliases: Map<String, String>
 ) {
+    val valuedMap = remember(valuedHoldings) {
+        valuedHoldings.associateBy { it.holding.id }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
@@ -583,6 +712,7 @@ fun AssetCategoryGroup(
             holdings.forEachIndexed { index, holding ->
                 HoldingItem(
                     holding = holding,
+                    valuedHolding = valuedMap[holding.id],
                     isPrivacyModeEnabled = isPrivacyModeEnabled,
                     currentCurrency = currentCurrency,
                     accountAliases = accountAliases
@@ -614,8 +744,9 @@ fun PortfolioHeader(state: PortfolioScreenState, onForecastingClick: () -> Unit)
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
+            val displayValue = if (state.totalValueInBase > 0) state.totalValueInBase else state.totalValueIdr
             PrivacyText(
-                amount = (state.totalValueIdr * 100).toLong(),
+                amount = (displayValue * 100).toLong(),
                 currencyCode = state.currentCurrency,
                 isVisible = !state.isPrivacyModeEnabled,
                 style = MaterialTheme.typography.headlineMedium,
@@ -631,9 +762,10 @@ fun PortfolioHeader(state: PortfolioScreenState, onForecastingClick: () -> Unit)
                 )
             }
 
+            // Annualized Return (XIRR)
             state.xirr?.let { xirrValue ->
                 Text(
-                    text = "ANNUALIZED RETURN (XIRR): ${String.format("%.2f%%", xirrValue * 100)}",
+                    text = "ANNUALIZED RETURN (XIRR): ${String.format(Locale.US, "%.2f%%", xirrValue * 100)}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Black,
@@ -642,37 +774,96 @@ fun PortfolioHeader(state: PortfolioScreenState, onForecastingClick: () -> Unit)
                 )
             }
 
-            state.previousTotalIdr?.let { prev ->
-                val diff = state.totalValueIdr - prev
-                val percent = if (prev != 0.0) (diff / prev) * 100 else 0.0
-                val color =
-                    if (diff >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+            // Gain Breakdown (Total Gain + FX Gain + Price Gain)
+            if (state.totalGainInBase != 0.0 || state.totalFxGainInBase != 0.0) {
+                val gainColor = if (state.totalGainInBase >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+                val gainSign = if (state.totalGainInBase >= 0) "+" else ""
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
                     modifier = Modifier
-                        .padding(top = 10.dp)
-                        .background(color.copy(alpha = 0.1f), CircleShape)
+                        .padding(top = 8.dp)
+                        .background(gainColor.copy(alpha = 0.1f), CircleShape)
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Icon(
-                        imageVector = if (diff >= 0) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
+                        imageVector = if (state.totalGainInBase >= 0) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
                         contentDescription = null,
-                        tint = color,
+                        tint = gainColor,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = "${if (diff >= 0) "+" else ""}${
-                            String.format(
-                                "%.2f",
-                                percent
-                            )
-                        }% vs last snapshot",
+                        text = "Total Return: $gainSign${com.sans.finance.core.util.CurrencyFormatter.formatAmountCompact((state.totalGainInBase * 100).toLong(), state.currentCurrency)} (${String.format(Locale.US, "%+.1f%%", state.totalGainPercentage)})",
                         style = MaterialTheme.typography.labelSmall,
-                        color = color,
+                        color = gainColor,
                         fontWeight = FontWeight.Black
                     )
+                }
+
+                if (state.totalFxGainInBase != 0.0 || state.totalPriceGainInBase != 0.0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(top = 6.dp)
+                    ) {
+                        val fxColor = if (state.totalFxGainInBase >= 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+                        val fxSign = if (state.totalFxGainInBase >= 0) "+" else ""
+                        Text(
+                            text = "FX Movement: $fxSign${com.sans.finance.core.util.CurrencyFormatter.formatAmountCompact((state.totalFxGainInBase * 100).toLong(), state.currentCurrency)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = fxColor,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        if (state.totalPriceGainInBase != 0.0) {
+                            Text("•", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                            val priceColor = if (state.totalPriceGainInBase >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            val priceSign = if (state.totalPriceGainInBase >= 0) "+" else ""
+                            Text(
+                                text = "Price: $priceSign${com.sans.finance.core.util.CurrencyFormatter.formatAmountCompact((state.totalPriceGainInBase * 100).toLong(), state.currentCurrency)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = priceColor,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            } else {
+                state.previousTotalIdr?.let { prev ->
+                    val diff = (if (state.totalValueInBase > 0) state.totalValueInBase else state.totalValueIdr) - prev
+                    val percent = if (prev != 0.0) (diff / prev) * 100 else 0.0
+                    val color =
+                        if (diff >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(top = 10.dp)
+                            .background(color.copy(alpha = 0.1f), CircleShape)
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (diff >= 0) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "${if (diff >= 0) "+" else ""}${
+                                String.format(
+                                    Locale.US,
+                                    "%.2f",
+                                    percent
+                                )
+                            }% vs last snapshot",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = color,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
                 }
             }
 
@@ -699,6 +890,7 @@ fun PortfolioHeader(state: PortfolioScreenState, onForecastingClick: () -> Unit)
 @Composable
 fun HoldingItem(
     holding: PortfolioHoldingEntity,
+    valuedHolding: com.sans.finance.domain.model.ValuedHolding? = null,
     isPrivacyModeEnabled: Boolean,
     currentCurrency: String,
     accountAliases: Map<String, String>
@@ -706,6 +898,8 @@ fun HoldingItem(
     val displayAccountName = accountAliases[holding.accountKey]
         ?: holding.accountName?.takeIf { it.isNotBlank() }
         ?: holding.account
+
+    val nominalInBase = valuedHolding?.currentValueInBase ?: holding.valueIdr
 
     Row(
         modifier = Modifier
@@ -731,11 +925,22 @@ fun HoldingItem(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline
             )
+            if (valuedHolding != null && holding.currency != currentCurrency && valuedHolding.fxGainInBase != 0.0) {
+                val fxGain = valuedHolding.fxGainInBase
+                val fxColor = if (fxGain >= 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+                val fxSign = if (fxGain >= 0) "+" else ""
+                Text(
+                    text = "FX Gain: $fxSign${com.sans.finance.core.util.CurrencyFormatter.formatAmountCompact((fxGain * 100).toLong(), currentCurrency)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = fxColor,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
         Column(horizontalAlignment = Alignment.End) {
             PrivacyText(
-                amount = (holding.valueIdr * 100).toLong(),
+                amount = (nominalInBase * 100).toLong(),
                 currencyCode = currentCurrency,
                 isVisible = !isPrivacyModeEnabled,
                 style = MaterialTheme.typography.bodyLarge,
