@@ -127,7 +127,7 @@ fun ExpenseListScreen(
                     ) {
                         Surface(
                             onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 showDatePicker = true
                             },
                             color = Color.Transparent,
@@ -154,7 +154,7 @@ fun ExpenseListScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onSearchClick()
                     }) {
                         Icon(
@@ -163,7 +163,7 @@ fun ExpenseListScreen(
                         )
                     }
                     IconButton(onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onStatsClick()
                     }) {
                         Icon(
@@ -173,14 +173,6 @@ fun ExpenseListScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onAddTransactionClick()
-            }) {
-                Icon(Icons.Default.Add, contentDescription = "Add Transaction")
-            }
         }
     ) { paddingValues ->
         val layoutDirection = LocalLayoutDirection.current
@@ -233,7 +225,7 @@ fun ExpenseListScreen(
                 FilterChip(
                     selected = state.activeCommitmentFilter == TimelineCommitmentFilter.ALL,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         viewModel.setCommitmentFilter(TimelineCommitmentFilter.ALL)
                     },
                     label = { Text("All", style = MaterialTheme.typography.labelMedium) },
@@ -242,7 +234,7 @@ fun ExpenseListScreen(
                 FilterChip(
                     selected = state.activeCommitmentFilter == TimelineCommitmentFilter.INSTALLMENTS,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         val next = if (state.activeCommitmentFilter == TimelineCommitmentFilter.INSTALLMENTS) {
                             TimelineCommitmentFilter.ALL
                         } else {
@@ -266,7 +258,7 @@ fun ExpenseListScreen(
                 FilterChip(
                     selected = state.activeCommitmentFilter == TimelineCommitmentFilter.RECURRING,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         val next = if (state.activeCommitmentFilter == TimelineCommitmentFilter.RECURRING) {
                             TimelineCommitmentFilter.ALL
                         } else {
@@ -472,13 +464,14 @@ private fun TimelineHeader(
     currentCurrency: String,
     isPrivacyModeEnabled: Boolean
 ) {
-    val date = header.date
     val dayIncome = header.income
     val dayExpense = header.expense
-
-    val cal = com.sans.finance.core.util.CalendarUtils.getInstance().apply { timeInMillis = date }
-    val day = cal.get(java.util.Calendar.DAY_OF_MONTH).toString().padStart(2, '0')
-    val dayOfWeek = com.sans.finance.core.util.DateFormatterUtils.formatDayOfWeek(cal.time)
+    val headerTitle = header.formattedDate.ifEmpty {
+        val cal = com.sans.finance.core.util.CalendarUtils.getInstance().apply { timeInMillis = header.date }
+        val day = cal.get(java.util.Calendar.DAY_OF_MONTH).toString().padStart(2, '0')
+        val dayOfWeek = com.sans.finance.core.util.DateFormatterUtils.formatDayOfWeek(cal.time)
+        "$day $dayOfWeek"
+    }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -495,7 +488,7 @@ private fun TimelineHeader(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "$day $dayOfWeek",
+                        text = headerTitle,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Black,
                         color = MaterialTheme.colorScheme.primary

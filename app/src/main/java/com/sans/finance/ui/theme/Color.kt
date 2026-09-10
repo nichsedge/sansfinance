@@ -21,9 +21,3 @@ val Emerald500 = Color(0xFF10B981) // Tertiary / Success
 // Semantic Colors
 val Rose500 = Color(0xFFF43F5E) // Error
 val Amber500 = Color(0xFFF59E0B) // Warning
-
-// Legacy compatibility aliases
-val MidIndigo = Indigo500
-val DarkBg = Slate900
-val SurfaceBg = Slate800
-val BorderColor = Slate700

@@ -21,6 +21,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -53,7 +54,7 @@ fun DashboardScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                             viewModel.togglePrivacyMode()
                         }
                     ) {
@@ -68,17 +69,21 @@ fun DashboardScreen(
         }
     ) { paddingValues ->
         val layoutDirection = LocalLayoutDirection.current
+        val surfaceColor = MaterialTheme.colorScheme.surface
+        val primaryColor = MaterialTheme.colorScheme.primary
+        val backgroundBrush = remember(surfaceColor, primaryColor) {
+            Brush.verticalGradient(
+                colors = listOf(
+                    surfaceColor,
+                    primaryColor.copy(alpha = 0.05f)
+                )
+            )
+        }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.surface,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
-                        )
-                    )
-                ),
+                .background(backgroundBrush),
             contentPadding = PaddingValues(
                 start = paddingValues.calculateStartPadding(layoutDirection) + 16.dp,
                 top = paddingValues.calculateTopPadding() + 8.dp,
@@ -88,7 +93,7 @@ fun DashboardScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // 1. Hero: Net Worth Overview
-            item {
+            item(key = "net_worth") {
                 NetWorthCard(
                     netWorth = state.netWorth,
                     assets = state.totalAssets,
@@ -100,7 +105,7 @@ fun DashboardScreen(
             }
 
             // 2. Operational Pulse: Monthly Cash Flow & Savings Rate
-            item {
+            item(key = "cash_flow") {
                 MonthlyCashFlowCard(
                     income = state.monthlyIncome,
                     expense = state.monthlyExpense,
@@ -113,7 +118,7 @@ fun DashboardScreen(
 
             // 3. Budget & Velocity
             if (state.globalBudget > 0L) {
-                item {
+                item(key = "global_budget") {
                     GlobalBudgetCard(
                         budget = state.globalBudget,
                         spent = state.globalSpent,
@@ -127,7 +132,7 @@ fun DashboardScreen(
 
             // 4. Category Budgets
             if (state.categoryBudgets.isNotEmpty()) {
-                item {
+                item(key = "category_budgets") {
                     SectionHeader("CATEGORY BUDGETS")
                     Spacer(modifier = Modifier.height(4.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -144,7 +149,7 @@ fun DashboardScreen(
 
             // 5. Actionable Obligations: Upcoming Bills & Installments
             if (state.upcomingBills.isNotEmpty()) {
-                item {
+                item(key = "upcoming_bills") {
                     UpcomingBillsCard(
                         bills = state.upcomingBills,
                         currencyCode = state.currentCurrency,
@@ -156,7 +161,7 @@ fun DashboardScreen(
             }
 
             // 6. Forecasting Sparkline
-            item {
+            item(key = "forecast") {
                 ForecastCard(
                     projectedBalance = state.projectedBalance30Days,
                     trendData = state.last30DaysTrend,
@@ -168,14 +173,14 @@ fun DashboardScreen(
 
             // 7. AI Advisor Insights
             if (state.aiSuggestions.isNotEmpty()) {
-                item {
+                item(key = "ai_advisor") {
                     AiAdvisorCard(suggestions = state.aiSuggestions)
                 }
             }
 
             // 8. Goal Progress (if any)
             if (state.goals.isNotEmpty()) {
-                item {
+                item(key = "goals") {
                     SectionHeader("GOAL PROGRESS")
                     Spacer(modifier = Modifier.height(4.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -192,7 +197,7 @@ fun DashboardScreen(
 
             // 9. Recent Activity / Transactions
             if (state.recentTransactions.isNotEmpty()) {
-                item {
+                item(key = "recent_transactions") {
                     RecentTransactionsCard(
                         transactions = state.recentTransactions,
                         currencyCode = state.currentCurrency,
@@ -202,7 +207,7 @@ fun DashboardScreen(
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(32.dp)) }
+            item(key = "bottom_spacer") { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
 }

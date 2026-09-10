@@ -1,5 +1,14 @@
 # Repository Guidelines
 
+## 🏛️ Ecosystem Role & Financial Data Contracts
+
+Sans Finance is the **Single Source of Truth (SSOT) for Cash Accounts, Daily Expenses, and Budgeting** in the workstation's Personal Data Architecture ([`~/Projects/DATA_ARCHITECTURE.md`](file:///home/al/Projects/DATA_ARCHITECTURE.md)):
+
+- **Primary Domain**: Daily cash flow pacing, expenses, accounts, budgets, debt/installment horizons, and Monte Carlo FIRE simulations (Android Room DB v38).
+- **Export to `portfolio-integration`**: Cloudflare R2 database snapshots provide off-chain cash and P2P lending balances to `portfolio-integration` via `sansfinance-fetch` (portfolio holdings in the app originate upstream from KSEI/DeBank and are excluded from re-import to avoid double-counting).
+- **Alignment with `ierp`**: High-level recurring commitments and normalized monthly burn inform `ierp commitments` for sovereign runway tracking.
+- **Boundary**: Do NOT create ad-hoc scrapers for stock or crypto exchanges inside this repository; investment assets are handled upstream by `portfolio-integration`.
+
 ## Project Structure & Module Organization
 
 Sans Finance is an Android project consisting of the following module:

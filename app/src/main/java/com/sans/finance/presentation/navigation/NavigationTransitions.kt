@@ -10,9 +10,9 @@ import androidx.compose.animation.fadeOut
 import androidx.navigation.NavBackStackEntry
 
 object NavigationTransitions {
-    private const val DEFAULT_DURATION_MS = 300
-    private const val MODAL_DURATION_MS = 350
-    private const val FADE_DURATION_MS = 220
+    private const val DEFAULT_DURATION_MS = 200
+    private const val MODAL_DURATION_MS = 220
+    private const val FADE_DURATION_MS = 150
 
     val defaultEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
         slideIntoContainer(
@@ -57,11 +57,11 @@ object NavigationTransitions {
     }
 
     val tabEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-        fadeIn(animationSpec = tween(FADE_DURATION_MS))
+        EnterTransition.None
     }
 
     val tabExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-        fadeOut(animationSpec = tween(FADE_DURATION_MS))
+        ExitTransition.None
     }
 }
 

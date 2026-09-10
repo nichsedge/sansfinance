@@ -17,6 +17,7 @@ import com.sans.finance.domain.usecase.GetNetWorthTrendUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@Immutable
 data class DashboardState(
     val netWorth: Long = 0L,
     val totalAssets: Long = 0L,
@@ -48,6 +50,7 @@ data class DashboardState(
     val categoryBudgets: List<CategoryBudgetProgress> = emptyList()
 )
 
+@Immutable
 data class DashboardGoal(
     val name: String,
     val progress: Float

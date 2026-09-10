@@ -11,6 +11,9 @@ import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -51,10 +54,35 @@ fun MainScreen(
     val configuration = LocalConfiguration.current
     val useNavRail = configuration.screenWidthDp >= 600
 
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    val showFab = currentDestination?.hierarchy?.any {
+        it.hasRoute(Screen.Dashboard::class) ||
+        it.hasRoute(Screen.ExpenseList::class) ||
+        it.hasRoute(Screen.Wealth::class)
+    } == true
+
     Scaffold(
         bottomBar = {
             if (!useNavRail) {
                 BottomNavigationBar(navController)
+            }
+        },
+        floatingActionButton = {
+            if (showFab) {
+                FloatingActionButton(
+                    onClick = {
+                        rootNavController.navigate(Screen.AddTransaction())
+                    },
+                    containerColor = MaterialTheme.colorScheme.tertiary,
+                    contentColor = MaterialTheme.colorScheme.onTertiary,
+                    shape = CircleShape
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Transaction"
+                    )
+                }
             }
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)

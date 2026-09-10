@@ -1,5 +1,6 @@
 package com.sans.finance.presentation.expense_list
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.core.util.CalendarUtils
@@ -44,10 +45,16 @@ enum class TimelineCommitmentFilter {
     RECURRING
 }
 
+@Immutable
 sealed class TimelineItem {
     abstract val key: String
 
-    data class Header(val date: Long, val income: Long, val expense: Long) : TimelineItem() {
+    data class Header(
+        val date: Long,
+        val income: Long,
+        val expense: Long,
+        val formattedDate: String = ""
+    ) : TimelineItem() {
         override val key: String = "header_$date"
     }
 
@@ -60,6 +67,7 @@ sealed class TimelineItem {
     }
 }
 
+@Immutable
 data class ExpenseListState(
     val expenses: List<Expense> = emptyList(),
     val groupedExpenses: Map<Long, List<Expense>> = emptyMap(),
@@ -241,7 +249,12 @@ class ExpenseListViewModel @Inject constructor(
                             else if (exp.type == "EXPENSE") dayExpense += amount
                         }
 
-                        timelineItems.add(TimelineItem.Header(date, dayIncome, dayExpense))
+                        val headerCal = CalendarUtils.getInstance().apply { timeInMillis = date }
+                        val day = headerCal.get(Calendar.DAY_OF_MONTH).toString().padStart(2, '0')
+                        val dayOfWeek = com.sans.finance.core.util.DateFormatterUtils.formatDayOfWeek(headerCal.time)
+                        val formattedDate = "$day $dayOfWeek"
+
+                        timelineItems.add(TimelineItem.Header(date, dayIncome, dayExpense, formattedDate))
                         for (exp in dayExpenses) {
                             timelineItems.add(TimelineItem.ExpenseItem(exp))
                         }

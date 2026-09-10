@@ -70,6 +70,11 @@ import com.sans.finance.presentation.components.AppTopBar
 import com.sans.finance.presentation.components.CategoryIcon
 import java.util.Date
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Tune
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTransactionScreen(
@@ -90,6 +95,11 @@ fun AddTransactionScreen(
     var multiplierExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
     var showEndDatePicker by remember { androidx.compose.runtime.mutableStateOf(false) }
     var showDeleteDialog by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showAdvancedOptions by remember {
+        androidx.compose.runtime.mutableStateOf(
+            viewModel.isRecurring || viewModel.isInstallment || viewModel.selectedTags.isNotEmpty()
+        )
+    }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
         if (!viewModel.isEditMode) {
@@ -115,6 +125,38 @@ fun AddTransactionScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .imePadding(),
+                tonalElevation = 6.dp,
+                shadowElevation = 8.dp,
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Button(
+                    onClick = {
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        viewModel.onSaveClick(onBack)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                        .height(48.dp),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text(
+                        text = (if (viewModel.isEditMode) stringResource(R.string.update_transaction) else stringResource(
+                            R.string.confirm_transaction
+                        )).uppercase(),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 14.sp,
+                        letterSpacing = 1.sp
+                    )
+                }
+            }
         }
     ) { paddingValues ->
         if (showDeleteDialog) {
@@ -249,9 +291,133 @@ fun AddTransactionScreen(
                         }
                     }
                 }
+            // Hero Amount Input Section
+            val hasMath = com.sans.finance.core.util.MathExpressionEvaluator.hasArithmetic(viewModel.amount)
+            val previewEval = if (hasMath) com.sans.finance.core.util.MathExpressionEvaluator.evaluate(viewModel.amount) else null
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                var currencyExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
+
+                ExposedDropdownMenuBox(
+                    expanded = currencyExpanded,
+                    onExpandedChange = { currencyExpanded = !currencyExpanded },
+                    modifier = Modifier.width(96.dp)
+                ) {
+                    OutlinedTextField(
+                        value = viewModel.currency,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Curr", fontSize = 10.sp) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = currencyExpanded) },
+                        modifier = Modifier
+                            .heightIn(min = 52.dp)
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                        shape = MaterialTheme.shapes.small,
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = currencyExpanded,
+                        onDismissRequest = { currencyExpanded = false }
+                    ) {
+                        viewModel.enabledCurrencies.forEach { curr ->
+                            DropdownMenuItem(
+                                text = { Text(curr) },
+                                onClick = {
+                                    viewModel.currency = curr
+                                    currencyExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = viewModel.amount,
+                    onValueChange = { viewModel.amount = it },
+                    label = { Text(stringResource(R.string.amount_spent), fontSize = 12.sp) },
+                    supportingText = if (previewEval != null && previewEval > 0.0) {
+                        {
+                            Text(
+                                "= ${if (previewEval % 1.0 == 0.0) String.format(java.util.Locale.US, "%,d", previewEval.toLong()) else String.format(java.util.Locale.US, "%,.2f", previewEval)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else null,
+                    modifier = Modifier.weight(1f).heightIn(min = 52.dp).focusRequester(focusRequester),
+                    textStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black),
+                    singleLine = true,
+                    visualTransformation = com.sans.finance.core.util.ThousandsSeparatorVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = {
+                            viewModel.evaluateAmountExpression()
+                            focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down)
+                        }
+                    ),
+                    shape = MaterialTheme.shapes.small
+                )
             }
+
+            // Quick increment chips for speed
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(10, 50, 100, 500).forEach { inc ->
+                    FilterChip(
+                        selected = false,
+                        onClick = {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                            val current = viewModel.amount.toDoubleOrNull() ?: 0.0
+                            val updated = current + inc
+                            viewModel.amount = if (updated % 1.0 == 0.0) updated.toLong().toString() else String.format(java.util.Locale.US, "%.2f", updated)
+                        },
+                        label = {
+                            Text("+$inc", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        },
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        modifier = Modifier.height(28.dp)
+                    )
+                }
+            }
+
+            val fxInfo by viewModel.fxConversionInfo.collectAsStateWithLifecycle()
+            if (fxInfo.isForeign) {
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = fxInfo.rateFormatted,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Text(
+                            text = fxInfo.convertedAmountFormatted,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
             // Transaction Type Selector (Segmented Buttons / Tabs)
-            // Transaction Type Selector (Rounded Chips)
             val types = listOf("EXPENSE", "INCOME", "TRANSFER")
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
@@ -412,108 +578,6 @@ fun AddTransactionScreen(
                 }
             }
 
-            // Amount Input with arithmetic support & preview
-            val hasMath = com.sans.finance.core.util.MathExpressionEvaluator.hasArithmetic(viewModel.amount)
-            val previewEval = if (hasMath) com.sans.finance.core.util.MathExpressionEvaluator.evaluate(viewModel.amount) else null
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                var currencyExpanded by remember { androidx.compose.runtime.mutableStateOf(false) }
-
-                ExposedDropdownMenuBox(
-                    expanded = currencyExpanded,
-                    onExpandedChange = { currencyExpanded = !currencyExpanded },
-                    modifier = Modifier.width(100.dp)
-                ) {
-                    OutlinedTextField(
-                        value = viewModel.currency,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Curr", fontSize = 10.sp) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = currencyExpanded) },
-                        modifier = Modifier
-                            .heightIn(min = 48.dp)
-                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                        shape = MaterialTheme.shapes.small,
-                        textStyle = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
-                    )
-                    ExposedDropdownMenu(
-                        expanded = currencyExpanded,
-                        onDismissRequest = { currencyExpanded = false }
-                    ) {
-                        viewModel.enabledCurrencies.forEach { curr ->
-                            DropdownMenuItem(
-                                text = { Text(curr) },
-                                onClick = {
-                                    viewModel.currency = curr
-                                    currencyExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                OutlinedTextField(
-                    value = viewModel.amount,
-                    onValueChange = { viewModel.amount = it },
-                    label = { Text(stringResource(R.string.amount_spent), fontSize = 12.sp) },
-                    supportingText = if (previewEval != null && previewEval > 0.0) {
-                        {
-                            Text(
-                                "= ${if (previewEval % 1.0 == 0.0) String.format(java.util.Locale.US, "%,d", previewEval.toLong()) else String.format(java.util.Locale.US, "%,.2f", previewEval)}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    } else null,
-                    modifier = Modifier.weight(1f).heightIn(min = 48.dp).focusRequester(focusRequester),
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                    singleLine = true,
-                    visualTransformation = com.sans.finance.core.util.ThousandsSeparatorVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Decimal,
-                        imeAction = ImeAction.Next
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onNext = {
-                            viewModel.evaluateAmountExpression()
-                            focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down)
-                        }
-                    ),
-                    shape = MaterialTheme.shapes.small
-                )
-            }
-
-            val fxInfo by viewModel.fxConversionInfo.collectAsStateWithLifecycle()
-            if (fxInfo.isForeign) {
-                Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
-                    shape = MaterialTheme.shapes.small,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = fxInfo.rateFormatted,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                        Text(
-                            text = fxInfo.convertedAmountFormatted,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
 
             // Date Picker Field
             OutlinedTextField(
@@ -664,57 +728,6 @@ fun AddTransactionScreen(
                 }
             }
 
-            Text(
-                "Tags".uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.secondary,
-                letterSpacing = 1.5.sp
-            )
-
-            val allTags by viewModel.allTags.collectAsStateWithLifecycle()
-
-            @OptIn(ExperimentalLayoutApi::class)
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                val tagsToShow = (allTags + viewModel.selectedTags).distinct()
-                tagsToShow.forEach { tagName ->
-                    FilterChip(
-                        selected = viewModel.selectedTags.contains(tagName),
-                        onClick = { viewModel.toggleTag(tagName) },
-                        label = { Text(tagName, style = MaterialTheme.typography.labelMedium) },
-                        shape = androidx.compose.foundation.shape.CircleShape,
-                        modifier = Modifier.height(32.dp)
-                    )
-                }
-            }
-
-            OutlinedTextField(
-                value = viewModel.newTagText,
-                onValueChange = { viewModel.newTagText = it },
-                label = { Text("Add New Tag", fontSize = 12.sp) },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                singleLine = true,
-                trailingIcon = {
-                    IconButton(onClick = { viewModel.addNewTag() }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Tag")
-                    }
-                },
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Send
-                ),
-                keyboardActions = KeyboardActions(
-                    onSend = {
-                        viewModel.addNewTag()
-                        focusManager.clearFocus()
-                    }
-                ),
-                shape = MaterialTheme.shapes.small,
-                textStyle = MaterialTheme.typography.bodyMedium
-            )
-
-
             @OptIn(ExperimentalMaterial3Api::class)
             ExposedDropdownMenuBox(
                 expanded = detailsExpanded && viewModel.detailsSuggestions.isNotEmpty(),
@@ -762,33 +775,81 @@ fun AddTransactionScreen(
                 }
             }
 
-            val paymentTypes = listOf("ONE_TIME", "RECURRING", "INSTALLMENT")
-            val paymentLabels = listOf(
-                stringResource(R.string.one_time),
-                stringResource(R.string.recurring_expenses),
-                stringResource(R.string.installment)
-            )
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            Surface(
+                onClick = { showAdvancedOptions = !showAdvancedOptions },
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                items(paymentTypes.size) { index ->
-                    val type = paymentTypes[index]
-                    FilterChip(
-                        selected = viewModel.paymentType == type,
-                        onClick = { viewModel.paymentType = type },
-                        label = {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Tune,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            "Advanced Options",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (viewModel.selectedTags.isNotEmpty() || viewModel.isRecurring || viewModel.isInstallment) {
                             Text(
-                                paymentLabels[index],
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (viewModel.paymentType == type) FontWeight.Bold else FontWeight.Normal
+                                "• Active",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary,
+                                fontWeight = FontWeight.Bold
                             )
-                        },
-                        shape = androidx.compose.foundation.shape.CircleShape,
-                        modifier = Modifier.height(32.dp)
+                        }
+                    }
+                    Icon(
+                        imageVector = if (showAdvancedOptions) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
+
+            if (showAdvancedOptions) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val paymentTypes = listOf("ONE_TIME", "RECURRING", "INSTALLMENT")
+                    val paymentLabels = listOf(
+                        stringResource(R.string.one_time),
+                        stringResource(R.string.recurring_expenses),
+                        stringResource(R.string.installment)
+                    )
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(paymentTypes.size) { index ->
+                            val type = paymentTypes[index]
+                            FilterChip(
+                                selected = viewModel.paymentType == type,
+                                onClick = { viewModel.paymentType = type },
+                                label = {
+                                    Text(
+                                        paymentLabels[index],
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (viewModel.paymentType == type) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                shape = androidx.compose.foundation.shape.CircleShape,
+                                modifier = Modifier.height(32.dp)
+                            )
+                        }
+                    }
 
             if (viewModel.isRecurring) {
                 Column(
@@ -1045,28 +1106,60 @@ fun AddTransactionScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                "Tags".uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.secondary,
+                letterSpacing = 1.5.sp
+            )
 
-            val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
-            Button(
-                onClick = {
-                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    viewModel.onSaveClick(onBack)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp),
-                shape = MaterialTheme.shapes.small
-) {
-                Text(
-                    text = (if (viewModel.isEditMode) stringResource(R.string.update_transaction) else stringResource(
-                        R.string.confirm_transaction
-                    )).uppercase(),
-                    fontWeight = FontWeight.Black,
-                    fontSize = 14.sp,
-                    letterSpacing = 1.sp
-                )
+            val allTags by viewModel.allTags.collectAsStateWithLifecycle()
+
+            @OptIn(ExperimentalLayoutApi::class)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                val tagsToShow = (allTags + viewModel.selectedTags).distinct()
+                tagsToShow.forEach { tagName ->
+                    FilterChip(
+                        selected = viewModel.selectedTags.contains(tagName),
+                        onClick = { viewModel.toggleTag(tagName) },
+                        label = { Text(tagName, style = MaterialTheme.typography.labelMedium) },
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        modifier = Modifier.height(32.dp)
+                    )
+                }
             }
+
+            OutlinedTextField(
+                value = viewModel.newTagText,
+                onValueChange = { viewModel.newTagText = it },
+                label = { Text("Add New Tag", fontSize = 12.sp) },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                singleLine = true,
+                trailingIcon = {
+                    IconButton(onClick = { viewModel.addNewTag() }) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Tag")
+                    }
+                },
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Send
+                ),
+                keyboardActions = KeyboardActions(
+                    onSend = {
+                        viewModel.addNewTag()
+                        focusManager.clearFocus()
+                    }
+                ),
+                shape = MaterialTheme.shapes.small,
+                textStyle = MaterialTheme.typography.bodyMedium
+            )
         }
     }
+
+    Spacer(modifier = Modifier.height(24.dp))
+}
+    }
+}
 }

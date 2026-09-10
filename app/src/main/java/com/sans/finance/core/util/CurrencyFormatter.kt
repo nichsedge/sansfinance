@@ -6,27 +6,40 @@ import java.util.Locale
 import kotlin.math.ceil
 
 object CurrencyFormatter {
+    private val formatters = object : ThreadLocal<MutableMap<String, NumberFormat>>() {
+        override fun initialValue(): MutableMap<String, NumberFormat> = HashMap()
+    }
+
+    private val compactDecimalFormatter = object : ThreadLocal<DecimalFormat>() {
+        override fun initialValue(): DecimalFormat = DecimalFormat("#.#")
+    }
+
+    private val symbolCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
     private fun getFormatter(currencyCode: String = "USD"): NumberFormat {
-        val locale = when (currencyCode) {
-            "IDR" -> Locale.forLanguageTag("id-ID")
-            "CNY" -> Locale.CHINA
-            "USD" -> Locale.US
-            "EUR" -> Locale.GERMANY
-            "GBP" -> Locale.UK
-            "JPY" -> Locale.JAPAN
-            "KRW" -> Locale.KOREA
-            else -> Locale.getDefault()
+        val map = formatters.get() ?: HashMap<String, NumberFormat>().also { formatters.set(it) }
+        return map.getOrPut(currencyCode) {
+            val locale = when (currencyCode) {
+                "IDR" -> Locale.forLanguageTag("id-ID")
+                "CNY" -> Locale.CHINA
+                "USD" -> Locale.US
+                "EUR" -> Locale.GERMANY
+                "GBP" -> Locale.UK
+                "JPY" -> Locale.JAPAN
+                "KRW" -> Locale.KOREA
+                else -> Locale.getDefault()
+            }
+            val formatter = NumberFormat.getCurrencyInstance(locale)
+            try {
+                val currency = java.util.Currency.getInstance(currencyCode)
+                formatter.currency = currency
+            } catch (e: Exception) {
+                // Fallback
+            }
+            formatter.isGroupingUsed = true
+            formatter.maximumFractionDigits = 0
+            formatter
         }
-        val formatter = NumberFormat.getCurrencyInstance(locale)
-        try {
-            val currency = java.util.Currency.getInstance(currencyCode)
-            formatter.currency = currency
-        } catch (e: Exception) {
-            // Fallback
-        }
-        formatter.isGroupingUsed = true
-        formatter.maximumFractionDigits = 0
-        return formatter
     }
 
     /**
@@ -57,21 +70,23 @@ object CurrencyFormatter {
      */
     fun formatAmountCompact(amountInCents: Long, currencyCode: String = "USD"): String {
         val amount = ceil(amountInCents / 100.0).toLong()
-        val symbol = try {
-            val currency = java.util.Currency.getInstance(currencyCode)
-            val displayLocale = when (currencyCode) {
-                "IDR" -> Locale.forLanguageTag("id-ID")
-                "CNY" -> Locale.CHINA
-                "USD" -> Locale.US
-                "EUR" -> Locale.GERMANY
-                "GBP" -> Locale.UK
-                "JPY" -> Locale.JAPAN
-                else -> Locale.getDefault()
+        val symbol = symbolCache.getOrPut(currencyCode) {
+            try {
+                val currency = java.util.Currency.getInstance(currencyCode)
+                val displayLocale = when (currencyCode) {
+                    "IDR" -> Locale.forLanguageTag("id-ID")
+                    "CNY" -> Locale.CHINA
+                    "USD" -> Locale.US
+                    "EUR" -> Locale.GERMANY
+                    "GBP" -> Locale.UK
+                    "JPY" -> Locale.JAPAN
+                    else -> Locale.getDefault()
+                }
+                val sym = currency.getSymbol(displayLocale)
+                if (currencyCode == "IDR" && sym == "IDR") "Rp" else sym
+            } catch (e: Exception) {
+                currencyCode
             }
-            val sym = currency.getSymbol(displayLocale)
-            if (currencyCode == "IDR" && sym == "IDR") "Rp" else sym
-        } catch (e: Exception) {
-            currencyCode
         }
 
         if (amount == 0L) return "${symbol}0"
@@ -79,11 +94,12 @@ object CurrencyFormatter {
         val isNegative = amount < 0
         val absAmount = kotlin.math.abs(amount)
         val prefix = if (isNegative) "-$symbol" else symbol
+        val decimalFormat = compactDecimalFormatter.get() ?: DecimalFormat("#.#")
 
         return when {
-            absAmount >= 1_000_000_000L -> "$prefix${DecimalFormat("#.#").format(absAmount / 1_000_000_000.0)}B"
-            absAmount >= 1_000_000L -> "$prefix${DecimalFormat("#.#").format(absAmount / 1_000_000.0)}M"
-            absAmount >= 1_000L -> "$prefix${DecimalFormat("#.#").format(absAmount / 1_000.0)}K"
+            absAmount >= 1_000_000_000L -> "$prefix${decimalFormat.format(absAmount / 1_000_000_000.0)}B"
+            absAmount >= 1_000_000L -> "$prefix${decimalFormat.format(absAmount / 1_000_000.0)}M"
+            absAmount >= 1_000L -> "$prefix${decimalFormat.format(absAmount / 1_000.0)}K"
             else -> "$prefix$absAmount"
         }
     }

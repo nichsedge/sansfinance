@@ -135,7 +135,7 @@ fun WealthScreen(
                     }
                     IconButton(
                         onClick = {
-                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                             viewModel.togglePrivacyMode()
                         }
                     ) {

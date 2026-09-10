@@ -11,10 +11,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Surface
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.TrendingFlat
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.TrendingFlat
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
@@ -91,19 +94,61 @@ fun GlobalBudgetCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(10.dp)
-                    .clip(CircleShape),
-                color = color,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+            val cal = java.util.Calendar.getInstance()
+            val daysInMonth = cal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
+            val currentDay = cal.get(java.util.Calendar.DAY_OF_MONTH)
+            val monthProgress = (currentDay.toFloat() / daysInMonth.toFloat()).coerceIn(0f, 1f)
 
-            Spacer(modifier = Modifier.height(16.dp))
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val totalWidth = maxWidth
+                Column {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(10.dp)
+                                .clip(CircleShape),
+                            color = color,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+
+                        // Pacing needle at expected month progress
+                        Box(
+                            modifier = Modifier
+                                .padding(start = (totalWidth * monthProgress - 1.dp).coerceAtLeast(0.dp))
+                                .width(2.dp)
+                                .height(10.dp)
+                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), CircleShape)
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "${(progress * 100).toInt()}% spent",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = color,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Day $currentDay of $daysInMonth (${(monthProgress * 100).toInt()}%)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -123,7 +168,7 @@ fun GlobalBudgetCard(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.material3.Icon(
-                        imageVector = if (spendingVelocity > 1.1f) Icons.Default.TrendingUp else Icons.Default.TrendingFlat,
+                        imageVector = if (spendingVelocity > 1.1f) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingFlat,
                         contentDescription = null,
                         tint = velocityColor.copy(alpha = 0.8f),
                         modifier = Modifier.size(16.dp)
@@ -143,6 +188,37 @@ fun GlobalBudgetCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     fontWeight = FontWeight.Medium
                 )
+            }
+
+            val dailyAllowance = if (daysLeft > 0 && !isOverBudget) remaining / daysLeft else 0L
+            if (dailyAllowance > 0L && !isOverBudget) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Safe to spend today",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium
+                        )
+                        PrivacyText(
+                            amount = dailyAllowance,
+                            currencyCode = currencyCode,
+                            isVisible = !isPrivacyModeEnabled,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))

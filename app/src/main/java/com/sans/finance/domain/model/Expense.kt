@@ -1,7 +1,9 @@
 package com.sans.finance.domain.model
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
+@Immutable
 @Serializable
 data class Expense(
     val id: Long = 0,
