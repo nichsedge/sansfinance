@@ -176,7 +176,7 @@ class DataManagementViewModel @Inject constructor(
 
         val (date, items, exchangeRate) = try {
             if (content.trim().startsWith("{")) {
-                PortfolioJsonImporter.parseContent(content)
+                PortfolioJsonImporter.parseContent(content).toTriple()
             } else {
                 PortfolioCsvParser.parse(content)
             }

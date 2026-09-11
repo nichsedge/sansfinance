@@ -57,7 +57,7 @@ object CloudStorageSyncer {
     suspend fun downloadLatestSnapshot(
         context: Context,
         prefs: UserPreferences
-    ): Triple<Long, List<PortfolioHoldingEntity>, Double?> = withContext(Dispatchers.IO) {
+    ): SnapshotImportResult = withContext(Dispatchers.IO) {
         val provider = getActiveProvider(prefs)
         when (provider) {
             CloudStorageProvider.CLOUDFLARE_R2 -> downloadLatestSnapshotFromR2(context, prefs)
@@ -180,7 +180,7 @@ object CloudStorageSyncer {
     private suspend fun downloadLatestSnapshotFromR2(
         context: Context,
         prefs: UserPreferences
-    ): Triple<Long, List<PortfolioHoldingEntity>, Double?> = withContext(Dispatchers.IO) {
+    ): SnapshotImportResult = withContext(Dispatchers.IO) {
         val r2Config = loadR2Config(context, prefs)
         val objectKey = "snapshots/latest.json"
         val host = "${r2Config.accountId}.r2.cloudflarestorage.com"
@@ -325,7 +325,7 @@ object CloudStorageSyncer {
     private suspend fun downloadLatestSnapshotFromGcs(
         context: Context,
         prefs: UserPreferences
-    ): Triple<Long, List<PortfolioHoldingEntity>, Double?> = withContext(Dispatchers.IO) {
+    ): SnapshotImportResult = withContext(Dispatchers.IO) {
         val bucketName = prefs.gcsBucketName.ifBlank { "ichsanul-portfolio-snapshots" }
         val token = getGcsAccessToken(context)
         retryWithExponentialBackoff {

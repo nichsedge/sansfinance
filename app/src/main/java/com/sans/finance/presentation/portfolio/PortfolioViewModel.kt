@@ -23,6 +23,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -102,8 +103,19 @@ class PortfolioViewModel @Inject constructor(
     private val _xirr = MutableStateFlow<Double?>(null)
     private val _aiAnalysis = MutableStateFlow<com.sans.finance.data.ai.PortfolioAnalysisResult?>(null)
     private val _isAiAnalyzing = MutableStateFlow(false)
+    private val _sovereignAdvisor = MutableStateFlow<com.sans.finance.data.util.SovereignAdvisorJson?>(null)
+    val sovereignAdvisor: StateFlow<com.sans.finance.data.util.SovereignAdvisorJson?> = _sovereignAdvisor.asStateFlow()
 
     init {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val file = java.io.File(context.filesDir, "latest_advisor.json")
+                if (file.exists()) {
+                    val parser = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                    _sovereignAdvisor.value = parser.decodeFromString(com.sans.finance.data.util.SovereignAdvisorJson.serializer(), file.readText())
+                }
+            } catch (_: Exception) {}
+        }
         viewModelScope.launch {
             repository.getPortfolioTargets().first().let {
                 if (it.isEmpty()) {
@@ -476,13 +488,20 @@ class PortfolioViewModel @Inject constructor(
                 val provider = com.sans.finance.data.util.CloudStorageSyncer.getActiveProvider(prefs)
                 val providerLabel = if (provider == com.sans.finance.data.util.CloudStorageProvider.CLOUDFLARE_R2) "Cloudflare R2" else "GCS"
                 _importMessage.value = "Connecting to $providerLabel..."
-                val (date, items, exchangeRate) = com.sans.finance.data.util.CloudStorageSyncer.downloadLatestSnapshot(context, prefs)
+                val (date, items, exchangeRate, advisor) = com.sans.finance.data.util.CloudStorageSyncer.downloadLatestSnapshot(context, prefs)
 
                 if (items.isEmpty()) {
                     _importMessage.value = "No valid entries found in $providerLabel"
                     return@launch
                 }
                 repository.importSnapshot(date, items, exchangeRate)
+                if (advisor != null) {
+                    _sovereignAdvisor.value = advisor
+                    try {
+                        val file = java.io.File(context.filesDir, "latest_advisor.json")
+                        file.writeText(kotlinx.serialization.json.Json.encodeToString(com.sans.finance.data.util.SovereignAdvisorJson.serializer(), advisor))
+                    } catch (_: Exception) {}
+                }
                 _selectedDateIndex.value = 0
                 _importMessage.value = "Synced ${items.size} holdings from $providerLabel"
             } catch (e: Exception) {

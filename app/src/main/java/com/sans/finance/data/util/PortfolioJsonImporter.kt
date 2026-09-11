@@ -15,8 +15,52 @@ data class PortfolioSnapshotJson(
     val metadata: SnapshotMetadata,
     val totals: SnapshotTotals? = null,
     val holdings: List<HoldingJson> = emptyList(),
-    @SerialName("liquid_cash_accounts") val liquidCashAccounts: List<HoldingJson> = emptyList()
+    @SerialName("liquid_cash_accounts") val liquidCashAccounts: List<HoldingJson> = emptyList(),
+    val advisor: SovereignAdvisorJson? = null
 )
+
+@Serializable
+data class SovereignAdvisorJson(
+    val date: String = "",
+    @SerialName("hourly_velocity_idr") val hourlyVelocityIdr: Double = 0.0,
+    @SerialName("velocity_str") val velocityStr: String = "N/A",
+    @SerialName("atracker_work_hours_30d") val workHours30d: Double = 0.0,
+    @SerialName("dry_powder_idr") val dryPowderIdr: Double = 0.0,
+    @SerialName("dry_powder_pct") val dryPowderPct: Double = 0.0,
+    @SerialName("net_worth_idr") val netWorthIdr: Double = 0.0,
+    @SerialName("mom_growth_idr") val momGrowthIdr: Double = 0.0,
+    @SerialName("action_summary") val actionSummary: String = "",
+    @SerialName("equities_verdicts") val equitiesVerdicts: List<EquityVerdictJson> = emptyList(),
+    val opportunities: List<ScreenedOpportunityJson> = emptyList()
+)
+
+@Serializable
+data class EquityVerdictJson(
+    val ticker: String,
+    @SerialName("value_idr") val valueIdr: Double = 0.0,
+    @SerialName("weight_pct") val weightPct: Double = 0.0,
+    val verdict: String = "",
+    @SerialName("nff_20d") val nff20d: Double = 0.0
+)
+
+@Serializable
+data class ScreenedOpportunityJson(
+    val ticker: String,
+    val name: String = "",
+    val close: Double = 0.0,
+    val roe: Double = 0.0,
+    val per: Double = 0.0,
+    @SerialName("nff_20d") val nff20d: Double = 0.0
+)
+
+data class SnapshotImportResult(
+    val snapshotDate: Long,
+    val holdings: List<PortfolioHoldingEntity>,
+    val exchangeRate: Double?,
+    val advisor: SovereignAdvisorJson? = null
+) {
+    fun toTriple(): Triple<Long, List<PortfolioHoldingEntity>, Double?> = Triple(snapshotDate, holdings, exchangeRate)
+}
 
 @Serializable
 data class SnapshotTotals(
@@ -61,7 +105,7 @@ object PortfolioJsonImporter {
     fun parse(
         context: Context,
         uri: Uri
-    ): Triple<Long, List<PortfolioHoldingEntity>, Double?> {
+    ): SnapshotImportResult {
         val jsonString = context.contentResolver.openInputStream(uri)?.use { inputStream ->
             inputStream.bufferedReader().use { it.readText() }
         } ?: throw Exception("Failed to open input stream")
@@ -69,7 +113,7 @@ object PortfolioJsonImporter {
         return parseContent(jsonString)
     }
 
-    fun parseContent(jsonString: String): Triple<Long, List<PortfolioHoldingEntity>, Double?> {
+    fun parseContent(jsonString: String): SnapshotImportResult {
         val snapshot = json.decodeFromString<PortfolioSnapshotJson>(jsonString)
 
         val snapshotDate = try {
@@ -96,6 +140,6 @@ object PortfolioJsonImporter {
             )
         }
 
-        return Triple(snapshotDate, entities, snapshot.metadata.exchangeRate)
+        return SnapshotImportResult(snapshotDate, entities, snapshot.metadata.exchangeRate, snapshot.advisor)
     }
 }

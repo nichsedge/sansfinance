@@ -82,6 +82,7 @@ fun PortfolioScreen(
     viewModel: PortfolioViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val sovereignAdvisor by viewModel.sovereignAdvisor.collectAsStateWithLifecycle()
     var showMenu by remember { mutableStateOf(false) }
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
 
@@ -308,6 +309,15 @@ fun PortfolioScreen(
 
                             item {
                                 PortfolioHeader(state, onForecastingClick)
+                            }
+
+                            if (sovereignAdvisor != null) {
+                                item {
+                                    com.sans.finance.presentation.portfolio.components.SovereignAdvisorCard(
+                                        advisor = sovereignAdvisor,
+                                        isPrivacyModeEnabled = state.isPrivacyModeEnabled
+                                    )
+                                }
                             }
 
                             if (state.valueHistory.size >= 2 || state.netWorthHistory.size >= 2) {
