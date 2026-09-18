@@ -245,7 +245,6 @@ fun AddTransactionScreen(
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize()
-                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -291,6 +290,8 @@ fun AddTransactionScreen(
                         }
                     }
                 }
+            }
+
             // Hero Amount Input Section
             val hasMath = com.sans.finance.core.util.MathExpressionEvaluator.hasArithmetic(viewModel.amount)
             val previewEval = if (hasMath) com.sans.finance.core.util.MathExpressionEvaluator.evaluate(viewModel.amount) else null
@@ -365,29 +366,6 @@ fun AddTransactionScreen(
                     ),
                     shape = MaterialTheme.shapes.small
                 )
-            }
-
-            // Quick increment chips for speed
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf(10, 50, 100, 500).forEach { inc ->
-                    FilterChip(
-                        selected = false,
-                        onClick = {
-                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-                            val current = viewModel.amount.toDoubleOrNull() ?: 0.0
-                            val updated = current + inc
-                            viewModel.amount = if (updated % 1.0 == 0.0) updated.toLong().toString() else String.format(java.util.Locale.US, "%.2f", updated)
-                        },
-                        label = {
-                            Text("+$inc", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                        },
-                        shape = androidx.compose.foundation.shape.CircleShape,
-                        modifier = Modifier.height(28.dp)
-                    )
-                }
             }
 
             val fxInfo by viewModel.fxConversionInfo.collectAsStateWithLifecycle()
@@ -1158,8 +1136,7 @@ fun AddTransactionScreen(
         }
     }
 
-    Spacer(modifier = Modifier.height(24.dp))
-}
+            Spacer(modifier = Modifier.height(24.dp))
+        }
     }
-}
 }
