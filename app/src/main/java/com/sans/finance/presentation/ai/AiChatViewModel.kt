@@ -2,6 +2,7 @@ package com.sans.finance.presentation.ai
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sans.finance.data.ai.AiJsonParser
 import com.sans.finance.data.ai.AiProviderFactory
 import com.sans.finance.data.ai.AiSettingsRepository
 import com.sans.finance.domain.model.AccountSummary
@@ -10,14 +11,19 @@ import com.sans.finance.domain.model.CategorySummary
 import com.sans.finance.domain.model.ChatMessage
 import com.sans.finance.domain.model.ChatSender
 import com.sans.finance.domain.model.Expense
+import com.sans.finance.domain.model.StreamEvent
 import com.sans.finance.domain.repository.AccountRepository
 import com.sans.finance.domain.repository.CategoryRepository
+import com.sans.finance.domain.repository.ExpenseRepository
 import com.sans.finance.domain.usecase.AddTransactionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -27,6 +33,7 @@ data class AiChatUiState(
     val messages: List<ChatMessage> = emptyList(),
     val inputText: String = "",
     val isLoading: Boolean = false,
+    val isStreaming: Boolean = false,
     val errorMessage: String? = null,
     val isAiConfigured: Boolean = true,
     val accounts: List<AccountSummary> = emptyList(),
@@ -40,11 +47,15 @@ class AiChatViewModel @Inject constructor(
     private val aiSettingsRepository: AiSettingsRepository,
     private val accountRepository: AccountRepository,
     private val categoryRepository: CategoryRepository,
+    private val expenseRepository: ExpenseRepository,
     private val addTransactionUseCase: AddTransactionUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AiChatUiState())
     val uiState: StateFlow<AiChatUiState> = _uiState.asStateFlow()
+
+    /** Active streaming job — cancelled on stop or new message. */
+    private var streamingJob: Job? = null
 
     init {
         loadInitialData()
@@ -67,7 +78,7 @@ class AiChatViewModel @Inject constructor(
                 val accountSummaries = rawAccounts.map {
                     AccountSummary(id = it.id, name = it.name, type = it.type, currency = it.currency)
                 }
-                val defaultCash = com.sans.finance.data.ai.AiJsonParser.findDefaultCashAccount(accountSummaries)
+                val defaultCash = AiJsonParser.findDefaultCashAccount(accountSummaries)
                 _uiState.update { state ->
                     val updatedMessages = state.messages.map { msg ->
                         if (msg.proposals.isNotEmpty()) {
@@ -113,7 +124,10 @@ class AiChatViewModel @Inject constructor(
 
     fun sendMessage(overrideText: String? = null) {
         val textToSend = (overrideText ?: _uiState.value.inputText).trim()
-        if (textToSend.isBlank() || _uiState.value.isLoading) return
+        if (textToSend.isBlank() || _uiState.value.isLoading || _uiState.value.isStreaming) return
+
+        // Cancel any ongoing stream
+        streamingJob?.cancel()
 
         val userMessage = ChatMessage(
             id = UUID.randomUUID().toString(),
@@ -121,22 +135,35 @@ class AiChatViewModel @Inject constructor(
             text = textToSend
         )
 
+        // Create an empty assistant placeholder for streaming
+        val assistantId = UUID.randomUUID().toString()
+        val assistantPlaceholder = ChatMessage(
+            id = assistantId,
+            sender = ChatSender.ASSISTANT,
+            text = "",
+            isStreaming = true
+        )
+
         _uiState.update {
             it.copy(
-                messages = it.messages + userMessage,
+                messages = it.messages + userMessage + assistantPlaceholder,
                 inputText = "",
                 isLoading = true,
+                isStreaming = true,
                 errorMessage = null
             )
         }
 
-        viewModelScope.launch {
+        streamingJob = viewModelScope.launch {
             try {
                 val provider = aiProviderFactory.create()
                 if (provider == null) {
+                    // Remove placeholder, show error
                     _uiState.update {
                         it.copy(
+                            messages = it.messages.filter { msg -> msg.id != assistantId },
                             isLoading = false,
+                            isStreaming = false,
                             isAiConfigured = false,
                             errorMessage = "API key AI belum diset. Silakan konfigurasi API key OpenRouter Anda di Pengaturan > AI Settings."
                         )
@@ -148,36 +175,106 @@ class AiChatViewModel @Inject constructor(
                 val categories = _uiState.value.categories
                 val baseCurrency = accounts.firstOrNull()?.currency ?: "IDR"
 
-                val response = provider.parseReceiptOrChat(
+                // Fast in-context financial snapshot from Room DB
+                val financialSnapshot = runCatching { getFinancialSnapshot(baseCurrency) }.getOrNull()
+
+                // Use streaming — collect tokens incrementally
+                provider.streamChat(
                     userMessage = textToSend,
                     accounts = accounts,
                     categories = categories,
                     currency = baseCurrency,
-                    conversationHistory = _uiState.value.messages.takeLast(6)
-                )
+                    conversationHistory = _uiState.value.messages
+                        .filter { it.id != assistantId }
+                        .takeLast(6),
+                    financialContext = financialSnapshot
+                ).collect { event ->
+                        when (event) {
+                            is StreamEvent.TextDelta -> {
+                                _uiState.update { state ->
+                                    val updated = state.messages.map { msg ->
+                                        if (msg.id == assistantId) {
+                                            msg.copy(text = msg.text + event.text)
+                                        } else msg
+                                    }
+                                    state.copy(messages = updated, isLoading = false)
+                                }
+                            }
 
-                val assistantMessage = ChatMessage(
-                    id = UUID.randomUUID().toString(),
-                    sender = ChatSender.ASSISTANT,
-                    text = response.reply,
-                    proposals = response.proposals
-                )
+                            is StreamEvent.Done -> {
+                                // Parse the full response for proposals
+                                val parsed = AiJsonParser.parseAssistantResponse(
+                                    event.fullText, accounts, categories
+                                )
+                                _uiState.update { state ->
+                                    val updated = state.messages.map { msg ->
+                                        if (msg.id == assistantId) {
+                                            msg.copy(
+                                                text = parsed.reply.ifBlank { msg.text },
+                                                proposals = parsed.proposals,
+                                                isStreaming = false
+                                            )
+                                        } else msg
+                                    }
+                                    state.copy(
+                                        messages = updated,
+                                        isLoading = false,
+                                        isStreaming = false
+                                    )
+                                }
+                            }
 
-                _uiState.update {
-                    it.copy(
-                        messages = it.messages + assistantMessage,
-                        isLoading = false
-                    )
-                }
+                            is StreamEvent.Error -> {
+                                _uiState.update { state ->
+                                    // Remove empty placeholder on error
+                                    val cleaned = state.messages.filter { msg ->
+                                        msg.id != assistantId || msg.text.isNotBlank()
+                                    }.map { msg ->
+                                        if (msg.id == assistantId) msg.copy(isStreaming = false)
+                                        else msg
+                                    }
+                                    state.copy(
+                                        messages = cleaned,
+                                        isLoading = false,
+                                        isStreaming = false,
+                                        errorMessage = event.message
+                                    )
+                                }
+                            }
+                        }
+                    }
             } catch (e: Exception) {
                 android.util.Log.e("AiChatViewModel", "Gagal memproses AI: ${e.message}", e)
-                _uiState.update {
-                    it.copy(
+                _uiState.update { state ->
+                    val cleaned = state.messages.map { msg ->
+                        if (msg.id == assistantId) msg.copy(isStreaming = false) else msg
+                    }.filter { msg ->
+                        msg.id != assistantId || msg.text.isNotBlank()
+                    }
+                    state.copy(
+                        messages = cleaned,
                         isLoading = false,
+                        isStreaming = false,
                         errorMessage = "Gagal memproses AI: ${e.localizedMessage ?: e.message}"
                     )
                 }
             }
+        }
+    }
+
+    /** Stop the active streaming generation. Keeps whatever text has arrived so far. */
+    fun stopGeneration() {
+        streamingJob?.cancel()
+        streamingJob = null
+        _uiState.update { state ->
+            val updated = state.messages.map { msg ->
+                if (msg.isStreaming) msg.copy(isStreaming = false) else msg
+            }
+            state.copy(
+                messages = updated,
+                isLoading = false,
+                isStreaming = false
+            )
         }
     }
 
@@ -276,14 +373,14 @@ class AiChatViewModel @Inject constructor(
         } else null
         if (byName != null) return byName
 
-        return com.sans.finance.data.ai.AiJsonParser.findDefaultCashAccount(accounts)
+        return AiJsonParser.findDefaultCashAccount(accounts)
     }
 
     private fun normalizeDate(date: Long): Long {
         val now = System.currentTimeMillis()
         return when {
             date <= 0L || date == 1726000000000L -> now
-            date < 100_000_000_000L -> date * 1000L // 10-digit epoch timestamp in seconds -> ms
+            date < 100_000_000_000L -> date * 1000L
             else -> date
         }
     }
@@ -326,5 +423,101 @@ class AiChatViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    private suspend fun getFinancialSnapshot(baseCurrency: String): com.sans.finance.domain.model.FinancialContextSnapshot {
+        val cal = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.DAY_OF_MONTH, 1)
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+        val startOfMonth = cal.timeInMillis
+        cal.add(java.util.Calendar.MONTH, 1)
+        val endOfMonth = cal.timeInMillis
+
+        val monthLabel = java.text.SimpleDateFormat("MMM yyyy", java.util.Locale.getDefault())
+            .format(java.util.Date(startOfMonth))
+
+        val income = expenseRepository.getTotalAmountByTypeBetween(startOfMonth, endOfMonth, "INCOME").first() ?: 0L
+        val expense = expenseRepository.getTotalAmountByTypeBetween(startOfMonth, endOfMonth, "EXPENSE").first() ?: 0L
+        val net = income - expense
+        val savingsRate = if (income > 0) net.toFloat() / income.toFloat() else 0f
+
+        val topCategories = expenseRepository.getBreakdownByCategoryBetween(startOfMonth, endOfMonth, "EXPENSE")
+            .first()
+            .take(5)
+            .map { it.categoryName to it.totalAmount }
+
+        val accounts = accountRepository.getAllAccounts().first().map { it.name to it.balance }
+
+        val allMonthExpenses = expenseRepository.getExpensesBetween(startOfMonth, endOfMonth).first()
+
+        val recentTx = allMonthExpenses
+            .filter { !it.isInstallment || it.isInstallmentPayment }
+            .take(6)
+            .map { tx ->
+                val dateStr = java.text.SimpleDateFormat("dd MMM", java.util.Locale.getDefault()).format(java.util.Date(tx.date))
+                "$dateStr: ${tx.title} (${tx.type}) ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(tx.amount, baseCurrency)}"
+            }
+
+        // Top Big-Ticket discrete expenses this month (e.g. Rent, Tuition, Major Purchases)
+        val topBigTickets = allMonthExpenses
+            .filter { it.type == "EXPENSE" && (!it.isInstallment || it.isInstallmentPayment) }
+            .sortedByDescending { it.amount }
+            .take(5)
+            .map { tx ->
+                val dateStr = java.text.SimpleDateFormat("dd MMM", java.util.Locale.getDefault()).format(java.util.Date(tx.date))
+                val cat = tx.categoryName ?: "General"
+                "$dateStr: ${tx.title} (${com.sans.finance.core.util.CurrencyFormatter.formatAmount(tx.amount, baseCurrency)}) [$cat]"
+            }
+
+        // Previous Month (M-1) metrics
+        val calPrev = java.util.Calendar.getInstance().apply {
+            timeInMillis = startOfMonth
+            add(java.util.Calendar.MONTH, -1)
+        }
+        val startOfPrevMonth = calPrev.timeInMillis
+        val endOfPrevMonth = startOfMonth
+        val prevMonthLabel = java.text.SimpleDateFormat("MMM yyyy", java.util.Locale.getDefault())
+            .format(java.util.Date(startOfPrevMonth))
+
+        val prevIncome = expenseRepository.getTotalAmountByTypeBetween(startOfPrevMonth, endOfPrevMonth, "INCOME").first() ?: 0L
+        val prevExpense = expenseRepository.getTotalAmountByTypeBetween(startOfPrevMonth, endOfPrevMonth, "EXPENSE").first() ?: 0L
+        val prevNet = prevIncome - prevExpense
+        val prevSavingsRate = if (prevIncome > 0) prevNet.toFloat() / prevIncome.toFloat() else 0f
+
+        val prevTopCategories = expenseRepository.getBreakdownByCategoryBetween(startOfPrevMonth, endOfPrevMonth, "EXPENSE")
+            .first()
+            .take(5)
+            .map { it.categoryName to it.totalAmount }
+
+        // 3-Month rolling baseline average expense (M-3, M-2, M-1)
+        val cal3M = java.util.Calendar.getInstance().apply {
+            timeInMillis = startOfMonth
+            add(java.util.Calendar.MONTH, -3)
+        }
+        val startOf3M = cal3M.timeInMillis
+        val total3MExpense = expenseRepository.getTotalAmountByTypeBetween(startOf3M, startOfMonth, "EXPENSE").first() ?: 0L
+        val threeMonthAverageExpense = if (total3MExpense > 0L) total3MExpense / 3L else 0L
+
+        return com.sans.finance.domain.model.FinancialContextSnapshot(
+            monthLabel = monthLabel,
+            totalIncomeThisMonth = income,
+            totalExpenseThisMonth = expense,
+            netCashflowThisMonth = net,
+            savingsRatePercentage = savingsRate,
+            topExpenseCategories = topCategories,
+            accountBalances = accounts,
+            recentTransactions = recentTx,
+            prevMonthLabel = prevMonthLabel,
+            prevMonthIncome = prevIncome,
+            prevMonthExpense = prevExpense,
+            prevMonthSavingsRate = prevSavingsRate,
+            prevMonthTopCategories = prevTopCategories,
+            threeMonthAverageExpense = threeMonthAverageExpense,
+            topBigTicketExpenses = topBigTickets
+        )
     }
 }

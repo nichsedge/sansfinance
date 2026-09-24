@@ -12,7 +12,7 @@ Sans Finance is a modern, privacy-first personal finance and wealth management a
 
 ## 📥 Download
 
-[![Download Latest APK](https://img.shields.io/badge/Download-Release%20v1.3-brightgreen?style=for-the-badge&logo=android)](https://github.com/nichsedge/sansfinance/releases/latest)
+[![Download Latest APK](https://img.shields.io/badge/Download-Release%20v1.4-brightgreen?style=for-the-badge&logo=android)](https://github.com/nichsedge/sansfinance/releases/latest)
 
 Get the latest signed APK directly from [GitHub Releases](https://github.com/nichsedge/sansfinance/releases/latest).
 
@@ -28,7 +28,7 @@ Get the latest signed APK directly from [GitHub Releases](https://github.com/nic
 - **Dividend & Cash Yield Tracker:** Dedicated portfolio yield analysis tracking annual passive run-rate, weighted yield-on-cost %, coupon schedules, and lifestyle expense coverage.
 
 ### ⚡ Daily Financial Operations
-- **AI Assistant & Smart Receipt Ingestion:** Chat with AI or paste raw bank receipt text (e.g. CIMB Niaga SBN coupon payouts, BCA transfer slips, QRIS notes). The assistant extracts transaction details with **Human-in-the-Loop (HITL)** confirmation before inserting into Room DB.
+- **SansAI Financial Copilot & Universal Ingestion:** Real-time conversational AI grounded in live SQLite financial metrics (expenses, income, savings rate, liquid cash balances) and smart receipt parsing (CIMB Niaga SBN coupon payouts, BCA transfer slips, QRIS notes) with SSE token streaming and **Human-in-the-Loop (HITL)** proposal confirmation before persisting.
 - **Safe-to-Spend Runway Pacing:** Real-time calculation of daily discretionary allowances after accounting for upcoming committed bills and billing cycle days.
 - **Installment Horizon Roadmap:** Timeline matrix projecting future monthly debt obligation reductions and freed cash flow milestones.
 - **Home Screen Widgets (Jetpack Glance):** Reactive Material 3 widgets for instant financial health glance and one-tap transaction logging.

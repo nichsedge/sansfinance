@@ -5,6 +5,7 @@ import com.sans.finance.domain.model.AiAssistantResponse
 import com.sans.finance.domain.model.AiTransactionProposal
 import com.sans.finance.domain.model.CategorySummary
 import com.sans.finance.domain.model.ChatMessage
+import com.sans.finance.domain.model.FinancialContextSnapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -223,7 +224,8 @@ class OpenAiResponsesProvider(
         accounts: List<AccountSummary>,
         categories: List<CategorySummary>,
         currency: String,
-        conversationHistory: List<ChatMessage>
+        conversationHistory: List<ChatMessage>,
+        financialContext: FinancialContextSnapshot?
     ): AiAssistantResponse {
         val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
         val accountsFormatted = accounts.joinToString(separator = "\n") {
@@ -245,9 +247,16 @@ class OpenAiResponsesProvider(
             $categoriesFormatted
 
             Capabilities & Modes:
-            1. CONVERSATIONAL & FINANCIAL ADVICE MODE:
-               - When the user asks financial questions, seeks budgeting strategies (50/30/20, zero-based), inquires about emergency fund sizing, cash runway, FIRE targets, debt payoff horizons, or general wealth habits:
-               - Provide a clear, insightful, motivating, and mathematically sound answer in Indonesian (or English if prompted in English).
+            1. CONVERSATIONAL & FINANCIAL COPILOT MODE:
+               - You are SansAI, an elite, data-driven personal wealth and cashflow intelligence copilot for Sans Finance.
+               - Grounding Invariant: Thoroughly inspect the Real-time Financial Context provided in the input. Never say historical data is unavailable when previous month (M-1) or 3-month baseline is present. Always cite exact numbers, percentages, and deltas between months.
+               - Deep Expense & Variance Analysis:
+                 * When the user asks why they spent so much ("kok boros?", "kenapa naik?"), do NOT give generic platitudes (e.g. "cabut colokan listrik", "kurangi AC", "gunakan metode 50/30/20").
+                 * Compare Current Month vs Previous Month and 3-Month Rolling Average directly.
+                 * Check the "Top Big-Ticket Discrete Expenses" to pinpoint the exact single transactions causing spikes (e.g. sewa kos/rent, tuition, electronics, flight).
+                 * Clearly distinguish Fixed Commitments (Kos/sewa, insurance, recurring bills) from Discretionary Leaks (food delivery, coffee, impulsive shopping, entertainment).
+                 * Acknowledge savings health: if the user's savings rate is high (e.g. >50% or 70%+), reassure them that their net cashflow remains strongly positive, but clearly highlight where the delta came from.
+               - Tone & Style: Direct, sharp, analytical, empathetic, and concise Indonesian (or English if prompted in English). Use bolding and concise bullet points.
                - Set "proposals": [] (empty array). Do NOT invent fictional transactions.
 
             2. UNIVERSAL TRANSACTION INGESTION MODE:
@@ -287,10 +296,17 @@ class OpenAiResponsesProvider(
             }
         """.trimIndent()
 
+        val financialContextFormatted = buildFinancialContextString(financialContext, currency)
+        val finalInput = if (financialContextFormatted.isNotBlank()) {
+            "Context: current_timestamp=${System.currentTimeMillis()}, date=$todayStr\n\n$financialContextFormatted\n\nUser Message: $userMessage"
+        } else {
+            userMessage
+        }
+
         val bodyJson = buildJsonObject {
             put("model", JsonPrimitive(model))
             put("instructions", JsonPrimitive(instructions))
-            put("input", JsonPrimitive(userMessage))
+            put("input", JsonPrimitive(finalInput))
             put(
                 "response_format",
                 buildJsonObject {
@@ -322,6 +338,67 @@ class OpenAiResponsesProvider(
                 AiJsonParser.parseAssistantResponse(rawOutput, accounts, categories)
             }
         }
+    }
+
+    private fun buildFinancialContextString(
+        snapshot: FinancialContextSnapshot?,
+        baseCurrency: String
+    ): String {
+        if (snapshot == null) return ""
+        val sb = StringBuilder()
+        sb.append("=== Real-time Financial Context & Metrics ===\n")
+        sb.append("[Current Month: ${snapshot.monthLabel.ifBlank { "Current Month" }}]\n")
+        sb.append("- Total Income: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.totalIncomeThisMonth, baseCurrency)}\n")
+        sb.append("- Total Expense: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.totalExpenseThisMonth, baseCurrency)}\n")
+        sb.append("- Net Cashflow: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.netCashflowThisMonth, baseCurrency)}\n")
+        sb.append("- Savings Rate: ${String.format(java.util.Locale.US, "%.1f", snapshot.savingsRatePercentage * 100f)}%\n")
+
+        if (snapshot.prevMonthLabel.isNotBlank()) {
+            sb.append("\n[Previous Month: ${snapshot.prevMonthLabel}]\n")
+            sb.append("- Total Income: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.prevMonthIncome, baseCurrency)}\n")
+            sb.append("- Total Expense: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.prevMonthExpense, baseCurrency)}\n")
+            sb.append("- Savings Rate: ${String.format(java.util.Locale.US, "%.1f", snapshot.prevMonthSavingsRate * 100f)}%\n")
+            if (snapshot.prevMonthTopCategories.isNotEmpty()) {
+                val catStr = snapshot.prevMonthTopCategories.joinToString { (name, amt) ->
+                    "$name (${com.sans.finance.core.util.CurrencyFormatter.formatAmount(amt, baseCurrency)})"
+                }
+                sb.append("- Top Categories: $catStr\n")
+            }
+        }
+
+        if (snapshot.threeMonthAverageExpense > 0L) {
+            sb.append("\n[3-Month Rolling Baseline Average Expense: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.threeMonthAverageExpense, baseCurrency)}/month]\n")
+        }
+
+        if (snapshot.topBigTicketExpenses.isNotEmpty()) {
+            sb.append("\n[Current Month Top Big-Ticket Expenses (Spike/Variance Drivers)]:\n")
+            snapshot.topBigTicketExpenses.forEach { tx ->
+                sb.append("  * $tx\n")
+            }
+        }
+
+        if (snapshot.topExpenseCategories.isNotEmpty()) {
+            sb.append("\n[Current Month Top Spending Categories]:\n")
+            snapshot.topExpenseCategories.forEach { (categoryName, amount) ->
+                sb.append("  * $categoryName: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(amount, baseCurrency)}\n")
+            }
+        }
+
+        if (snapshot.accountBalances.isNotEmpty()) {
+            sb.append("\n[Current Liquid Account Balances]:\n")
+            snapshot.accountBalances.forEach { (name, balance) ->
+                sb.append("  * $name: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(balance, baseCurrency)}\n")
+            }
+        }
+
+        if (snapshot.recentTransactions.isNotEmpty()) {
+            sb.append("\n[Latest Transactions]:\n")
+            snapshot.recentTransactions.take(6).forEach { tx ->
+                sb.append("  * $tx\n")
+            }
+        }
+        sb.append("=============================================")
+        return sb.toString().trim()
     }
 }
 

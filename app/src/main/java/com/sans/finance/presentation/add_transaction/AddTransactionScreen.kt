@@ -120,7 +120,7 @@ fun AddTransactionScreen(
                         IconButton(onClick = onAiChatClick) {
                             Icon(
                                 Icons.Default.AutoAwesome,
-                                contentDescription = "AI Assistant",
+                                contentDescription = "SansAI",
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }

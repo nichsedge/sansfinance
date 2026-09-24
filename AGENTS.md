@@ -84,7 +84,7 @@ The project follows **Clean Architecture** with a Kotlin Multiplatform core.
 
 **Presentation** (`app/presentation/`) — Compose + ViewModel + Jetpack Glance.
 - ViewModels use `StateFlow` to expose UI state.
-- Screen list: `Dashboard`, `ExpenseList`, `AddTransaction`, `AiChat` (Smart Receipt & SBN Coupon Ingestion with HITL Confirmation), `Wealth`, `Portfolio` (Overview, Health, Yield), `Goals`, `Budgets` (Safe-to-Spend runway), `Installments` (Horizon timeline), `MonthlyReview`, `DataManagement` (Database Optimization & Audit), `WealthForecasting` (Monte Carlo Simulation), etc.
+- Screen list: `Dashboard`, `ExpenseList`, `AddTransaction`, `SansAI` (Financial Copilot & Universal Transaction Ingestion with HITL Confirmation), `Wealth`, `Portfolio` (Overview, Health, Yield), `Goals`, `Budgets` (Safe-to-Spend runway), `Installments` (Horizon timeline), `MonthlyReview`, `DataManagement` (Database Optimization & Audit), `WealthForecasting` (Monte Carlo Simulation), etc.
 - Navigation: Type-safe routes using Kotlinx Serialization in `Screen.kt` with fluid Material 3 enter/exit motion transitions.
 - AppWidgets: Jetpack Glance-powered home screen widgets (`FinancialSummaryGlanceWidget`, `QuickAddGlanceWidget`) alongside legacy RemoteViews.
 
@@ -120,9 +120,19 @@ Reference snapshot: `sans_finance_db_snapshot.sqlite`.
   - Monthly Review closing summaries and Portfolio Health Insights.
   - Interactive **AI Chat & Smart Receipt Ingestion**: Parsing raw text receipts (such as CIMB Niaga SBN coupon payouts, bank slips, or expense notes) into structured transaction proposals.
   - **Human-in-the-Loop (HITL) Guarantee**: The AI never directly mutates the database; it presents an interactive confirmation proposal card allowing account/category review and explicit confirmation before persisting via `AddTransactionUseCase`.
+- **SSE Streaming Architecture**:
+  - **`AiProvider.streamChat()`** returns `Flow<StreamEvent>` (TextDelta / Done / Error) for real-time token-by-token rendering via Server-Sent Events.
+  - **OpenRouter**: Uses `callbackFlow` + Okio `BufferedSource` SSE parsing with `stream: true`. A dedicated `streamingClient` with `readTimeout(0)` prevents timeout during long token pauses.
+  - **OpenAI**: Falls back to non-streaming via the default `AiProvider.streamChat()` implementation (OpenAI `/v1/responses` endpoint does not support SSE streaming).
+  - **Non-streaming retained**: `parseReceiptOrChat()` (blocking, `response_format: json_object`) remains for Monthly Review, Portfolio Analysis, and as a fallback.
+  - **Prompt Caching**: The streaming system prompt is static (no `System.currentTimeMillis()` interpolation); dynamic context (timestamp, date) is injected as a separate user context turn to enable OpenRouter prefix caching.
+  - **OkHttp**: Base client uses `pingInterval(20s)` for HTTP/2 PING keep-alive to defeat carrier CGNAT idle eviction on cellular networks.
+- **Real-time Financial Grounding Snapshot**:
+  - `AiChatViewModel` injects a zero-latency (~5ms) `FinancialContextSnapshot` into the dynamic context turn: Current Month totals, Previous Month (M-1) totals/top categories, 3-Month rolling baseline average expense, Top Big-Ticket discrete items (spike drivers), and liquid account balances.
+  - This eliminates generic platitudes (e.g. telling user to unplug electricity appliances when the spike is actually rent) and ensures SansAI performs deep historical variance analysis.
 - **Receipt Ingestion & Account Resolution Invariants**:
   - **Account Fallback**: If receipt text or user input does not match an identifiable account, the parser and ViewModel must default to the primary/first **Cash** account (e.g. `Wallet`). Never leave the account unassigned or pick an investment account.
-  - **Dynamic Timestamp Prompting**: LLM system prompts must always inject dynamic current timestamps (`${System.currentTimeMillis()}`) rather than hardcoded dummy epoch values, preventing the LLM from backdating transactions into prior months.
+  - **Dynamic Timestamp Prompting**: LLM system prompts must always inject dynamic current timestamps (`${System.currentTimeMillis()}`) rather than hardcoded dummy epoch values, preventing the LLM from backdating transactions into prior months. For streaming, timestamps are injected as a separate context turn rather than inline in the system prompt.
   - **Account Currency Inheritance**: Created expenses must inherit the parent account's native currency (defaulting to `IDR`), never falling back to legacy `USD`.
 - **No On-Device AI / LLM**: Do not implement or suggest on-device LLMs or on-device AI engines (such as LiteRT-LM / edge SLMs). They introduce excessive battery drain, thermal throttling, and large binary footprints with negligible user benefit for personal finance. All core calculations must remain pure deterministic Kotlin algorithms, while complex LLM summaries use cloud APIs.
 

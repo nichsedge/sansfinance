@@ -266,8 +266,10 @@ object AiJsonParser {
 
         val resolvedAccountId = matchedAccount?.id ?: defaultCashAccount?.id ?: 1L
         val resolvedAccountName = matchedAccount?.name ?: defaultCashAccount?.name ?: "Cash"
+        val proposalId = obj.optString("id").takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString()
 
         return AiTransactionProposal(
+            id = proposalId,
             title = title,
             amountInCents = amountInCents,
             type = type,

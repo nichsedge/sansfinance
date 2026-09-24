@@ -59,7 +59,7 @@ fun DashboardScreen(
                         IconButton(onClick = onChat) {
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = "AI Assistant",
+                                contentDescription = "SansAI",
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }

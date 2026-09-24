@@ -38,7 +38,8 @@ data class ChatMessage(
     val proposal: AiTransactionProposal? = null,
     val proposals: List<AiTransactionProposal> = emptyList(),
     val isConfirmed: Boolean = false,
-    val isRejected: Boolean = false
+    val isRejected: Boolean = false,
+    val isStreaming: Boolean = false
 ) {
     val allConfirmed: Boolean
         get() = (proposals.isNotEmpty() && proposals.all { it.isConfirmed }) || (proposal != null && isConfirmed)
@@ -60,8 +61,42 @@ data class CategorySummary(
     val type: String
 )
 
+data class FinancialContextSnapshot(
+    val monthLabel: String = "",
+    val totalIncomeThisMonth: Long = 0L,
+    val totalExpenseThisMonth: Long = 0L,
+    val netCashflowThisMonth: Long = 0L,
+    val savingsRatePercentage: Float = 0f,
+    val topExpenseCategories: List<Pair<String, Long>> = emptyList(),
+    val accountBalances: List<Pair<String, Long>> = emptyList(),
+    val recentTransactions: List<String> = emptyList(),
+
+    // Historical comparison (M-1 / Previous Month)
+    val prevMonthLabel: String = "",
+    val prevMonthIncome: Long = 0L,
+    val prevMonthExpense: Long = 0L,
+    val prevMonthSavingsRate: Float = 0f,
+    val prevMonthTopCategories: List<Pair<String, Long>> = emptyList(),
+
+    // 3-Month rolling baseline average expense
+    val threeMonthAverageExpense: Long = 0L,
+
+    // Big-ticket discrete expenses this month (e.g. "12 Sep: Kos (Rp 2.250.000) [Utility]")
+    val topBigTicketExpenses: List<String> = emptyList()
+)
+
 data class AiAssistantResponse(
     val reply: String,
     val proposal: AiTransactionProposal? = null,
     val proposals: List<AiTransactionProposal> = emptyList()
 )
+
+/** Events emitted during SSE streaming from the AI provider. */
+sealed interface StreamEvent {
+    /** A chunk of text content from the model. */
+    data class TextDelta(val text: String) : StreamEvent
+    /** Stream completed successfully; [fullText] contains the entire accumulated response. */
+    data class Done(val fullText: String) : StreamEvent
+    /** An error occurred during streaming. */
+    data class Error(val message: String) : StreamEvent
+}

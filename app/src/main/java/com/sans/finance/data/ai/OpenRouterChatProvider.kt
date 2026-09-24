@@ -24,6 +24,12 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
+import com.sans.finance.domain.model.FinancialContextSnapshot
+import com.sans.finance.domain.model.StreamEvent
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flowOn
 
 class OpenRouterChatProvider(
     rawClient: OkHttpClient,
@@ -40,6 +46,13 @@ class OpenRouterChatProvider(
     private val client = rawClient.newBuilder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(90, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
+
+    // SSE streaming client: readTimeout(0) prevents SocketTimeoutException during long token pauses
+    private val streamingClient = rawClient.newBuilder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(0, TimeUnit.MILLISECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
@@ -207,7 +220,8 @@ class OpenRouterChatProvider(
         accounts: List<AccountSummary>,
         categories: List<CategorySummary>,
         currency: String,
-        conversationHistory: List<ChatMessage>
+        conversationHistory: List<ChatMessage>,
+        financialContext: FinancialContextSnapshot?
     ): AiAssistantResponse {
         val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
             .format(java.util.Date())
@@ -218,6 +232,8 @@ class OpenRouterChatProvider(
         val categoriesFormatted = categories.joinToString(separator = "\n") {
             "- ID: ${it.id} | Name: '${it.name}' | Type: ${it.type}"
         }
+
+        val financialContextFormatted = buildFinancialContextString(financialContext, currency)
 
         val systemPrompt = """
             You are Sans Finance Copilot, an elite personal finance assistant and universal transaction harness for an Indonesia-based personal wealth and cashflow management app.
@@ -230,9 +246,12 @@ class OpenRouterChatProvider(
             User's Registered Categories:
             $categoriesFormatted
 
+            ${financialContextFormatted.ifBlank { "" }}
+
             Capabilities & Modes:
             1. CONVERSATIONAL & FINANCIAL ADVICE MODE:
-               - When the user asks financial questions, seeks budgeting strategies (50/30/20, zero-based), inquires about emergency fund sizing, cash runway, FIRE targets, debt payoff horizons, or general wealth habits:
+               - When the user asks financial questions, inquires about their current expenses, income, savings, cash balances, budgeting strategies (50/30/20, zero-based), emergency fund sizing, cash runway, FIRE targets, or debt payoff horizons:
+               - Use the real figures provided in the Financial Snapshot above to answer accurately and concretely.
                - Provide a clear, insightful, motivating, and mathematically sound answer in Indonesian (or English if prompted in English).
                - Set "proposals": [] (empty array). Do NOT invent fictional transactions.
 
@@ -326,6 +345,247 @@ class OpenRouterChatProvider(
         val content = executeChatCompletion(bodyJson)
         return AiJsonParser.parseAssistantResponse(content, accounts, categories)
     }
+
+    override fun streamChat(
+        userMessage: String,
+        accounts: List<AccountSummary>,
+        categories: List<CategorySummary>,
+        currency: String,
+        conversationHistory: List<ChatMessage>,
+        financialContext: FinancialContextSnapshot?
+    ): Flow<StreamEvent> = callbackFlow {
+        val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+            .format(java.util.Date())
+
+        val accountsFormatted = accounts.joinToString(separator = "\n") {
+            "- ID: ${it.id} | Name: '${it.name}' | Type: ${it.type} | Currency: ${it.currency}"
+        }
+        val categoriesFormatted = categories.joinToString(separator = "\n") {
+            "- ID: ${it.id} | Name: '${it.name}' | Type: ${it.type}"
+        }
+
+        val financialContextFormatted = buildFinancialContextString(financialContext, currency)
+
+        // Static system prompt (no dynamic timestamps) for prompt caching
+        val systemPrompt = buildChatSystemPrompt(todayStr, currency, accountsFormatted, categoriesFormatted)
+
+        val bodyJson = buildJsonObject {
+            put("model", JsonPrimitive(model))
+            put("stream", JsonPrimitive(true))
+            put(
+                "messages",
+                buildJsonArray {
+                    add(
+                        buildJsonObject {
+                            put("role", JsonPrimitive("system"))
+                            put("content", JsonPrimitive(systemPrompt))
+                        }
+                    )
+                    // Dynamic context as a separate user turn for prompt caching
+                    val dynamicContextContent = buildString {
+                        append("Context: current_timestamp=${System.currentTimeMillis()}, date=$todayStr")
+                        if (financialContextFormatted.isNotBlank()) {
+                            append("\n\n").append(financialContextFormatted)
+                        }
+                    }
+                    add(
+                        buildJsonObject {
+                            put("role", JsonPrimitive("user"))
+                            put("content", JsonPrimitive(dynamicContextContent))
+                        }
+                    )
+                    add(
+                        buildJsonObject {
+                            put("role", JsonPrimitive("assistant"))
+                            put("content", JsonPrimitive("Understood. I have your up-to-date financial context and accounts."))
+                        }
+                    )
+                    conversationHistory.takeLast(4).forEach { msg ->
+                        add(
+                            buildJsonObject {
+                                put("role", JsonPrimitive(if (msg.sender == ChatSender.USER) "user" else "assistant"))
+                                put("content", JsonPrimitive(msg.text))
+                            }
+                        )
+                    }
+                    add(
+                        buildJsonObject {
+                            put("role", JsonPrimitive("user"))
+                            put("content", JsonPrimitive(userMessage))
+                        }
+                    )
+                }
+            )
+            // Do not force reasoning effort = none; models like DeepSeek R1 / openrouter/free require reasoning
+            put("temperature", JsonPrimitive(0.2))
+            put("max_tokens", JsonPrimitive(4096))
+        }
+
+        val request = Request.Builder()
+            .url("https://openrouter.ai/api/v1/chat/completions")
+            .header("Authorization", "Bearer $apiKey")
+            .header("Content-Type", "application/json")
+            .header("HTTP-Referer", appUrl)
+            .header("X-Title", appName)
+            .header("X-OpenRouter-Title", appName)
+            .post(bodyJson.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        Log.d("OpenRouter", "Starting SSE stream (model=$model)")
+
+        var activeCall = streamingClient.newCall(request)
+        try {
+            var response = activeCall.execute()
+
+            // If 400 occurs due to unrecognized parameters, retry cleanly
+            if (!response.isSuccessful && response.code == 400) {
+                val errorBody = response.body.string()
+                Log.w("OpenRouter", "Stream HTTP 400: $errorBody")
+                if (errorBody.contains("reasoning", ignoreCase = true) || errorBody.contains("unrecognized", ignoreCase = true)) {
+                    val fallbackBody = buildJsonObject {
+                        bodyJson.forEach { (k, v) ->
+                            if (k != "reasoning") put(k, v)
+                        }
+                    }
+                    val retryReq = request.newBuilder()
+                        .post(fallbackBody.toString().toRequestBody("application/json".toMediaType()))
+                        .build()
+                    activeCall = streamingClient.newCall(retryReq)
+                    response = activeCall.execute()
+                } else {
+                    trySend(StreamEvent.Error(parseOpenRouterError(response.code, errorBody)))
+                    close()
+                    return@callbackFlow
+                }
+            }
+
+            if (!response.isSuccessful) {
+                val errorBody = response.body.string()
+                Log.e("OpenRouter", "Stream error HTTP ${response.code}: $errorBody")
+                trySend(StreamEvent.Error(parseOpenRouterError(response.code, errorBody)))
+                close()
+                return@callbackFlow
+            }
+
+            val fullText = StringBuilder()
+            val source = response.body.source()
+
+            while (!source.exhausted()) {
+                val line = source.readUtf8Line() ?: continue
+                if (line.isBlank() || !line.startsWith("data: ")) continue
+
+                val data = line.removePrefix("data: ").trim()
+                if (data == "[DONE]") break
+
+                try {
+                    val chunk = json.parseToJsonElement(data).jsonObject
+                    val deltaObj = chunk["choices"]?.jsonArray?.firstOrNull()?.jsonObject
+                        ?.get("delta")?.jsonObject
+                    val contentDelta = deltaObj?.get("content")?.jsonPrimitive?.contentOrNull
+                    val reasoningDelta = deltaObj?.get("reasoning")?.jsonPrimitive?.contentOrNull
+
+                    val textToEmit = when {
+                        !contentDelta.isNullOrEmpty() -> contentDelta
+                        // If model only emits reasoning tokens (thinking phase), we can skip emitting or let it stream
+                        else -> null
+                    }
+
+                    if (!textToEmit.isNullOrEmpty()) {
+                        fullText.append(textToEmit)
+                        trySend(StreamEvent.TextDelta(textToEmit))
+                    }
+                } catch (e: Exception) {
+                    Log.w("OpenRouter", "Failed to parse SSE chunk: $data", e)
+                }
+            }
+
+            trySend(StreamEvent.Done(fullText.toString()))
+            close()
+        } catch (e: java.net.SocketTimeoutException) {
+            Log.e("OpenRouter", "Stream socket timeout for model: $model", e)
+            trySend(StreamEvent.Error(
+                "Waktu tunggu habis (timeout). Model '$model' terlalu lama merespons. " +
+                "Disarankan gunakan model cepat seperti 'google/gemini-2.0-flash-001' atau 'openai/gpt-4.1-mini'."
+            ))
+            close()
+        } catch (e: Exception) {
+            Log.e("OpenRouter", "Stream exception: ${e.message}", e)
+            trySend(StreamEvent.Error(e.localizedMessage ?: e.message ?: "Unknown streaming error"))
+            close()
+        }
+
+        awaitClose { activeCall.cancel() }
+    }.flowOn(Dispatchers.IO)
+
+    private fun buildChatSystemPrompt(
+        todayStr: String,
+        currency: String,
+        accountsFormatted: String,
+        categoriesFormatted: String
+    ): String = """
+        You are Sans Finance Copilot, an elite personal finance assistant and universal transaction harness for an Indonesia-based personal wealth and cashflow management app.
+        Current Date: $todayStr
+        Base Currency: $currency
+
+        User's Registered Accounts:
+        $accountsFormatted
+
+        User's Registered Categories:
+        $categoriesFormatted
+
+        Capabilities & Modes:
+        1. CONVERSATIONAL & FINANCIAL COPILOT MODE:
+           - You are SansAI, an elite, data-driven personal wealth and cashflow intelligence copilot for Sans Finance.
+           - Grounding Invariant: Thoroughly inspect the Real-time Financial Context provided in the context turn. Never say historical data is unavailable when previous month (M-1) or 3-month baseline is present. Always cite exact numbers, percentages, and deltas between months.
+           - Deep Expense & Variance Analysis:
+             * When the user asks why they spent so much ("kok boros?", "kenapa naik?"), do NOT give generic platitudes (e.g. "cabut colokan listrik", "kurangi AC", "gunakan metode 50/30/20").
+             * Compare Current Month vs Previous Month and 3-Month Rolling Average directly.
+             * Check the "Top Big-Ticket Discrete Expenses" to pinpoint the exact single transactions causing spikes (e.g. sewa kos/rent, tuition, electronics, flight).
+             * Clearly distinguish Fixed Commitments (Kos/sewa, insurance, recurring bills) from Discretionary Leaks (food delivery, coffee, impulsive shopping, entertainment).
+             * Acknowledge savings health: if the user's savings rate is high (e.g. >50% or 70%+), reassure them that their net cashflow remains strongly positive, but clearly highlight where the delta came from.
+           - Tone & Style: Direct, sharp, analytical, empathetic, and concise Indonesian (or English if prompted in English). Use bolding and concise bullet points.
+           - Set "proposals": [] (empty array). Do NOT invent fictional transactions.
+
+        2. UNIVERSAL TRANSACTION INGESTION MODE:
+           - When the user pastes ANY receipt, bank mutation, invoice, purchase confirmation, QRIS payment, bill, or income notification:
+             * Daily Spends & Shopping: Supermarket, groceries (Indomaret, Alfamart, Superindo), food & dining (GoFood, Grab, restaurants), coffee, e-commerce (Tokopedia, Shopee, Blibli), transport, fuel.
+             * Bills & Utilities: PLN electricity, PDAM, internet/WiFi, cellular, subscriptions (Netflix, Spotify, Google, iCloud).
+             * Incomes & Payouts: Salary/gaji, freelance fees, bonus, THR, reimbursement, cashbacks, gifts.
+             * Passive Income & Investments: SBN coupon payouts (ORI, SR, PBS, ST, FR), stock dividends, P2P lending interest, crypto staking yields, bank deposit interest. Kupon/dividends are ALWAYS type 'INCOME'. Use the net credited nominal (after tax if stated).
+             * Account Transfers: Transfer between user accounts (e.g. BCA to GoPay, Mandiri to Bibit, Bank to RDN) with type 'TRANSFER'.
+           - Extract EVERY discrete transaction found in the message into the "proposals" array. If multiple transactions or bulk notifications are present, create a separate proposal item for each one.
+           - Nominal Amount: Standard numeric value in major currency units (e.g. 150000 for Rp 150.000, 2500000 for Rp 2.500.000).
+           - Title: Clean, descriptive merchant/transaction title (e.g. 'Kopi Kenangan', 'Superindo Kelapa Gading', 'PLN Token Listrik', 'Kupon SBN ORI026', 'Gaji Bulanan', 'Top Up GoPay').
+           - Type: Exactly 'EXPENSE', 'INCOME', or 'TRANSFER'.
+           - Date: Epoch timestamp in milliseconds. Extract transaction timestamp from receipt if available, otherwise use the current timestamp provided in the context turn above.
+           - Account: Match with the best Account ID from the user's registered accounts list. If no specific bank/account is mentioned or identifiable in the receipt/message, set accountName to 'Cash' (it will automatically default to the user's primary cash account).
+           - Category: Match with the best Category ID matching the transaction type and purpose.
+           - Notes: Concise additional context (e.g. reference number, tax deducted, items purchased).
+           - Tags: Relevant lowercase tags (e.g. ["makan", "coffee"], ["belanja", "groceries"], ["investasi", "sbn", "kupon"], ["utilities"]).
+
+        Always output a valid, well-formed JSON object matching this schema:
+        {
+          "reply": "Conversational explanation or friendly answer. If transactions were detected, summarize count and total nominal.",
+          "proposals": [
+            {
+              "title": "string",
+              "amount": 150000,
+              "type": "EXPENSE",
+              "date": 0,
+              "accountId": 1,
+              "accountName": "Cash",
+              "categoryId": 2,
+              "categoryName": "string",
+              "notes": "string",
+              "tags": ["tag1", "tag2"]
+            }
+          ]
+        }
+
+        CRITICAL DIRECTIVE:
+        Do NOT include chain-of-thought, thinking traces, or <think> tags.
+        Output ONLY valid JSON starting immediately with '{' and ending with '}'.
+    """.trimIndent()
 
     private suspend fun executeChatCompletion(bodyJson: JsonObject): String = withContext(Dispatchers.IO) {
         val request = Request.Builder()
@@ -427,5 +687,65 @@ class OpenRouterChatProvider(
         }.getOrDefault(fallback)
     }
 
+    private fun buildFinancialContextString(
+        snapshot: FinancialContextSnapshot?,
+        baseCurrency: String
+    ): String {
+        if (snapshot == null) return ""
+        val sb = StringBuilder()
+        sb.append("=== Real-time Financial Context & Metrics ===\n")
+        sb.append("[Current Month: ${snapshot.monthLabel.ifBlank { "Current Month" }}]\n")
+        sb.append("- Total Income: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.totalIncomeThisMonth, baseCurrency)}\n")
+        sb.append("- Total Expense: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.totalExpenseThisMonth, baseCurrency)}\n")
+        sb.append("- Net Cashflow: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.netCashflowThisMonth, baseCurrency)}\n")
+        sb.append("- Savings Rate: ${String.format(java.util.Locale.US, "%.1f", snapshot.savingsRatePercentage * 100f)}%\n")
+
+        if (snapshot.prevMonthLabel.isNotBlank()) {
+            sb.append("\n[Previous Month: ${snapshot.prevMonthLabel}]\n")
+            sb.append("- Total Income: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.prevMonthIncome, baseCurrency)}\n")
+            sb.append("- Total Expense: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.prevMonthExpense, baseCurrency)}\n")
+            sb.append("- Savings Rate: ${String.format(java.util.Locale.US, "%.1f", snapshot.prevMonthSavingsRate * 100f)}%\n")
+            if (snapshot.prevMonthTopCategories.isNotEmpty()) {
+                val catStr = snapshot.prevMonthTopCategories.joinToString { (name, amt) ->
+                    "$name (${com.sans.finance.core.util.CurrencyFormatter.formatAmount(amt, baseCurrency)})"
+                }
+                sb.append("- Top Categories: $catStr\n")
+            }
+        }
+
+        if (snapshot.threeMonthAverageExpense > 0L) {
+            sb.append("\n[3-Month Rolling Baseline Average Expense: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.threeMonthAverageExpense, baseCurrency)}/month]\n")
+        }
+
+        if (snapshot.topBigTicketExpenses.isNotEmpty()) {
+            sb.append("\n[Current Month Top Big-Ticket Expenses (Spike/Variance Drivers)]:\n")
+            snapshot.topBigTicketExpenses.forEach { tx ->
+                sb.append("  * $tx\n")
+            }
+        }
+
+        if (snapshot.topExpenseCategories.isNotEmpty()) {
+            sb.append("\n[Current Month Top Spending Categories]:\n")
+            snapshot.topExpenseCategories.forEach { (categoryName, amount) ->
+                sb.append("  * $categoryName: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(amount, baseCurrency)}\n")
+            }
+        }
+
+        if (snapshot.accountBalances.isNotEmpty()) {
+            sb.append("\n[Current Liquid Account Balances]:\n")
+            snapshot.accountBalances.forEach { (name, balance) ->
+                sb.append("  * $name: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(balance, baseCurrency)}\n")
+            }
+        }
+
+        if (snapshot.recentTransactions.isNotEmpty()) {
+            sb.append("\n[Latest Transactions]:\n")
+            snapshot.recentTransactions.take(6).forEach { tx ->
+                sb.append("  * $tx\n")
+            }
+        }
+        sb.append("=============================================")
+        return sb.toString().trim()
+    }
 }
 

@@ -6,14 +6,17 @@ import com.sans.finance.data.ai.AiProviderType
 import com.sans.finance.data.ai.AiSettings
 import com.sans.finance.data.ai.AiSettingsRepository
 import com.sans.finance.data.local.entity.AccountEntity
+import com.sans.finance.domain.model.AccountSummary
 import com.sans.finance.domain.model.AiAssistantResponse
 import com.sans.finance.domain.model.AiTransactionProposal
 import com.sans.finance.domain.model.Category
+import com.sans.finance.domain.model.CategorySummary
 import com.sans.finance.domain.model.ChatMessage
 import com.sans.finance.domain.model.ChatSender
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.repository.AccountRepository
 import com.sans.finance.domain.repository.CategoryRepository
+import com.sans.finance.domain.repository.ExpenseRepository
 import com.sans.finance.domain.usecase.AddTransactionUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -22,6 +25,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -42,6 +46,7 @@ class AiChatViewModelTest {
     private lateinit var aiSettingsRepository: AiSettingsRepository
     private lateinit var accountRepository: AccountRepository
     private lateinit var categoryRepository: CategoryRepository
+    private lateinit var expenseRepository: ExpenseRepository
     private lateinit var addTransactionUseCase: AddTransactionUseCase
     private lateinit var aiProvider: AiProvider
 
@@ -63,12 +68,57 @@ class AiChatViewModelTest {
         aiSettingsRepository = mockk(relaxed = true)
         accountRepository = mockk(relaxed = true)
         categoryRepository = mockk(relaxed = true)
+        expenseRepository = mockk(relaxed = true)
         addTransactionUseCase = mockk(relaxed = true)
         aiProvider = mockk(relaxed = true)
 
         every { accountRepository.getAllAccounts() } returns accountsFlow
         every { categoryRepository.getAllCategories() } returns categoriesFlow
         every { aiSettingsRepository.settings } returns settingsFlow
+        every { expenseRepository.getTotalAmountByTypeBetween(any(), any(), any()) } returns flowOf(0L)
+        every { expenseRepository.getBreakdownByCategoryBetween(any(), any(), any()) } returns flowOf(emptyList())
+        every { expenseRepository.getExpensesBetween(any(), any()) } returns flowOf(emptyList())
+
+        every {
+            aiProvider.streamChat(any(), any(), any(), any(), any(), any())
+        } answers {
+            val userMsg = firstArg<String>()
+            val accs = secondArg<List<AccountSummary>>()
+            val cats = thirdArg<List<CategorySummary>>()
+            val curr = arg<String>(3)
+            val hist = arg<List<ChatMessage>>(4)
+            val snap = arg<com.sans.finance.domain.model.FinancialContextSnapshot?>(5)
+            kotlinx.coroutines.flow.flow {
+                val resp = aiProvider.parseReceiptOrChat(userMsg, accs, cats, curr, hist, snap)
+                if (resp.proposals.isNotEmpty()) {
+                    val jsonProposals = org.json.JSONArray().apply {
+                        resp.proposals.forEach { p ->
+                            put(org.json.JSONObject().apply {
+                                put("id", p.id)
+                                put("title", p.title)
+                                put("amount", p.amountInCents / 100.0)
+                                put("type", p.type)
+                                put("date", p.date)
+                                put("accountId", p.accountId)
+                                put("accountName", p.accountName)
+                                put("categoryId", p.categoryId)
+                                put("categoryName", p.categoryName)
+                                put("notes", p.notes)
+                                put("tags", org.json.JSONArray(p.tags))
+                            })
+                        }
+                    }
+                    val fullPayload = org.json.JSONObject().apply {
+                        put("reply", resp.reply)
+                        put("proposals", jsonProposals)
+                    }.toString()
+                    emit(com.sans.finance.domain.model.StreamEvent.Done(fullPayload))
+                } else {
+                    emit(com.sans.finance.domain.model.StreamEvent.Done(resp.reply))
+                }
+            }
+        }
+
         coEvery { aiProviderFactory.create() } returns aiProvider
     }
 
@@ -84,6 +134,7 @@ class AiChatViewModelTest {
             aiSettingsRepository = aiSettingsRepository,
             accountRepository = accountRepository,
             categoryRepository = categoryRepository,
+            expenseRepository = expenseRepository,
             addTransactionUseCase = addTransactionUseCase
         )
 
@@ -124,7 +175,7 @@ class AiChatViewModelTest {
         )
 
         coEvery {
-            aiProvider.parseReceiptOrChat(any(), any(), any(), any(), any())
+            aiProvider.parseReceiptOrChat(any(), any(), any(), any(), any(), any())
         } returns AiAssistantResponse(
             reply = "Ditemukan 2 pembayaran kupon SBN.",
             proposals = listOf(proposal1, proposal2)
@@ -135,6 +186,7 @@ class AiChatViewModelTest {
             aiSettingsRepository = aiSettingsRepository,
             accountRepository = accountRepository,
             categoryRepository = categoryRepository,
+            expenseRepository = expenseRepository,
             addTransactionUseCase = addTransactionUseCase
         )
 
@@ -166,7 +218,7 @@ class AiChatViewModelTest {
         )
 
         coEvery {
-            aiProvider.parseReceiptOrChat(any(), any(), any(), any(), any())
+            aiProvider.parseReceiptOrChat(any(), any(), any(), any(), any(), any())
         } returns AiAssistantResponse(
             reply = "1 kupon terdeteksi",
             proposals = listOf(proposal)
@@ -177,6 +229,7 @@ class AiChatViewModelTest {
             aiSettingsRepository = aiSettingsRepository,
             accountRepository = accountRepository,
             categoryRepository = categoryRepository,
+            expenseRepository = expenseRepository,
             addTransactionUseCase = addTransactionUseCase
         )
 
@@ -224,7 +277,7 @@ class AiChatViewModelTest {
         )
 
         coEvery {
-            aiProvider.parseReceiptOrChat(any(), any(), any(), any(), any())
+            aiProvider.parseReceiptOrChat(any(), any(), any(), any(), any(), any())
         } returns AiAssistantResponse(
             reply = "2 kupon",
             proposals = listOf(proposal1, proposal2)
@@ -235,6 +288,7 @@ class AiChatViewModelTest {
             aiSettingsRepository = aiSettingsRepository,
             accountRepository = accountRepository,
             categoryRepository = categoryRepository,
+            expenseRepository = expenseRepository,
             addTransactionUseCase = addTransactionUseCase
         )
 
@@ -264,7 +318,7 @@ class AiChatViewModelTest {
         )
 
         coEvery {
-            aiProvider.parseReceiptOrChat(any(), any(), any(), any(), any())
+            aiProvider.parseReceiptOrChat(any(), any(), any(), any(), any(), any())
         } returns AiAssistantResponse(
             reply = "1 biaya",
             proposals = listOf(proposal)
@@ -275,6 +329,7 @@ class AiChatViewModelTest {
             aiSettingsRepository = aiSettingsRepository,
             accountRepository = accountRepository,
             categoryRepository = categoryRepository,
+            expenseRepository = expenseRepository,
             addTransactionUseCase = addTransactionUseCase
         )
 
@@ -309,7 +364,7 @@ class AiChatViewModelTest {
         )
 
         coEvery {
-            aiProvider.parseReceiptOrChat(any(), any(), any(), any(), any())
+            aiProvider.parseReceiptOrChat(any(), any(), any(), any(), any(), any())
         } returns AiAssistantResponse(
             reply = "Pengeluaran terdeteksi",
             proposals = listOf(proposal)
@@ -320,6 +375,7 @@ class AiChatViewModelTest {
             aiSettingsRepository = aiSettingsRepository,
             accountRepository = accountRepository,
             categoryRepository = categoryRepository,
+            expenseRepository = expenseRepository,
             addTransactionUseCase = addTransactionUseCase
         )
 

@@ -1,6 +1,12 @@
 package com.sans.finance.presentation.ai
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -34,6 +41,7 @@ import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -56,6 +64,8 @@ import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.unit.sp
+import com.sans.finance.presentation.ai.components.MarkdownContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -112,8 +122,8 @@ fun AiChatScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "AI Assistant",
-                subtitle = "Smart Receipt & SBN Coupon Ingestion",
+                title = "SansAI",
+                subtitle = "Financial Copilot & Universal Ingestion",
                 onBack = onBack,
                 actions = {
                     IconButton(onClick = onNavigateToAiSettings) {
@@ -138,17 +148,17 @@ fun AiChatScreen(
                 Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.Bottom
                     ) {
                         OutlinedTextField(
                             value = state.inputText,
                             onValueChange = viewModel::onInputTextChanged,
-                            placeholder = { Text("Paste receipt atau ketik chat...", fontSize = 14.sp) },
+                            placeholder = { Text("Tanya keuangan atau tempel transaksi...", fontSize = 14.sp) },
                             modifier = Modifier
                                 .weight(1f)
-                                .height(56.dp),
-                            shape = RoundedCornerShape(24.dp),
-                            maxLines = 4,
+                                .heightIn(min = 52.dp, max = 140.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            maxLines = 6,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
@@ -174,33 +184,51 @@ fun AiChatScreen(
                         Spacer(Modifier.width(8.dp))
 
                         IconButton(
-                            onClick = { viewModel.sendMessage() },
-                            enabled = state.inputText.isNotBlank() && !state.isLoading,
+                            onClick = {
+                                if (state.isStreaming) {
+                                    viewModel.stopGeneration()
+                                } else {
+                                    viewModel.sendMessage()
+                                }
+                            },
+                            enabled = state.isStreaming || (state.inputText.isNotBlank() && !state.isLoading),
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
                                 .background(
-                                    if (state.inputText.isNotBlank() && !state.isLoading)
-                                        MaterialTheme.colorScheme.primary
-                                    else
-                                        MaterialTheme.colorScheme.surfaceVariant
+                                    when {
+                                        state.isStreaming -> MaterialTheme.colorScheme.error
+                                        state.inputText.isNotBlank() && !state.isLoading ->
+                                            MaterialTheme.colorScheme.primary
+                                        else -> MaterialTheme.colorScheme.surfaceVariant
+                                    }
                                 )
                         ) {
-                            if (state.isLoading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Send,
-                                    contentDescription = "Send",
-                                    tint = if (state.inputText.isNotBlank())
-                                        MaterialTheme.colorScheme.onPrimary
-                                    else
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            when {
+                                state.isStreaming -> {
+                                    Icon(
+                                        imageVector = Icons.Default.Stop,
+                                        contentDescription = "Stop Generation",
+                                        tint = MaterialTheme.colorScheme.onError
+                                    )
+                                }
+                                state.isLoading -> {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                }
+                                else -> {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Send,
+                                        contentDescription = "Send",
+                                        tint = if (state.inputText.isNotBlank())
+                                            MaterialTheme.colorScheme.onPrimary
+                                        else
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
@@ -342,26 +370,56 @@ fun ChatMessageItem(
 
         Surface(
             shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (isUser) 16.dp else 4.dp,
-                bottomEnd = if (isUser) 4.dp else 16.dp
+                topStart = 18.dp,
+                topEnd = 18.dp,
+                bottomStart = if (isUser) 18.dp else 4.dp,
+                bottomEnd = if (isUser) 4.dp else 18.dp
             ),
             color = if (isUser)
                 MaterialTheme.colorScheme.primaryContainer
             else
-                MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.fillMaxWidth(0.9f)
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+            modifier = Modifier.fillMaxWidth(if (isUser) 0.85f else 0.96f)
         ) {
-            Text(
-                text = message.text,
-                modifier = Modifier.padding(12.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isUser)
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (message.isStreaming && message.text.isEmpty()) {
+                // Typing indicator: animated dots while waiting for first token
+                val infiniteTransition = rememberInfiniteTransition(label = "typing")
+                val alpha by infiniteTransition.animateFloat(
+                    initialValue = 0.3f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(600, easing = LinearEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "typingAlpha"
+                )
+                Text(
+                    text = "● ● ●",
+                    modifier = Modifier.padding(14.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha)
+                )
+            } else {
+                if (isUser) {
+                    Text(
+                        text = message.text,
+                        modifier = Modifier.padding(14.dp),
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            lineHeight = 22.sp,
+                            letterSpacing = 0.15.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                } else {
+                    MarkdownContent(
+                        text = message.text,
+                        modifier = Modifier.padding(14.dp),
+                        textColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        accentColor = MaterialTheme.colorScheme.primary,
+                        isStreaming = message.isStreaming
+                    )
+                }
+            }
         }
 
         if (message.proposals.isNotEmpty()) {
