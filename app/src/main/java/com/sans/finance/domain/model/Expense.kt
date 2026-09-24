@@ -24,7 +24,7 @@ data class Expense(
     val toAccountId: Long? = null,
     val type: String = "EXPENSE",
     val tags: List<String> = emptyList(),
-    val currency: String = "USD",
+    val currency: String = "IDR",
     // Installment specific fields
     val totalPaid: Long = 0L,
     val remainingBalance: Long = 0L,

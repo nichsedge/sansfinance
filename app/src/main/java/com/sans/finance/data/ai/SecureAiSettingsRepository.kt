@@ -34,14 +34,18 @@ class SecureAiSettingsRepository @Inject constructor(
             ?: AiProviderType.OFF
 
         val openAiApiKeyEncrypted = preferences[KEY_OPENAI_KEY].orEmpty()
-        val openAiApiKey = runCatching { CryptoManager.decrypt(openAiApiKeyEncrypted) }.getOrDefault("")
+        val openAiApiKey = runCatching { CryptoManager.decrypt(openAiApiKeyEncrypted) }
+            .getOrDefault("").filter { it > ' ' && it.code < 127 }
 
-        val openAiModel = preferences[KEY_OPENAI_MODEL] ?: AiSettings().openAiModel
+        val openAiModel = (preferences[KEY_OPENAI_MODEL] ?: AiSettings().openAiModel)
+            .filter { it > ' ' && it.code < 127 }
 
         val openRouterApiKeyEncrypted = preferences[KEY_OPENROUTER_KEY].orEmpty()
-        val openRouterApiKey = runCatching { CryptoManager.decrypt(openRouterApiKeyEncrypted) }.getOrDefault("")
+        val openRouterApiKey = runCatching { CryptoManager.decrypt(openRouterApiKeyEncrypted) }
+            .getOrDefault("").filter { it > ' ' && it.code < 127 }
 
-        val openRouterModel = preferences[KEY_OPENROUTER_MODEL] ?: AiSettings().openRouterModel
+        val openRouterModel = (preferences[KEY_OPENROUTER_MODEL] ?: AiSettings().openRouterModel)
+            .filter { it > ' ' && it.code < 127 }
 
         AiSettings(
             provider = provider,
@@ -59,28 +63,32 @@ class SecureAiSettingsRepository @Inject constructor(
     }
 
     override suspend fun setOpenAiApiKey(apiKey: String) {
-        val encrypted = CryptoManager.encrypt(apiKey.trim())
+        val clean = apiKey.filter { it > ' ' && it.code < 127 }
+        val encrypted = CryptoManager.encrypt(clean)
         dataStore.edit { prefs ->
             prefs[KEY_OPENAI_KEY] = encrypted
         }
     }
 
     override suspend fun setOpenAiModel(model: String) {
+        val clean = model.filter { it > ' ' && it.code < 127 }
         dataStore.edit { prefs ->
-            prefs[KEY_OPENAI_MODEL] = model.trim()
+            prefs[KEY_OPENAI_MODEL] = clean
         }
     }
 
     override suspend fun setOpenRouterApiKey(apiKey: String) {
-        val encrypted = CryptoManager.encrypt(apiKey.trim())
+        val clean = apiKey.filter { it > ' ' && it.code < 127 }
+        val encrypted = CryptoManager.encrypt(clean)
         dataStore.edit { prefs ->
             prefs[KEY_OPENROUTER_KEY] = encrypted
         }
     }
 
     override suspend fun setOpenRouterModel(model: String) {
+        val clean = model.filter { it > ' ' && it.code < 127 }
         dataStore.edit { prefs ->
-            prefs[KEY_OPENROUTER_MODEL] = model.trim()
+            prefs[KEY_OPENROUTER_MODEL] = clean
         }
     }
 

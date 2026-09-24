@@ -28,6 +28,7 @@ Get the latest signed APK directly from [GitHub Releases](https://github.com/nic
 - **Dividend & Cash Yield Tracker:** Dedicated portfolio yield analysis tracking annual passive run-rate, weighted yield-on-cost %, coupon schedules, and lifestyle expense coverage.
 
 ### ⚡ Daily Financial Operations
+- **AI Assistant & Smart Receipt Ingestion:** Chat with AI or paste raw bank receipt text (e.g. CIMB Niaga SBN coupon payouts, BCA transfer slips, QRIS notes). The assistant extracts transaction details with **Human-in-the-Loop (HITL)** confirmation before inserting into Room DB.
 - **Safe-to-Spend Runway Pacing:** Real-time calculation of daily discretionary allowances after accounting for upcoming committed bills and billing cycle days.
 - **Installment Horizon Roadmap:** Timeline matrix projecting future monthly debt obligation reductions and freed cash flow milestones.
 - **Home Screen Widgets (Jetpack Glance):** Reactive Material 3 widgets for instant financial health glance and one-tap transaction logging.
@@ -35,7 +36,7 @@ Get the latest signed APK directly from [GitHub Releases](https://github.com/nic
 
 ### 🔒 Privacy & Architecture
 - **100% Deterministic Core:** All calculations, simulations, valuations, and financial modeling run locally and offline on pure Kotlin algorithms.
-- **Optional Cloud AI Connector:** Connect your own **OpenAI** or **OpenRouter** API key on demand for comprehensive monthly closures and portfolio health commentary.
+- **Optional Cloud AI Connector:** Connect your own **OpenRouter** or **OpenAI** API key on demand for receipt ingestion, monthly closures, and portfolio health commentary.
 - **Global Privacy Mode:** One-tap toggle to mask financial amounts and account balances across the entire app.
 
 ## 🛠 Tech Stack
@@ -46,7 +47,7 @@ Get the latest signed APK directly from [GitHub Releases](https://github.com/nic
 - **Dependency Injection:** [Hilt](https://dagger.dev/hilt/)
 - **Local Database:** [Room](https://developer.android.com/training/data-storage/room) (SQLite) — Schema Version 38
 - **Optional AI:** Cloud AI connector (OpenAI / OpenRouter)
-- **Data Persistence:** DataStore (Preferences) & Cloudflare R2 / GCS Backups
+- **Data Persistence:** DataStore (Preferences) & Cloudflare R2 Backups (with Immutable Archives)
 
 ## 🚀 Project Structure
 

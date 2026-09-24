@@ -2,6 +2,7 @@ package com.sans.finance.data.util
 
 import android.content.Context
 import android.util.Base64
+import android.util.Log
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import com.sans.finance.domain.model.UserPreferences
 import kotlinx.coroutines.Dispatchers
@@ -42,15 +43,47 @@ object CloudStorageSyncer {
 
     private const val GCS_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
+    fun isDatabasePopulated(dbFile: File): Boolean {
+        if (!dbFile.exists() || dbFile.length() < 1024L) return false
+        return runCatching {
+            android.database.sqlite.SQLiteDatabase.openDatabase(
+                dbFile.absolutePath,
+                null,
+                android.database.sqlite.SQLiteDatabase.OPEN_READONLY
+            ).use { db ->
+                val cursor = db.rawQuery("SELECT count(*) FROM expenses", null)
+                val count = if (cursor.moveToFirst()) cursor.getInt(0) else 0
+                cursor.close()
+                count > 0
+            }
+        }.getOrDefault(false)
+    }
+
     suspend fun uploadDatabaseBackup(
         context: Context,
         dbFile: File,
         prefs: UserPreferences
     ): Result<String> = withContext(Dispatchers.IO) {
+        if (!isDatabasePopulated(dbFile)) {
+            Log.w("CloudStorageSyncer", "Refusing to upload empty database (0 expenses found in ${dbFile.name}).")
+            return@withContext Result.failure(Exception("Cannot upload empty database: 0 expenses found."))
+        }
         val provider = getActiveProvider(prefs)
         when (provider) {
             CloudStorageProvider.CLOUDFLARE_R2 -> uploadDatabaseBackupToR2(context, dbFile, prefs)
             CloudStorageProvider.GCS -> uploadDatabaseBackupToGcs(context, dbFile, prefs)
+        }
+    }
+
+    suspend fun downloadDatabaseBackup(
+        context: Context,
+        destFile: File,
+        prefs: UserPreferences
+    ): Result<File> = withContext(Dispatchers.IO) {
+        val provider = getActiveProvider(prefs)
+        when (provider) {
+            CloudStorageProvider.CLOUDFLARE_R2 -> downloadDatabaseBackupFromR2(context, destFile, prefs)
+            CloudStorageProvider.GCS -> Result.failure(Exception("GCS backup download not supported"))
         }
     }
 
@@ -120,6 +153,54 @@ object CloudStorageSyncer {
         return block()
     }
 
+    private suspend fun uploadFileToR2(
+        r2Config: CloudflareR2Config,
+        objectKey: String,
+        fileBytes: ByteArray,
+        contentType: String = "application/x-sqlite3"
+    ): Result<Unit> {
+        val payloadHash = sha256Hex(fileBytes)
+        val host = "${r2Config.accountId}.r2.cloudflarestorage.com"
+        val canonicalUri = "/${r2Config.bucketName}/$objectKey"
+        val endpointUrl = "https://$host$canonicalUri"
+
+        val (amzDate, dateStamp) = getIsoTimestamps()
+        val headers = sortedMapOf(
+            "content-type" to contentType,
+            "host" to host,
+            "x-amz-content-sha256" to payloadHash,
+            "x-amz-date" to amzDate
+        )
+
+        val authorization = buildSigV4AuthorizationHeader(
+            httpMethod = "PUT",
+            canonicalUri = canonicalUri,
+            headers = headers,
+            payloadHash = payloadHash,
+            accessKey = r2Config.accessKeyId,
+            secretKey = r2Config.secretAccessKey,
+            dateStamp = dateStamp,
+            amzDate = amzDate
+        )
+
+        return retryWithExponentialBackoff {
+            val url = URL(endpointUrl)
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "PUT"
+                doOutput = true
+                setRequestProperty("Authorization", authorization)
+                setRequestProperty("Content-Type", contentType)
+                setRequestProperty("Host", host)
+                setRequestProperty("x-amz-date", amzDate)
+                setRequestProperty("x-amz-content-sha256", payloadHash)
+                setFixedLengthStreamingMode(fileBytes.size)
+            }
+            conn.outputStream.use { it.write(fileBytes) }
+            if (conn.responseCode in 200..299) Result.success(Unit)
+            else throw Exception("R2 upload to $objectKey failed: HTTP ${conn.responseCode}")
+        }
+    }
+
     private suspend fun uploadDatabaseBackupToR2(
         context: Context,
         dbFile: File,
@@ -131,50 +212,93 @@ object CloudStorageSyncer {
             val r2Config = loadR2Config(context, prefs)
             if (!r2Config.isValid) return@withContext Result.failure(Exception("R2 not configured"))
 
-            val objectKey = "db/sans_finance_latest.sqlite"
             val fileBytes = dbFile.readBytes()
-            val payloadHash = sha256Hex(fileBytes)
+
+            // 1. Upload to latest
+            val latestKey = "db/sans_finance_latest.sqlite"
+            val latestResult = uploadFileToR2(r2Config, latestKey, fileBytes)
+            if (latestResult.isFailure) {
+                return@withContext Result.failure(latestResult.exceptionOrNull() ?: Exception("R2 latest upload failed"))
+            }
+
+            // 2. Upload timestamped archive for versioned safety (never get wiped again)
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+            }.format(Date())
+            val archiveKey = "db/archive/sans_finance_$timestamp.sqlite"
+            uploadFileToR2(r2Config, archiveKey, fileBytes)
+
+            Result.success("R2 Backup Successful ($latestKey & $archiveKey)")
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    private suspend fun downloadDatabaseBackupFromR2(
+        context: Context,
+        destFile: File,
+        prefs: UserPreferences
+    ): Result<File> = withContext(Dispatchers.IO) {
+        try {
+            val r2Config = loadR2Config(context, prefs)
+            if (!r2Config.isValid) return@withContext Result.failure(Exception("R2 not configured"))
+
+            val objectKey = "db/sans_finance_latest.sqlite"
             val host = "${r2Config.accountId}.r2.cloudflarestorage.com"
             val canonicalUri = "/${r2Config.bucketName}/$objectKey"
             val endpointUrl = "https://$host$canonicalUri"
 
             val (amzDate, dateStamp) = getIsoTimestamps()
-            val contentType = "application/x-sqlite3"
+            val emptyPayloadHash = sha256Hex(ByteArray(0))
             val headers = sortedMapOf(
-                "content-type" to contentType,
                 "host" to host,
-                "x-amz-content-sha256" to payloadHash,
+                "x-amz-content-sha256" to emptyPayloadHash,
                 "x-amz-date" to amzDate
             )
 
             val authorization = buildSigV4AuthorizationHeader(
-                httpMethod = "PUT",
+                httpMethod = "GET",
                 canonicalUri = canonicalUri,
                 headers = headers,
-                payloadHash = payloadHash,
+                payloadHash = emptyPayloadHash,
                 accessKey = r2Config.accessKeyId,
                 secretKey = r2Config.secretAccessKey,
                 dateStamp = dateStamp,
                 amzDate = amzDate
             )
 
+            val tempFile = File(destFile.parentFile, "${destFile.name}.download")
             retryWithExponentialBackoff {
                 val url = URL(endpointUrl)
                 val conn = (url.openConnection() as HttpURLConnection).apply {
-                    requestMethod = "PUT"
-                    doOutput = true
                     setRequestProperty("Authorization", authorization)
-                    setRequestProperty("Content-Type", contentType)
                     setRequestProperty("Host", host)
                     setRequestProperty("x-amz-date", amzDate)
-                    setRequestProperty("x-amz-content-sha256", payloadHash)
-                    setFixedLengthStreamingMode(fileBytes.size)
+                    setRequestProperty("x-amz-content-sha256", emptyPayloadHash)
                 }
-                conn.outputStream.use { it.write(fileBytes) }
-                if (conn.responseCode in 200..299) Result.success("R2 Backup Successful")
-                else throw Exception("R2 upload failed: ${conn.responseCode}")
+                if (conn.responseCode != 200) {
+                    throw Exception("R2 Download Failed: HTTP ${conn.responseCode}")
+                }
+                conn.inputStream.use { input ->
+                    tempFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
             }
-        } catch (e: Exception) { Result.failure(e) }
+
+            if (!isDatabasePopulated(tempFile)) {
+                tempFile.delete()
+                return@withContext Result.failure(Exception("Downloaded backup is empty or invalid (0 expenses)"))
+            }
+
+            if (tempFile.renameTo(destFile) || (destFile.delete() && tempFile.renameTo(destFile))) {
+                Result.success(destFile)
+            } else {
+                tempFile.copyTo(destFile, overwrite = true)
+                tempFile.delete()
+                Result.success(destFile)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     private suspend fun downloadLatestSnapshotFromR2(

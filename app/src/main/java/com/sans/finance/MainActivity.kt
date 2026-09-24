@@ -181,7 +181,10 @@ fun AppNavigation(
             enterTransition = NavigationTransitions.modalEnterTransition,
             popExitTransition = NavigationTransitions.modalPopExitTransition
         ) {
-            AddTransactionScreen(onBack = { navController.popBackStack() })
+            AddTransactionScreen(
+                onBack = { navController.popBackStack() },
+                onAiChatClick = { navController.navigate(Screen.AiChat) }
+            )
         }
 
         composable<Screen.Search> {
@@ -281,6 +284,29 @@ fun AppNavigation(
         composable<Screen.MonthlyReview> {
             com.sans.finance.presentation.monthly_review.MonthlyReviewScreen(
                 onBack = { navController.popBackStack() }
+            )
+        }
+        composable<Screen.AiChat> {
+            com.sans.finance.presentation.ai.AiChatScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToAiSettings = { navController.navigate(Screen.AiSettings) },
+                onEditInForm = { proposal ->
+                    val amountStr = if (proposal.amountInCents % 100 == 0L) {
+                        (proposal.amountInCents / 100).toString()
+                    } else {
+                        String.format(java.util.Locale.US, "%.2f", proposal.amountInCents / 100.0).trimEnd('0').trimEnd('.')
+                    }
+                    navController.navigate(
+                        Screen.AddTransaction(
+                            categoryId = proposal.categoryId,
+                            transactionType = proposal.type,
+                            initialTitle = proposal.title,
+                            initialNotes = proposal.notes,
+                            initialAmount = amountStr,
+                            initialAccountId = proposal.accountId
+                        )
+                    )
+                }
             )
         }
     }

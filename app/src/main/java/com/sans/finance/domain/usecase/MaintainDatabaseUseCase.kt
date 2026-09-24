@@ -57,9 +57,20 @@ class MaintainDatabaseUseCase @Inject constructor(
                         """.trimIndent()
                     )
                 }
+
+
+                // 3. Align any legacy USD currency tags if parent account has local currency (e.g. IDR)
+                db.execSQL(
+                    """
+                    UPDATE expenses 
+                    SET currency = (SELECT currency FROM accounts WHERE accounts.id = expenses.account_id)
+                    WHERE expenses.currency = 'USD' 
+                      AND EXISTS (SELECT 1 FROM accounts WHERE accounts.id = expenses.account_id AND accounts.currency != 'USD')
+                    """.trimIndent()
+                )
             }
 
-            // 2. Count total expenses
+            // 4. Count total expenses
             val countCursor = db.query("SELECT COUNT(*) FROM expenses")
             if (countCursor.moveToFirst()) {
                 totalTransactions = countCursor.getInt(0)

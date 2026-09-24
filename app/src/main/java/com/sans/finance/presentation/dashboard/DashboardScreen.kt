@@ -32,6 +32,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sans.finance.presentation.components.AppTopBar
 
+import androidx.compose.material.icons.filled.AutoAwesome
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
@@ -39,6 +41,7 @@ fun DashboardScreen(
     onRecurringExpensesClick: () -> Unit,
     onInstallmentsClick: () -> Unit,
     onWealthForecastingClick: () -> Unit,
+    onAiChatClick: (() -> Unit)? = null,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -52,6 +55,15 @@ fun DashboardScreen(
                 title = "Dashboard",
                 scrollBehavior = scrollBehavior,
                 actions = {
+                    onAiChatClick?.let { onChat ->
+                        IconButton(onClick = onChat) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = "AI Assistant",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                     IconButton(
                         onClick = {
                             haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)

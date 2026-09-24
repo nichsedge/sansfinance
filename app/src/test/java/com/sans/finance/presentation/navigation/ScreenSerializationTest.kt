@@ -73,6 +73,7 @@ class ScreenSerializationTest {
         Screen.ReSyncDryRun,
         Screen.MonthlyReview(monthOffset = -2),
         Screen.MonthlyReview(monthOffset = 0),
-        Screen.MonthlyReview(monthOffset = 12)
+        Screen.MonthlyReview(monthOffset = 12),
+        Screen.AiChat
     )
 }

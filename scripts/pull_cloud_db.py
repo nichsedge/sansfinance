@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Downloads the latest Sans Finance SQLite snapshot from Google Cloud Storage or Cloudflare R2.
+Downloads the latest or archived Sans Finance SQLite snapshot from Cloudflare R2.
 Usage:
-    python3 scripts/pull_cloud_db.py [output_path] [--provider gcs|r2] [--bucket BUCKET]
+    python3 scripts/pull_cloud_db.py [output_path] [--key OBJECT_KEY] [--list]
 """
 
 import sys
@@ -15,10 +15,10 @@ import hashlib
 import hmac
 import urllib.request
 import urllib.error
+import xml.etree.ElementTree as ET
 
-GCS_BUCKET_NAME = "ichsanul-portfolio-snapshots"
 R2_BUCKET_NAME = "ichsanul-dev"
-BLOB_NAME = "db/sans_finance_latest.sqlite"
+DEFAULT_BLOB_NAME = "db/sans_finance_latest.sqlite"
 
 def load_r2_credentials():
     """Load R2 credentials from environment or creds directory."""
@@ -49,74 +49,13 @@ def load_r2_credentials():
 
     return account_id, access_key, secret_key, bucket_name or R2_BUCKET_NAME
 
-def get_gcs_storage_client():
-    try:
-        from google.cloud import storage
-    except ImportError:
-        print("❌ Error: google-cloud-storage package is not installed.")
-        print("💡 Install it via: pip install google-cloud-storage")
-        sys.exit(1)
-
-    creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    if not creds_path:
-        base_dir = Path(__file__).resolve().parents[2]
-        candidate = base_dir / "creds" / "gcp" / "SA_cred_general.json"
-        if candidate.exists():
-            creds_path = str(candidate)
-    
-    if creds_path and os.path.exists(creds_path):
-        return storage.Client.from_service_account_json(creds_path)
-    return storage.Client()
-
-def pull_from_gcs(output_path: Path, bucket_name: str):
-    print(f"☁️ Connecting to GCS bucket: {bucket_name}...")
-    client = get_gcs_storage_client()
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(BLOB_NAME)
-
-    if not blob.exists():
-        print(f"❌ Error: {BLOB_NAME} does not exist in bucket {bucket_name} yet.")
-        print("💡 Hint: Open Sans Finance on your phone -> Settings -> 'Back Up' to upload.")
-        sys.exit(1)
-
-    blob.reload()
-    size_kb = blob.size / 1024.0 if blob.size else 0
-    updated = blob.updated.strftime('%Y-%m-%d %H:%M:%S UTC') if blob.updated else "Unknown"
-
-    print(f"📥 Found {BLOB_NAME} ({size_kb:.1f} KB, updated {updated})")
-    print(f"💾 Downloading to {output_path}...")
-    blob.download_to_filename(str(output_path))
-    print(f"✅ Successfully downloaded to {output_path}")
-
-def pull_from_r2(output_path: Path, bucket_name: str):
-    account_id, access_key, secret_key, detected_bucket = load_r2_credentials()
-    bucket = bucket_name or detected_bucket
-    if not (account_id and access_key and secret_key):
-        # Fallback to wrangler CLI (OAuth authenticated)
-        import shutil
-        import subprocess
-        wrangler_cmd = ["bunx", "wrangler"] if not shutil.which("wrangler") else ["wrangler"]
-        cmd = wrangler_cmd + ["r2", "object", "get", f"{bucket}/{BLOB_NAME}", f"--file={output_path}", "--remote"]
-        print(f"☁️ Connecting to Cloudflare R2 bucket '{bucket}' via Wrangler...")
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        if res.returncode == 0:
-            print(f"✅ Successfully downloaded to {output_path}")
-            return
-        else:
-            print(f"❌ Could not download from Cloudflare R2: {res.stderr.strip() or res.stdout.strip()}")
-            print("💡 Hint: Place API keys in creds/cloudflare/r2_cred.json or export R2_ACCESS_KEY_ID & R2_SECRET_ACCESS_KEY")
-            sys.exit(1)
-
-    print(f"☁️ Connecting to Cloudflare R2 bucket: {bucket}...")
+def build_sigv4_headers(method: str, canonical_uri: str, canonical_query: str, payload_bytes: bytes, account_id: str, access_key: str, secret_key: str):
     host = f"{account_id}.r2.cloudflarestorage.com"
-    canonical_uri = f"/{bucket}/{BLOB_NAME}"
-    endpoint_url = f"https://{host}{canonical_uri}"
-
     now = datetime.now(timezone.utc)
     amz_date = now.strftime('%Y%m%dT%H%M%SZ')
     date_stamp = now.strftime('%Y%m%d')
+    payload_hash = hashlib.sha256(payload_bytes).hexdigest()
 
-    payload_hash = hashlib.sha256(b"").hexdigest()
     headers = {
         "host": host,
         "x-amz-content-sha256": payload_hash,
@@ -125,7 +64,7 @@ def pull_from_r2(output_path: Path, bucket_name: str):
 
     canonical_headers = "".join([f"{k}:{v}\n" for k, v in sorted(headers.items())])
     signed_headers = ";".join(sorted(headers.keys()))
-    canonical_request = f"GET\n{canonical_uri}\n\n{canonical_headers}\n{signed_headers}\n{payload_hash}"
+    canonical_request = f"{method}\n{canonical_uri}\n{canonical_query}\n{canonical_headers}\n{signed_headers}\n{payload_hash}"
     credential_scope = f"{date_stamp}/auto/s3/aws4_request"
     string_to_sign = f"AWS4-HMAC-SHA256\n{amz_date}\n{credential_scope}\n{hashlib.sha256(canonical_request.encode('utf-8')).hexdigest()}"
 
@@ -140,29 +79,66 @@ def pull_from_r2(output_path: Path, bucket_name: str):
 
     auth_header = f"AWS4-HMAC-SHA256 Credential={access_key}/{credential_scope}, SignedHeaders={signed_headers}, Signature={signature}"
 
-    req = urllib.request.Request(
-        endpoint_url,
-        headers={
-            "Authorization": auth_header,
-            "Host": host,
-            "x-amz-date": amz_date,
-            "x-amz-content-sha256": payload_hash
-        },
-        method="GET"
-    )
+    return {
+        "Authorization": auth_header,
+        "Host": host,
+        "x-amz-date": amz_date,
+        "x-amz-content-sha256": payload_hash
+    }
 
+def list_r2_backups(bucket: str):
+    account_id, access_key, secret_key, _ = load_r2_credentials()
+    if not (account_id and access_key and secret_key):
+        print("❌ Cloudflare R2 credentials not found.")
+        sys.exit(1)
+
+    canonical_uri = f"/{bucket}"
+    canonical_query = "list-type=2&prefix=db%2F"
+    headers = build_sigv4_headers("GET", canonical_uri, canonical_query, b"", account_id, access_key, secret_key)
+    endpoint_url = f"https://{headers['Host']}{canonical_uri}?{canonical_query}"
+
+    req = urllib.request.Request(endpoint_url, headers=headers, method="GET")
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
+            root = ET.fromstring(resp.read())
+            print(f"📦 Objects in bucket '{bucket}' under 'db/':")
+            for content in root.findall('{http://s3.amazonaws.com/doc/2006-03-01/}Contents'):
+                key = content.find('{http://s3.amazonaws.com/doc/2006-03-01/}Key').text
+                size = int(content.find('{http://s3.amazonaws.com/doc/2006-03-01/}Size').text)
+                mtime = content.find('{http://s3.amazonaws.com/doc/2006-03-01/}LastModified').text
+                print(f"  • {key} ({size / 1024:.1f} KB) - {mtime}")
+    except Exception as e:
+        print(f"❌ Failed to list R2 objects: {e}")
+        sys.exit(1)
+
+def pull_from_r2(output_path: Path, bucket: str, object_key: str):
+    account_id, access_key, secret_key, _ = load_r2_credentials()
+    if not (account_id and access_key and secret_key):
+        print("❌ Cloudflare R2 credentials not found in r2_cred.json or environment.")
+        sys.exit(1)
+
+    print(f"☁️ Connecting to Cloudflare R2 bucket: {bucket}...")
+    canonical_uri = f"/{bucket}/{object_key}"
+    headers = build_sigv4_headers("GET", canonical_uri, "", b"", account_id, access_key, secret_key)
+    endpoint_url = f"https://{headers['Host']}{canonical_uri}"
+
+    req = urllib.request.Request(endpoint_url, headers=headers, method="GET")
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
             content = resp.read()
+            if len(content) == 0:
+                print(f"❌ Error: Downloaded file from {object_key} is 0 bytes.")
+                sys.exit(1)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
             with open(output_path, "wb") as f:
                 f.write(content)
             size_kb = len(content) / 1024.0
-            print(f"📥 Found {BLOB_NAME} ({size_kb:.1f} KB)")
+            print(f"📥 Found {object_key} ({size_kb:.1f} KB)")
             print(f"✅ Successfully downloaded to {output_path}")
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            print(f"❌ Error: {BLOB_NAME} does not exist in Cloudflare R2 bucket {bucket} yet.")
-            print("💡 Hint: Open Sans Finance on your phone -> Settings -> 'Back Up' to upload.")
+            print(f"❌ Error: {object_key} does not exist in Cloudflare R2 bucket '{bucket}'.")
         else:
             print(f"❌ Error downloading from Cloudflare R2: HTTP {e.code} - {e.read().decode('utf-8', errors='ignore')}")
         sys.exit(1)
@@ -171,18 +147,19 @@ def pull_from_r2(output_path: Path, bucket_name: str):
         sys.exit(1)
 
 def main():
-    parser = argparse.ArgumentParser(description="Download latest SQLite snapshot from Cloud Storage (GCS or Cloudflare R2)")
+    parser = argparse.ArgumentParser(description="Download latest SQLite snapshot from Cloudflare R2")
     parser.add_argument("output", nargs="?", default="sans_finance_latest.sqlite", help="Destination output file")
-    parser.add_argument("--provider", choices=["gcs", "r2"], default=os.getenv("STORAGE_PROVIDER", "r2").lower(), help="Storage provider (gcs or r2)")
-    parser.add_argument("--bucket", default=None, help="Bucket name override")
+    parser.add_argument("--key", default=DEFAULT_BLOB_NAME, help="R2 object key to download")
+    parser.add_argument("--bucket", default=R2_BUCKET_NAME, help="Bucket name override")
+    parser.add_argument("--list", action="store_true", help="List database backups in R2 bucket")
     args = parser.parse_args()
 
+    if args.list:
+        list_r2_backups(args.bucket)
+        return
+
     out_path = Path(args.output)
-    if args.provider == "r2":
-        pull_from_r2(out_path, args.bucket or R2_BUCKET_NAME)
-    else:
-        pull_from_gcs(out_path, args.bucket or GCS_BUCKET_NAME)
+    pull_from_r2(out_path, args.bucket, args.key)
 
 if __name__ == "__main__":
     main()
-

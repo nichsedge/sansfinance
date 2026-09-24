@@ -22,7 +22,7 @@ class IndonesianMerchantClassifierTest {
         val res = IndonesianMerchantClassifier.classify("Indomaret Point Dago")
         assertNotNull(res)
         assertEquals("Supermarket & Groceries", res!!.normalizedMerchant)
-        assertEquals("Groceries", res.suggestedCategory)
+        assertEquals("Shopping", res.suggestedCategory)
     }
 
     @Test

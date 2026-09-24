@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.ShowChart
@@ -31,6 +30,7 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ElectricBolt
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -49,16 +49,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -73,7 +69,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -81,6 +76,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sans.finance.core.util.CurrencyFormatter
 import androidx.compose.foundation.layout.BoxWithConstraints
 import com.sans.finance.presentation.wealth.components.SavingsVelocityCard
+import com.sans.finance.presentation.wealth.components.FiStressTestBottomSheet
 import com.sans.finance.domain.model.EmergencyFundStressTest
 import com.sans.finance.domain.model.StressTestScenarioType
 import com.sans.finance.domain.model.WealthDistributionTab
@@ -108,6 +104,9 @@ fun WealthScreen(
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+
+    var showStressTestSheet by remember { mutableStateOf(false) }
+    var selectedScenarioType by remember { mutableStateOf<StressTestScenarioType?>(null) }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -177,7 +176,7 @@ fun WealthScreen(
                         ),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Left Column: Asset Allocation, Savings Velocity, Financial Hub
+                    // Left Column: Asset Allocation, Financial Hub, Strategy & Planning
                     LazyColumn(
                         modifier = Modifier
                             .weight(1f)
@@ -194,15 +193,6 @@ fun WealthScreen(
                                     onTabSelected = viewModel::setWealthDistributionTab,
                                     currencyCode = state.currencyCode,
                                     isPrivacyModeEnabled = state.isPrivacyModeEnabled
-                                )
-                            }
-                        }
-
-                        state.savingsVelocity?.let { velocity ->
-                            item {
-                                SavingsVelocityCard(
-                                    summary = velocity,
-                                    isPrivacyMode = state.isPrivacyModeEnabled
                                 )
                             }
                         }
@@ -228,10 +218,21 @@ fun WealthScreen(
                             )
                         }
 
+                        item {
+                            SectionHeader("STRATEGY & PLANNING")
+                            Spacer(modifier = Modifier.height(4.dp))
+                            StrategyPlanningCard(
+                                onOpenBudgets = onOpenBudgets,
+                                onOpenRecurringExpenses = onOpenRecurringExpenses,
+                                onOpenForecasting = onOpenForecasting,
+                                onOpenMonthlyReview = onOpenMonthlyReview
+                            )
+                        }
+
                         item { Spacer(modifier = Modifier.height(32.dp)) }
                     }
 
-                    // Right Column: FI Suite, Emergency Stress Test, Strategy & Planning
+                    // Right Column: FI Suite, Emergency Stress Test, Savings Velocity
                     LazyColumn(
                         modifier = Modifier
                             .weight(1f)
@@ -249,29 +250,22 @@ fun WealthScreen(
                                 fiCoveragePct = state.fiCoveragePct,
                                 fiStage = state.fiStage,
                                 fiNextStageGap = state.fiNextStageGap,
-                                totalAssets = state.totalAssets,
-                                annualExpense = state.annualExpense,
-                                freedomYears = state.financialFreedomYears,
-                                freedomScore = state.financialFreedomScore,
-                                isManualEnabled = state.isFireManualEnabled,
-                                manualAnnualExpense = state.manualFireAnnualExpense,
-                                onManualToggle = viewModel::setFireManualEnabled,
-                                onManualAmountChange = viewModel::setManualFireAnnualExpense,
                                 currencyCode = state.currencyCode,
                                 isPrivacyModeEnabled = state.isPrivacyModeEnabled,
-                                stressTest = state.emergencyStressTest
+                                stressTest = state.emergencyStressTest,
+                                selectedScenarioType = selectedScenarioType,
+                                onOpenStressTest = { showStressTestSheet = true },
+                                onResetScenario = { selectedScenarioType = null }
                             )
                         }
 
-                        item {
-                            SectionHeader("STRATEGY & PLANNING")
-                            Spacer(modifier = Modifier.height(4.dp))
-                            StrategyPlanningCard(
-                                onOpenBudgets = onOpenBudgets,
-                                onOpenRecurringExpenses = onOpenRecurringExpenses,
-                                onOpenForecasting = onOpenForecasting,
-                                onOpenMonthlyReview = onOpenMonthlyReview
-                            )
+                        state.savingsVelocity?.let { velocity ->
+                            item {
+                                SavingsVelocityCard(
+                                    summary = velocity,
+                                    isPrivacyMode = state.isPrivacyModeEnabled
+                                )
+                            }
                         }
 
                         item { Spacer(modifier = Modifier.height(32.dp)) }
@@ -304,43 +298,7 @@ fun WealthScreen(
                         }
                     }
 
-                    // 2. Savings Velocity & Momentum
-                    state.savingsVelocity?.let { velocity ->
-                        item {
-                            SavingsVelocityCard(
-                                summary = velocity,
-                                isPrivacyMode = state.isPrivacyModeEnabled
-                            )
-                        }
-                    }
-
-                    // 3. The Financial Independence & Safety Suite (with integrated Shock Simulator)
-                    item {
-                        FinancialIndependenceSuiteCard(
-                            runwayMonths = state.runwayMonths,
-                            monthlyBurn = state.monthlyBurn,
-                            cashAssets = state.cashAssets,
-                            monthlyPassiveIncome = state.monthlyPassiveIncome,
-                            annualPassiveIncome = state.annualPassiveIncome,
-                            nextPayoutDateStr = state.nextPayoutDateStr,
-                            fiCoveragePct = state.fiCoveragePct,
-                            fiStage = state.fiStage,
-                            fiNextStageGap = state.fiNextStageGap,
-                            totalAssets = state.totalAssets,
-                            annualExpense = state.annualExpense,
-                            freedomYears = state.financialFreedomYears,
-                            freedomScore = state.financialFreedomScore,
-                            isManualEnabled = state.isFireManualEnabled,
-                            manualAnnualExpense = state.manualFireAnnualExpense,
-                            onManualToggle = viewModel::setFireManualEnabled,
-                            onManualAmountChange = viewModel::setManualFireAnnualExpense,
-                            currencyCode = state.currencyCode,
-                            isPrivacyModeEnabled = state.isPrivacyModeEnabled,
-                            stressTest = state.emergencyStressTest
-                        )
-                    }
-
-                    // 5. Financial Hub (2x2 Bento Grid)
+                    // 2. Financial Hub (2x2 Bento Grid)
                     item {
                         SectionHeader("FINANCIAL HUB")
                         Spacer(modifier = Modifier.height(4.dp))
@@ -362,7 +320,7 @@ fun WealthScreen(
                         )
                     }
 
-                    // 6. Strategy & Planning Section
+                    // 3. Strategy & Planning Section
                     item {
                         SectionHeader("STRATEGY & PLANNING")
                         Spacer(modifier = Modifier.height(4.dp))
@@ -374,9 +332,58 @@ fun WealthScreen(
                         )
                     }
 
+                    // 4. The Financial Independence & Safety Suite (with integrated Shock Simulator)
+                    item {
+                        FinancialIndependenceSuiteCard(
+                            runwayMonths = state.runwayMonths,
+                            monthlyBurn = state.monthlyBurn,
+                            cashAssets = state.cashAssets,
+                            monthlyPassiveIncome = state.monthlyPassiveIncome,
+                            annualPassiveIncome = state.annualPassiveIncome,
+                            nextPayoutDateStr = state.nextPayoutDateStr,
+                            fiCoveragePct = state.fiCoveragePct,
+                            fiStage = state.fiStage,
+                            fiNextStageGap = state.fiNextStageGap,
+                            currencyCode = state.currencyCode,
+                            isPrivacyModeEnabled = state.isPrivacyModeEnabled,
+                            stressTest = state.emergencyStressTest,
+                            selectedScenarioType = selectedScenarioType,
+                            onOpenStressTest = { showStressTestSheet = true },
+                            onResetScenario = { selectedScenarioType = null }
+                        )
+                    }
+
+                    // 5. Savings Velocity & Momentum
+                    state.savingsVelocity?.let { velocity ->
+                        item {
+                            SavingsVelocityCard(
+                                summary = velocity,
+                                isPrivacyMode = state.isPrivacyModeEnabled
+                            )
+                        }
+                    }
+
                     item { Spacer(modifier = Modifier.height(32.dp)) }
                 }
             }
+        }
+
+        if (showStressTestSheet) {
+            FiStressTestBottomSheet(
+                stressTest = state.emergencyStressTest,
+                baselineRunwayMonths = state.runwayMonths,
+                totalAssets = state.totalAssets,
+                annualExpense = state.annualExpense,
+                currencyCode = state.currencyCode,
+                isPrivacyModeEnabled = state.isPrivacyModeEnabled,
+                isManualEnabled = state.isFireManualEnabled,
+                manualAnnualExpense = state.manualFireAnnualExpense,
+                selectedScenarioType = selectedScenarioType,
+                onScenarioSelected = { selectedScenarioType = it },
+                onManualToggle = viewModel::setFireManualEnabled,
+                onManualAmountChange = viewModel::setManualFireAnnualExpense,
+                onDismiss = { showStressTestSheet = false }
+            )
         }
     }
 }
@@ -569,27 +576,13 @@ fun FinancialIndependenceSuiteCard(
     fiCoveragePct: Double,
     fiStage: String,
     fiNextStageGap: Long,
-    totalAssets: Long,
-    annualExpense: Long,
-    freedomYears: Double,
-    freedomScore: Float,
-    isManualEnabled: Boolean,
-    manualAnnualExpense: Long,
-    onManualToggle: (Boolean) -> Unit,
-    onManualAmountChange: (Long) -> Unit,
     currencyCode: String,
     isPrivacyModeEnabled: Boolean,
-    stressTest: EmergencyFundStressTest? = null
+    stressTest: EmergencyFundStressTest? = null,
+    selectedScenarioType: StressTestScenarioType? = null,
+    onOpenStressTest: () -> Unit,
+    onResetScenario: () -> Unit = {}
 ) {
-    var isSandboxExpanded by remember { mutableStateOf(false) }
-    var selectedSwr by remember { mutableFloatStateOf(0.04f) }
-    var expenseMultiplier by remember { mutableFloatStateOf(1.0f) }
-    var manualInput by remember(manualAnnualExpense) {
-        mutableStateOf((manualAnnualExpense / 100).toString())
-    }
-    var selectedScenarioType by remember { mutableStateOf<StressTestScenarioType?>(null) }
-    val haptic = LocalHapticFeedback.current
-
     val activeScenario = stressTest?.scenarios?.find { it.type == selectedScenarioType }
     val displayedRunway = activeScenario?.runwayMonths ?: runwayMonths
 
@@ -605,11 +598,6 @@ fun FinancialIndependenceSuiteCard(
         runwayMonths >= 3.0 -> "Moderate Buffer"
         else -> "Needs Attention"
     }
-
-    val effectiveExpense = if (isManualEnabled && manualAnnualExpense > 0) manualAnnualExpense else annualExpense
-    val simulatedAnnualExpense = (effectiveExpense * expenseMultiplier).toLong()
-    val simulatedTargetFire = if (selectedSwr > 0f) (simulatedAnnualExpense / selectedSwr).toLong() else 0L
-    val simulatedYearsOfCover = if (simulatedAnnualExpense > 0) totalAssets.toDouble() / simulatedAnnualExpense else 0.0
 
     GlassCard(
         modifier = Modifier.fillMaxWidth()
@@ -701,7 +689,7 @@ fun FinancialIndependenceSuiteCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Pillar 1: Emergency Runway (Dynamic under stress testing)
+                // Pillar 1: Emergency Runway
                 Surface(
                     modifier = Modifier.weight(1f),
                     shape = MaterialTheme.shapes.large,
@@ -710,15 +698,36 @@ fun FinancialIndependenceSuiteCard(
                     Column(modifier = Modifier.padding(12.dp)) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("🛡️", fontSize = 13.sp)
-                            Text(
-                                "Runway",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text("🛡️", fontSize = 13.sp)
+                                Text(
+                                    "Runway",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (selectedScenarioType != null) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.error.copy(alpha = 0.12f),
+                                    modifier = Modifier.clickable { onResetScenario() }
+                                ) {
+                                    Text(
+                                        text = "Shock ✕",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -774,53 +783,6 @@ fun FinancialIndependenceSuiteCard(
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-                }
-            }
-
-            // Embedded Shock Scenario Selector
-            if (stressTest != null && stressTest.scenarios.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = "Simulate Shock Impact:",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        listOf(
-                            null to "Baseline",
-                            StressTestScenarioType.ZERO_INCOME to "Job Loss",
-                            StressTestScenarioType.PARTIAL_INCOME to "-50% Pay",
-                            StressTestScenarioType.INFLATION_SURGE to "+25% Surge",
-                            StressTestScenarioType.MARKET_DRAWDOWN to "-30% Crash"
-                        ).forEach { (type, label) ->
-                            val isSelected = selectedScenarioType == type
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        selectedScenarioType = type
-                                    }
-                            ) {
-                                Text(
-                                    text = label,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                    modifier = Modifier.padding(vertical = 5.dp)
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -890,182 +852,60 @@ fun FinancialIndependenceSuiteCard(
                 }
             }
 
-            // Expandable FIRE Runway Sandbox Toggle
+            // Stress Test & Simulation Action Pill
             Surface(
-                onClick = { isSandboxExpanded = !isSandboxExpanded },
+                onClick = onOpenStressTest,
                 shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            "FIRE Runway Sandbox",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    Text(
-                        if (isSandboxExpanded) "Hide ▲" else "Simulate ▼",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            AnimatedVisibility(visible = isSandboxExpanded) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // SWR Filter Chips
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "SWR:",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        listOf(0.03f to "3.0%", 0.035f to "3.5%", 0.04f to "4.0% (Standard)").forEach { (swr, label) ->
-                            val isSelected = selectedSwr == swr
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { selectedSwr = swr },
-                                label = { Text(label, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) }
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ElectricBolt,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
                             )
                         }
-                    }
-
-                    // Spending Multiplier Slider
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
+                        Column {
                             Text(
-                                "Spending: ${(expenseMultiplier * 100).toInt()}% (${String.format(Locale.US, "%.1f", simulatedYearsOfCover)} yrs cover)",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                if (isPrivacyModeEnabled) "••••••" else CurrencyFormatter.formatAmount(simulatedAnnualExpense / 12, currencyCode) + "/mo",
-                                style = MaterialTheme.typography.labelSmall,
+                                text = "Stress Test & Shock Simulator",
+                                style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
-                        }
-                        Slider(
-                            value = expenseMultiplier,
-                            onValueChange = { expenseMultiplier = it },
-                            valueRange = 0.5f..1.5f,
-                            steps = 9
-                        )
-                    }
-
-                    // Target Nest Egg Goal
-                    val milestoneBadge = when {
-                        simulatedYearsOfCover >= (1.0 / selectedSwr) -> "👑 Full Financial Independence"
-                        simulatedYearsOfCover >= 12.5 -> "🏔️ Lean FIRE Range"
-                        simulatedYearsOfCover >= 6.0 -> "🧭 Half FI Milestone"
-                        simulatedYearsOfCover >= 1.0 -> "⛵ Coast Cushion"
-                        else -> "🛡️ Emergency Shield"
-                    }
-
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    "Simulated Nest Egg Target",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                PrivacyText(
-                                    amount = simulatedTargetFire,
-                                    currencyCode = currencyCode,
-                                    isVisible = !isPrivacyModeEnabled,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Black,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            Surface(
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                shape = MaterialTheme.shapes.small
-                            ) {
-                                Text(
-                                    milestoneBadge,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
+                            Text(
+                                text = if (selectedScenarioType != null) {
+                                    "Simulating: ${activeScenario?.title ?: "Custom Shock"}"
+                                } else {
+                                    "Model job loss, market crashes & FIRE targets"
+                                },
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
-
-                    // Manual Override Option
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Manual Expense Override",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Switch(
-                            checked = isManualEnabled,
-                            onCheckedChange = { onManualToggle(it) }
-                        )
-                    }
-
-                    if (isManualEnabled) {
-                        OutlinedTextField(
-                            value = manualInput,
-                            onValueChange = {
-                                manualInput = it
-                                it.toLongOrNull()?.let { amount ->
-                                    onManualAmountChange(amount * 100)
-                                }
-                            },
-                            label = { Text("Annual Expense ($currencyCode)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            shape = MaterialTheme.shapes.medium
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }

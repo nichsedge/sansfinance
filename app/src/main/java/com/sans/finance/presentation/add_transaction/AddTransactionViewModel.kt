@@ -110,13 +110,15 @@ class AddTransactionViewModel @Inject constructor(
         initialValue = emptyList()
     )
 
-    var amount by mutableStateOf("")
+    var amount by mutableStateOf(addTransactionRoute?.initialAmount ?: "")
     var title by mutableStateOf(addTransactionRoute?.initialTitle ?: "")
     var details by mutableStateOf(addTransactionRoute?.initialNotes ?: "")
     var categoryId by mutableLongStateOf(
         if (addTransactionRoute != null && addTransactionRoute.categoryId > 0) addTransactionRoute.categoryId else 1L
     )
-    var accountId by mutableLongStateOf(1L)
+    var accountId by mutableLongStateOf(
+        if (addTransactionRoute != null && addTransactionRoute.initialAccountId > 0) addTransactionRoute.initialAccountId else 1L
+    )
     var toAccountId by mutableLongStateOf(2L)
 
     var paymentType by mutableStateOf("ONE_TIME") // "ONE_TIME", "RECURRING", "INSTALLMENT"

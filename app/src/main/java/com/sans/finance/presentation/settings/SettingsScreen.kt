@@ -44,6 +44,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -116,6 +117,7 @@ fun SettingsScreen(
     var showBackupFrequencyDialog by remember { mutableStateOf(false) }
     var showCloudProviderDialog by remember { mutableStateOf(false) }
     var showR2ConfigDialog by remember { mutableStateOf(false) }
+    var showRestoreCloudConfirmDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.syncMessage.value) {
         viewModel.syncMessage.value?.let {
@@ -174,7 +176,8 @@ fun SettingsScreen(
             onConfigureR2Click = { showR2ConfigDialog = true },
             onWifiOnlyToggle = { viewModel.setBackupWifiOnly(it, context) },
             onRequiresChargingToggle = { viewModel.setBackupRequiresCharging(it, context) },
-            onBackupNow = { viewModel.uploadBackupToCloud(context) }
+            onBackupNow = { viewModel.uploadBackupToCloud(context) },
+            onRestoreFromCloud = { showRestoreCloudConfirmDialog = true }
         )
     }
 
@@ -213,6 +216,36 @@ fun SettingsScreen(
             onSave = { accId, keyId, secKey, bucket ->
                 viewModel.saveR2Config(accId, keyId, secKey, bucket)
                 showR2ConfigDialog = false
+            }
+        )
+    }
+
+    if (showRestoreCloudConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showRestoreCloudConfirmDialog = false },
+            title = { Text("Restore from Cloud Backup") },
+            text = {
+                Text(
+                    "This will download the latest verified backup from Cloudflare R2 and replace your local database. The app will restart automatically after restore.\n\nAre you sure you want to proceed?"
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showRestoreCloudConfirmDialog = false
+                        viewModel.restoreBackupFromCloud(context)
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Restore & Restart")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestoreCloudConfirmDialog = false }) {
+                    Text("Cancel")
+                }
             }
         )
     }
@@ -316,7 +349,8 @@ fun SettingsContent(
     onConfigureR2Click: () -> Unit,
     onWifiOnlyToggle: (Boolean) -> Unit,
     onRequiresChargingToggle: (Boolean) -> Unit,
-    onBackupNow: () -> Unit
+    onBackupNow: () -> Unit,
+    onRestoreFromCloud: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -464,7 +498,8 @@ fun SettingsContent(
                 onConfigureR2Click = onConfigureR2Click,
                 onWifiOnlyToggle = onWifiOnlyToggle,
                 onRequiresChargingToggle = onRequiresChargingToggle,
-                onBackupNow = onBackupNow
+                onBackupNow = onBackupNow,
+                onRestoreFromCloud = onRestoreFromCloud
             )
         }
 
@@ -1043,7 +1078,8 @@ private fun WhatsAppBackupSettingsCard(
     onConfigureR2Click: () -> Unit,
     onWifiOnlyToggle: (Boolean) -> Unit,
     onRequiresChargingToggle: (Boolean) -> Unit,
-    onBackupNow: () -> Unit
+    onBackupNow: () -> Unit,
+    onRestoreFromCloud: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1086,20 +1122,33 @@ private fun WhatsAppBackupSettingsCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Button(
-                    onClick = onBackupNow,
-                    enabled = !isLoading,
-                    shape = MaterialTheme.shapes.medium,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text("Back Up", style = MaterialTheme.typography.labelMedium)
+                    OutlinedButton(
+                        onClick = onRestoreFromCloud,
+                        enabled = !isLoading,
+                        shape = MaterialTheme.shapes.medium,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text("Restore", style = MaterialTheme.typography.labelMedium)
+                    }
+                    Button(
+                        onClick = onBackupNow,
+                        enabled = !isLoading,
+                        shape = MaterialTheme.shapes.medium,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Text("Back Up", style = MaterialTheme.typography.labelMedium)
+                        }
                     }
                 }
             }

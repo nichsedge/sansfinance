@@ -12,7 +12,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SANS_FINANCE_DIR = os.path.dirname(SCRIPT_DIR)
 PROJECTS_DIR = os.path.dirname(SANS_FINANCE_DIR)
 
-DB_PATH = os.path.join(SANS_FINANCE_DIR, "sans_finance_db")
+DB_PATH = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("--") else os.path.join(SANS_FINANCE_DIR, "sans_finance_db_snapshot.sqlite")
 DATA_DIR = os.getenv("PORTFOLIO_DATA_DIR")
 if not DATA_DIR:
     standard_path = os.path.join(PROJECTS_DIR, "portfolio-integration", "data")
@@ -291,13 +291,6 @@ def main():
             is_temp_dir = True
         else:
             print("⚠️ Failed to download snapshots from Cloudflare R2. Falling back to local data directory.")
-    elif gcs_bucket:
-        print(f"☁️ PORTFOLIO_GCS_BUCKET is set to '{gcs_bucket}'. Syncing snapshots from GCS...")
-        if download_snapshots_from_gcs(gcs_bucket, temp_dir, existing_dates):
-            data_dir = temp_dir
-            is_temp_dir = True
-        else:
-            print("⚠️ Failed to download snapshots from GCS. Falling back to local data directory.")
 
     if not os.path.exists(data_dir):
         print(f"⚠️ Warning: Portfolio data directory '{data_dir}' does not exist!")

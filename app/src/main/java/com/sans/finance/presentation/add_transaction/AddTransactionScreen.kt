@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
@@ -79,6 +80,7 @@ import androidx.compose.material.icons.filled.Tune
 @Composable
 fun AddTransactionScreen(
     onBack: () -> Unit,
+    onAiChatClick: (() -> Unit)? = null,
     viewModel: AddTransactionViewModel = hiltViewModel()
 ) {
     val categories by viewModel.categories.collectAsStateWithLifecycle()
@@ -114,6 +116,15 @@ fun AddTransactionScreen(
                 title = if (viewModel.isEditMode) stringResource(R.string.edit_transaction) else stringResource(R.string.add_transaction),
                 onBack = onBack,
                 actions = {
+                    if (!viewModel.isEditMode && onAiChatClick != null) {
+                        IconButton(onClick = onAiChatClick) {
+                            Icon(
+                                Icons.Default.AutoAwesome,
+                                contentDescription = "AI Assistant",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                     if (viewModel.isEditMode) {
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(

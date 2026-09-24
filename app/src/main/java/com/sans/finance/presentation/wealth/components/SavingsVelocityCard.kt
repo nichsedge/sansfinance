@@ -1,8 +1,12 @@
 package com.sans.finance.presentation.wealth.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -238,38 +242,17 @@ fun SavingsVelocityCard(
                             .pointerInput(summary.history.size) {
                                 detectTapGestures { offset ->
                                     val count = summary.history.size
-                                    val step = size.width / count
-                                    val idx = (offset.x / step).toInt().coerceIn(0, count - 1)
-                                    if (selectedIndex != idx) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        selectedIndex = idx
-                                    } else {
-                                        selectedIndex = null
-                                    }
-                                }
-                            }
-                            .pointerInput(summary.history.size) {
-                                detectDragGestures(
-                                    onDragStart = { offset ->
-                                        val count = summary.history.size
+                                    if (count > 0) {
                                         val step = size.width / count
                                         val idx = (offset.x / step).toInt().coerceIn(0, count - 1)
                                         if (selectedIndex != idx) {
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             selectedIndex = idx
+                                        } else {
+                                            selectedIndex = null
                                         }
-                                    },
-                                    onDrag = { change, _ ->
-                                        val count = summary.history.size
-                                        val step = size.width / count
-                                        val idx = (change.position.x / step).toInt().coerceIn(0, count - 1)
-                                        if (selectedIndex != idx) {
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            selectedIndex = idx
-                                        }
-                                    },
-                                    onDragEnd = {}
-                                )
+                                    }
+                                }
                             }
                     ) {
                         val count = summary.history.size
@@ -336,40 +319,46 @@ fun SavingsVelocityCard(
                     }
                 }
 
-                // Tooltip detail overlay when scrubbed
-                selectedIndex?.let { idx ->
-                    val point = summary.history.getOrNull(idx)
-                    if (point != null) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                // Tooltip detail overlay when a bar is inspected
+                AnimatedVisibility(
+                    visible = selectedIndex != null,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    selectedIndex?.let { idx ->
+                        val point = summary.history.getOrNull(idx)
+                        if (point != null) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text(
-                                    text = "${point.monthLabel}: ${"%.1f%%".format(point.savingsRatePct)} rate",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = momentumColor
-                                )
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Text(
-                                        text = "Saved: ",
+                                        text = "${point.monthLabel}: ${"%.1f%%".format(point.savingsRatePct)} rate",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        fontWeight = FontWeight.Bold,
+                                        color = momentumColor
                                     )
-                                    PrivacyText(
-                                        amount = point.savings,
-                                        currencyCode = summary.currencyCode,
-                                        isVisible = !isPrivacyMode,
-                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "Saved: ",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        PrivacyText(
+                                            amount = point.savings,
+                                            currencyCode = summary.currencyCode,
+                                            isVisible = !isPrivacyMode,
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                                        )
+                                    }
                                 }
                             }
                         }

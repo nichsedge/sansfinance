@@ -42,7 +42,7 @@ object IndonesianMerchantClassifier {
         Rule(
             patterns = listOf("indomaret".toRegex(RegexOption.IGNORE_CASE), "alfamart".toRegex(RegexOption.IGNORE_CASE), "alfamidi".toRegex(RegexOption.IGNORE_CASE), "superindo".toRegex(RegexOption.IGNORE_CASE), "super indo".toRegex(RegexOption.IGNORE_CASE), "hypermart".toRegex(RegexOption.IGNORE_CASE), "grandlucky".toRegex(RegexOption.IGNORE_CASE), "sayurbox".toRegex(RegexOption.IGNORE_CASE), "astro".toRegex(RegexOption.IGNORE_CASE)),
             normalizedName = "Supermarket & Groceries",
-            category = "Groceries",
+            category = "Shopping",
             tags = listOf("groceries", "household")
         ),
 
@@ -88,15 +88,15 @@ object IndonesianMerchantClassifier {
         Rule(
             patterns = listOf("bpjs".toRegex(RegexOption.IGNORE_CASE), "bpjs kesehatan".toRegex(RegexOption.IGNORE_CASE), "bpjs ketenagakerjaan".toRegex(RegexOption.IGNORE_CASE)),
             normalizedName = "BPJS Healthcare",
-            category = "Health",
-            tags = listOf("insurance", "health")
+            category = "Utility",
+            tags = listOf("insurance", "health", "bills")
         ),
 
         // Digital Subscriptions & Tech
         Rule(
             patterns = listOf("netflix".toRegex(RegexOption.IGNORE_CASE), "spotify".toRegex(RegexOption.IGNORE_CASE), "youtube premium".toRegex(RegexOption.IGNORE_CASE), "disney".toRegex(RegexOption.IGNORE_CASE), "app store".toRegex(RegexOption.IGNORE_CASE), "google play".toRegex(RegexOption.IGNORE_CASE), "icloud".toRegex(RegexOption.IGNORE_CASE), "openai".toRegex(RegexOption.IGNORE_CASE), "chatgpt".toRegex(RegexOption.IGNORE_CASE), "claude".toRegex(RegexOption.IGNORE_CASE)),
             normalizedName = "Digital Subscription",
-            category = "Entertainment",
+            category = "Subscriptions",
             tags = listOf("subscription", "digital")
         ),
 

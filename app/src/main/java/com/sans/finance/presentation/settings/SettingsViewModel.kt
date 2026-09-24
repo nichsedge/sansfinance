@@ -323,6 +323,50 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun restoreBackupFromCloud(context: android.content.Context) {
+        _isLoading.value = true
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val downloadDest = java.io.File(context.cacheDir, "sans_finance_restore.sqlite")
+            try {
+                val result = com.sans.finance.data.util.CloudStorageSyncer.downloadDatabaseBackup(context, downloadDest, userPreferences.value)
+                result.fold(
+                    onSuccess = { downloadedFile ->
+                        val isValid = com.sans.finance.data.util.CloudStorageSyncer.isDatabasePopulated(downloadedFile)
+                        if (!isValid) {
+                            _error.value = "Downloaded database is empty or corrupt (0 expenses)."
+                            return@fold
+                        }
+
+                        // Close DB and replace files
+                        db.close()
+                        val currentDb = context.getDatabasePath("sans_finance_db")
+                        val walFile = java.io.File(currentDb.path + "-wal")
+                        val shmFile = java.io.File(currentDb.path + "-shm")
+
+                        walFile.delete()
+                        shmFile.delete()
+                        downloadedFile.copyTo(currentDb, overwrite = true)
+                        downloadedFile.delete()
+
+                        _syncMessage.value = "Database restored successfully! Restarting app..."
+                        kotlinx.coroutines.delay(1000)
+                        restartApp(context)
+                    },
+                    onFailure = { err ->
+                        _error.value = err.message ?: "Failed to download backup from cloud"
+                    }
+                )
+            } catch (e: Exception) {
+                _error.value = e.message
+            } finally {
+                if (downloadDest.exists()) {
+                    downloadDest.delete()
+                }
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun clearMessages() {
         _error.value = null
         _syncMessage.value = null

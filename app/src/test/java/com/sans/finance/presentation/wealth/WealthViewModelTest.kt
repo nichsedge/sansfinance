@@ -7,8 +7,12 @@ import com.sans.finance.data.local.entity.AccountTypeEntity
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import com.sans.finance.data.local.entity.PortfolioSnapshotHeaderEntity
 import com.sans.finance.data.util.LocaleManager
+import com.sans.finance.domain.model.EmergencyFundStressTest
 import com.sans.finance.domain.model.FinancialFreedomStats
 import com.sans.finance.domain.model.Goal
+import com.sans.finance.domain.model.MomentumTrend
+import com.sans.finance.domain.model.SafetyBufferTier
+import com.sans.finance.domain.model.SavingsRateVelocitySummary
 import com.sans.finance.domain.model.UserPreferences
 import com.sans.finance.domain.model.WealthDistributionTab
 import com.sans.finance.domain.model.WealthMetrics
@@ -143,38 +147,38 @@ class WealthViewModelTest {
         )
 
         getWealthMetricsUseCase = mockk()
-        every { getWealthMetricsUseCase.invoke() } returns metricsFlow
+        every { getWealthMetricsUseCase() } returns metricsFlow
 
         getFinancialFreedomStatsUseCase = mockk()
-        every { getFinancialFreedomStatsUseCase.invoke() } returns freedomFlow
+        every { getFinancialFreedomStatsUseCase() } returns freedomFlow
 
         getEmergencyFundStressTestUseCase = mockk()
-        every { getEmergencyFundStressTestUseCase.invoke() } returns flowOf(
-            com.sans.finance.domain.model.EmergencyFundStressTest(
+        every { getEmergencyFundStressTestUseCase() } returns flowOf(
+            EmergencyFundStressTest(
                 liquidCashReserves = 50_000_000L,
                 baselineMonthlyBurn = 5_000_000L,
                 baselineRunwayMonths = 10.0,
-                baselineTier = com.sans.finance.domain.model.SafetyBufferTier.STRONG,
+                baselineTier = SafetyBufferTier.STRONG,
                 scenarios = emptyList(),
                 currencyCode = "IDR"
             )
         )
 
         getSavingsRateVelocityUseCase = mockk()
-        every { getSavingsRateVelocityUseCase.invoke() } returns flowOf(
-            com.sans.finance.domain.model.SavingsRateVelocitySummary(
+        every { getSavingsRateVelocityUseCase() } returns flowOf(
+            SavingsRateVelocitySummary(
                 currentMonthSavingsRatePct = 50.0,
                 threeMonthAvgSavingsRatePct = 45.0,
                 sixMonthAvgSavingsRatePct = 40.0,
                 monthlyNetWorthVelocity = 10_000_000L,
-                momentumTrend = com.sans.finance.domain.model.MomentumTrend.ACCELERATING,
+                momentumTrend = MomentumTrend.ACCELERATING,
                 history = emptyList(),
                 currencyCode = "IDR"
             )
         )
 
         getWealthDistributionUseCase = mockk()
-        every { getWealthDistributionUseCase.invoke(any()) } returns flowOf(
+        every { getWealthDistributionUseCase(any()) } returns flowOf(
             mapOf("Fixed Income" to 100_000_000L, "Cash" to 50_000_000L)
         )
 

@@ -114,6 +114,9 @@ fun MainScreen(
                             },
                             onWealthForecastingClick = {
                                 rootNavController.navigate(Screen.WealthForecasting)
+                            },
+                            onAiChatClick = {
+                                rootNavController.navigate(Screen.AiChat)
                             }
                         )
                     }

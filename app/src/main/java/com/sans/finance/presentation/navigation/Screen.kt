@@ -18,10 +18,12 @@ sealed class Screen {
         val categoryId: Long = -1L,
         val transactionType: String = "EXPENSE",
         val initialTitle: String = "",
-        val initialNotes: String = ""
+        val initialNotes: String = "",
+        val initialAmount: String = "",
+        val initialAccountId: Long = -1L
     ) : Screen() {
         companion object {
-            operator fun invoke(): AddTransaction = AddTransaction(-1L, "EXPENSE", "", "")
+            operator fun invoke(): AddTransaction = AddTransaction(-1L, "EXPENSE", "", "", "", -1L)
         }
     }
 
@@ -87,4 +89,7 @@ sealed class Screen {
 
     @Serializable
     data class MonthlyReview(val monthOffset: Int = 0) : Screen()
+
+    @Serializable
+    object AiChat : Screen()
 }

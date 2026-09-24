@@ -1,22 +1,43 @@
 package com.sans.finance.data.ai
 
+import com.sans.finance.domain.model.AccountSummary
+import com.sans.finance.domain.model.AiAssistantResponse
+import com.sans.finance.domain.model.AiTransactionProposal
+import com.sans.finance.domain.model.CategorySummary
+import com.sans.finance.domain.model.ChatMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
+import java.util.concurrent.TimeUnit
+
 class OpenAiResponsesProvider(
-    private val client: OkHttpClient,
-    private val apiKey: String,
-    private val model: String,
+    rawClient: OkHttpClient,
+    rawApiKey: String,
+    rawModel: String,
 ) : AiProvider {
+
+    private val apiKey = rawApiKey.filter { it > ' ' && it.code < 127 }
+    private val model = rawModel.filter { it > ' ' && it.code < 127 }
+
+    private val client = rawClient.newBuilder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(90, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -83,9 +104,30 @@ class OpenAiResponsesProvider(
         }
     }
 
+    private fun extractJson(raw: String): String {
+        val trimmed = raw.trim()
+        val fencedMatch = Regex("""```(?:json)?\s*([\s\S]*?)\s*```""").find(trimmed)
+        if (fencedMatch != null) {
+            val inner = fencedMatch.groupValues[1].trim()
+            val start = inner.indexOf('{')
+            val end = inner.lastIndexOf('}')
+            if (start != -1 && end != -1 && end > start) {
+                return inner.substring(start, end + 1)
+            }
+            return inner
+        }
+        val start = trimmed.indexOf('{')
+        val end = trimmed.lastIndexOf('}')
+        if (start != -1 && end != -1 && end > start) {
+            return trimmed.substring(start, end + 1)
+        }
+        return trimmed
+    }
+
     private fun parseJsonResult(text: String): MonthlyReviewResult? {
+        val clean = extractJson(text)
         return runCatching {
-            val obj = json.parseToJsonElement(text).jsonObject
+            val obj = json.parseToJsonElement(clean).jsonObject
             val headline = obj["headline"]?.jsonPrimitive?.content ?: "Monthly review"
             val insightsJson = obj["insights"]
             val insights = if (insightsJson == null) {
@@ -162,8 +204,9 @@ class OpenAiResponsesProvider(
     }
 
     private fun parsePortfolioJsonResult(text: String): PortfolioAnalysisResult? {
+        val clean = extractJson(text)
         return runCatching {
-            val obj = json.parseToJsonElement(text).jsonObject
+            val obj = json.parseToJsonElement(clean).jsonObject
             val summary = obj["summary"]?.jsonPrimitive?.content ?: "Portfolio Analysis"
             val insightsJson = obj["insights"]
             val insights = if (insightsJson == null) {
@@ -174,4 +217,111 @@ class OpenAiResponsesProvider(
             PortfolioAnalysisResult(summary = summary, insights = insights, rawText = null)
         }.getOrNull()
     }
+
+    override suspend fun parseReceiptOrChat(
+        userMessage: String,
+        accounts: List<AccountSummary>,
+        categories: List<CategorySummary>,
+        currency: String,
+        conversationHistory: List<ChatMessage>
+    ): AiAssistantResponse {
+        val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+        val accountsFormatted = accounts.joinToString(separator = "\n") {
+            "- ID: ${it.id} | Name: '${it.name}' | Type: ${it.type} | Currency: ${it.currency}"
+        }
+        val categoriesFormatted = categories.joinToString(separator = "\n") {
+            "- ID: ${it.id} | Name: '${it.name}' | Type: ${it.type}"
+        }
+
+        val instructions = """
+            You are Sans Finance Copilot, an elite personal finance assistant and universal transaction harness for an Indonesia-based personal wealth and cashflow management app.
+            Current Date: $todayStr
+            Base Currency: $currency
+
+            User's Registered Accounts:
+            $accountsFormatted
+
+            User's Registered Categories:
+            $categoriesFormatted
+
+            Capabilities & Modes:
+            1. CONVERSATIONAL & FINANCIAL ADVICE MODE:
+               - When the user asks financial questions, seeks budgeting strategies (50/30/20, zero-based), inquires about emergency fund sizing, cash runway, FIRE targets, debt payoff horizons, or general wealth habits:
+               - Provide a clear, insightful, motivating, and mathematically sound answer in Indonesian (or English if prompted in English).
+               - Set "proposals": [] (empty array). Do NOT invent fictional transactions.
+
+            2. UNIVERSAL TRANSACTION INGESTION MODE:
+               - When the user pastes ANY receipt, bank mutation, invoice, purchase confirmation, QRIS payment, bill, or income notification:
+                 * Daily Spends & Shopping: Supermarket, groceries (Indomaret, Alfamart, Superindo), food & dining (GoFood, Grab, restaurants), coffee, e-commerce (Tokopedia, Shopee, Blibli), transport, fuel.
+                 * Bills & Utilities: PLN electricity, PDAM, internet/WiFi, cellular, subscriptions (Netflix, Spotify, Google, iCloud).
+                 * Incomes & Payouts: Salary/gaji, freelance fees, bonus, THR, reimbursement, cashbacks, gifts.
+                 * Passive Income & Investments: SBN coupon payouts (ORI, SR, PBS, ST, FR), stock dividends, P2P lending interest, crypto staking yields, bank deposit interest. Kupon/dividends are ALWAYS type 'INCOME'. Use the net credited nominal (after tax if stated).
+                 * Account Transfers: Transfer between user accounts (e.g. BCA to GoPay, Mandiri to Bibit, Bank to RDN) with type 'TRANSFER'.
+               - Extract EVERY discrete transaction found in the message into the "proposals" array. If multiple transactions or bulk notifications are present, create a separate proposal item for each one.
+               - Nominal Amount: Standard numeric value in major currency units (e.g. 150000 for Rp 150.000, 2500000 for Rp 2.500.000).
+               - Title: Clean, descriptive merchant/transaction title (e.g. 'Kopi Kenangan', 'Superindo Kelapa Gading', 'PLN Token Listrik', 'Kupon SBN ORI026', 'Gaji Bulanan', 'Top Up GoPay').
+               - Type: Exactly 'EXPENSE', 'INCOME', or 'TRANSFER'.
+               - Date: Epoch timestamp in milliseconds. Extract transaction timestamp from receipt if available, otherwise use current timestamp (${System.currentTimeMillis()}).
+               - Account: Match with the best Account ID from the user's registered accounts list. If no specific bank/account is mentioned or identifiable in the receipt/message, set accountName to 'Cash' (it will automatically default to the user's primary cash account).
+               - Category: Match with the best Category ID matching the transaction type and purpose.
+               - Notes: Concise additional context (e.g. reference number, tax deducted, items purchased).
+               - Tags: Relevant lowercase tags (e.g. ["makan", "coffee"], ["belanja", "groceries"], ["investasi", "sbn", "kupon"], ["utilities"]).
+
+            Always output a valid, well-formed JSON object matching this schema:
+            {
+              "reply": "Conversational explanation or friendly answer. If transactions were detected, summarize count and total nominal.",
+              "proposals": [
+                {
+                  "title": "string",
+                  "amount": 150000,
+                  "type": "EXPENSE",
+                  "date": ${System.currentTimeMillis()},
+                  "accountId": 1,
+                  "accountName": "Cash",
+                  "categoryId": 2,
+                  "categoryName": "string",
+                  "notes": "string",
+                  "tags": ["tag1", "tag2"]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val bodyJson = buildJsonObject {
+            put("model", JsonPrimitive(model))
+            put("instructions", JsonPrimitive(instructions))
+            put("input", JsonPrimitive(userMessage))
+            put(
+                "response_format",
+                buildJsonObject {
+                    put("type", JsonPrimitive("json_object"))
+                }
+            )
+        }
+
+        val request = Request.Builder()
+            .url("https://api.openai.com/v1/responses")
+            .header("Authorization", "Bearer $apiKey")
+            .header("Content-Type", "application/json")
+            .post(bodyJson.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        return withContext(Dispatchers.IO) {
+            client.newCall(request).execute().use { resp ->
+                val raw = resp.body.string()
+                if (!resp.isSuccessful) {
+                    throw Exception("OpenAI error ${resp.code}: ${raw.take(500)}")
+                }
+
+                val root = json.parseToJsonElement(raw).jsonObject
+                val outputText = root["output_text"]?.let { element ->
+                    runCatching { element.jsonPrimitive.content }.getOrNull()
+                }
+
+                val rawOutput = outputText ?: raw
+                AiJsonParser.parseAssistantResponse(rawOutput, accounts, categories)
+            }
+        }
+    }
 }
+

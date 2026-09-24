@@ -84,7 +84,7 @@ The project follows **Clean Architecture** with a Kotlin Multiplatform core.
 
 **Presentation** (`app/presentation/`) — Compose + ViewModel + Jetpack Glance.
 - ViewModels use `StateFlow` to expose UI state.
-- Screen list: `Dashboard`, `ExpenseList`, `AddTransaction`, `Wealth`, `Portfolio` (Overview, Health, Yield), `Goals`, `Budgets` (Safe-to-Spend runway), `Installments` (Horizon timeline), `MonthlyReview`, `DataManagement` (Database Optimization & Audit), `WealthForecasting` (Monte Carlo Simulation), etc.
+- Screen list: `Dashboard`, `ExpenseList`, `AddTransaction`, `AiChat` (Smart Receipt & SBN Coupon Ingestion with HITL Confirmation), `Wealth`, `Portfolio` (Overview, Health, Yield), `Goals`, `Budgets` (Safe-to-Spend runway), `Installments` (Horizon timeline), `MonthlyReview`, `DataManagement` (Database Optimization & Audit), `WealthForecasting` (Monte Carlo Simulation), etc.
 - Navigation: Type-safe routes using Kotlinx Serialization in `Screen.kt` with fluid Material 3 enter/exit motion transitions.
 - AppWidgets: Jetpack Glance-powered home screen widgets (`FinancialSummaryGlanceWidget`, `QuickAddGlanceWidget`) alongside legacy RemoteViews.
 
@@ -100,15 +100,30 @@ Room database is at **version 38**. It includes:
 - Support for portfolio tracking, targets (`portfolio_targets`), goals, and budgets.
 Reference snapshot: `sans_finance_db_snapshot.sqlite`.
 
-## Cloud Sync & Backup
+### Database Invariants & Maintenance
+- **Epoch Sentinel (`date = 0`)**: Records with `date = 0` (or `date <= 0`) are intentional epoch opening balance adjustments created by the Re-Sync utility (`ReSyncDryRunViewModel`). They must **NEVER** be updated to `created_at` or current timestamps by maintenance scripts or migrations, as doing so distorts monthly cashflow pacing and safe-to-spend runway.
+- **Orphaned Cross-References**: Junction tables (such as `expense_tag_ref`) may accumulate phantom pointers if referenced expenses are deleted. Database maintenance (`MaintainDatabaseUseCase`) safely cleans orphaned references where `expenseId NOT IN (SELECT id FROM expenses)` while preserving active tag associations.
 
-- **Cloudflare R2 (Default)**: Pure Kotlin AWS SigV4 signed requests for S3-compatible cloud snapshot downloads and SQLite database backups.
-- **Google Cloud Storage (GCS, Optional)**: Service-account JWT authentication for snapshots and SQLite database backup uploads.
+
+## Cloud Sync, Backup & Disaster Recovery
+
+- **Cloudflare R2 (SSOT)**: Pure Kotlin AWS SigV4 signed requests for S3-compatible cloud snapshot downloads and SQLite database backups.
+- **Zero Data-Loss Safeguard**: `CloudStorageSyncer` strictly inspects database contents prior to upload and refuses to overwrite backups if the `expenses` count is 0.
+- **Dual-Destination Archiving**: Every backup operation writes to both `db/sans_finance_latest.sqlite` and an immutable timestamped key `db/archive/sans_finance_yyyyMMdd_HHmmss.sqlite`.
+- **In-App Cloud Restore**: Settings screen provides a one-tap `[Restore]` button that verifies SQLite integrity before replacing local files and cleanly restarting the app.
+- **CLI Recovery Utility**: `scripts/restore_from_r2.sh` allows pulling and restoring verified snapshots directly to connected devices via ADB.
 - Background sync and automated backups scheduled via Android `WorkManager` with exponential backoff retry policies.
 
 ## AI Integration Strategy
 
-- **Cloud AI Only**: Support for **OpenAI** and OpenAI-compatible APIs (e.g., **OpenRouter**). Used strictly for high-value on-demand analysis (e.g. "Analyze with AI" in Monthly Review and Portfolio Health Insights).
+- **Cloud AI Only**: Support for **OpenAI** and OpenAI-compatible APIs (e.g., **OpenRouter**). Used strictly for high-value on-demand analysis:
+  - Monthly Review closing summaries and Portfolio Health Insights.
+  - Interactive **AI Chat & Smart Receipt Ingestion**: Parsing raw text receipts (such as CIMB Niaga SBN coupon payouts, bank slips, or expense notes) into structured transaction proposals.
+  - **Human-in-the-Loop (HITL) Guarantee**: The AI never directly mutates the database; it presents an interactive confirmation proposal card allowing account/category review and explicit confirmation before persisting via `AddTransactionUseCase`.
+- **Receipt Ingestion & Account Resolution Invariants**:
+  - **Account Fallback**: If receipt text or user input does not match an identifiable account, the parser and ViewModel must default to the primary/first **Cash** account (e.g. `Wallet`). Never leave the account unassigned or pick an investment account.
+  - **Dynamic Timestamp Prompting**: LLM system prompts must always inject dynamic current timestamps (`${System.currentTimeMillis()}`) rather than hardcoded dummy epoch values, preventing the LLM from backdating transactions into prior months.
+  - **Account Currency Inheritance**: Created expenses must inherit the parent account's native currency (defaulting to `IDR`), never falling back to legacy `USD`.
 - **No On-Device AI / LLM**: Do not implement or suggest on-device LLMs or on-device AI engines (such as LiteRT-LM / edge SLMs). They introduce excessive battery drain, thermal throttling, and large binary footprints with negligible user benefit for personal finance. All core calculations must remain pure deterministic Kotlin algorithms, while complex LLM summaries use cloud APIs.
 
 ## Coding Style
