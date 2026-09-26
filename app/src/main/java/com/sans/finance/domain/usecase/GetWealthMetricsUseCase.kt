@@ -73,17 +73,22 @@ class GetWealthMetricsUseCase @Inject constructor(
             }
 
             val liabilityTypeNames = finance.types.filter { it.isLiability }.map { it.name }.toSet()
+            val investmentTypeNames = finance.types.filter { it.isInvestment }.map { it.name }.toSet()
 
             // Assets & Liabilities
             val cashAssets = finance.accounts
-                .filter { it.type !in liabilityTypeNames && it.type != "Investment" }
+                .filter { it.type !in liabilityTypeNames && it.type !in investmentTypeNames }
+                .sumOf { convertToBase(it.balance, it.currency) }
+            val investmentAccountAssets = finance.accounts
+                .filter { it.type in investmentTypeNames }
                 .sumOf { convertToBase(it.balance, it.currency) }
             val liabilities = finance.accounts
                 .filter { it.type in liabilityTypeNames }
                 .sumOf { convertToBase(it.balance, it.currency) }
 
-            val portfolioValueIdr = finance.holdings.sumOf { it.valueIdr }
-            val portfolioValue = if (baseRate > 0) ((portfolioValueIdr / baseRate) * 100).toLong() else 0L
+            val portfolioHoldingsValueIdr = finance.holdings.sumOf { it.valueIdr }
+            val portfolioHoldingsValue = if (baseRate > 0) ((portfolioHoldingsValueIdr / baseRate) * 100).toLong() else 0L
+            val portfolioValue = portfolioHoldingsValue + investmentAccountAssets
 
             // Monthly Burn (3-month avg)
             val monthlyBurn = if (baseRate > 0) (((stats.total90dExpenseIdr ?: 0L).toDouble() / baseRate) / 3.0).toLong() else 0L
@@ -100,7 +105,9 @@ class GetWealthMetricsUseCase @Inject constructor(
                 val cat = holding.category
 
                 val meta = stats.metadata.find { asset.contains(it.code, ignoreCase = true) }
-                val rate = meta?.rate ?: if (cat.contains("SBN", ignoreCase = true) || cat.contains("Bond", ignoreCase = true) || asset.contains("Sukuk", ignoreCase = true)) 0.0625 else 0.0
+                val rate = holding.yieldRate?.takeIf { it > 0 }
+                    ?: meta?.rate
+                    ?: if (cat.contains("SBN", ignoreCase = true) || cat.contains("Bond", ignoreCase = true) || asset.contains("Sukuk", ignoreCase = true)) 0.0625 else 0.0
 
                 if (rate > 0) {
                     val grossMonthly = (holding.valueIdr * rate) / 12.0

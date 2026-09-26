@@ -7,7 +7,6 @@ Usage:
 
 import sys
 import os
-import json
 import argparse
 from pathlib import Path
 from datetime import datetime, timezone
@@ -21,31 +20,11 @@ R2_BUCKET_NAME = "ichsanul-dev"
 DEFAULT_BLOB_NAME = "db/sans_finance_latest.sqlite"
 
 def load_r2_credentials():
-    """Load R2 credentials from environment or creds directory."""
+    """Load R2 credentials directly from environment variables."""
     account_id = os.getenv("R2_ACCOUNT_ID") or os.getenv("CLOUDFLARE_ACCOUNT_ID")
     access_key = os.getenv("R2_ACCESS_KEY_ID") or os.getenv("AWS_ACCESS_KEY_ID")
     secret_key = os.getenv("R2_SECRET_ACCESS_KEY") or os.getenv("AWS_SECRET_ACCESS_KEY")
     bucket_name = os.getenv("R2_BUCKET_NAME")
-
-    if not (account_id and access_key and secret_key):
-        base_dir = Path(__file__).resolve().parents[2]
-        candidates = [
-            base_dir / "creds" / "cloudflare" / "r2_cred.json",
-            base_dir / "sansfinance" / "app" / "src" / "main" / "assets" / "r2_cred.json"
-        ]
-        for candidate in candidates:
-            if candidate.exists():
-                try:
-                    with open(candidate, "r") as f:
-                        data = json.load(f)
-                    account_id = account_id or data.get("account_id")
-                    access_key = access_key or data.get("access_key_id")
-                    secret_key = secret_key or data.get("secret_access_key")
-                    bucket_name = bucket_name or data.get("bucket_name")
-                    if account_id and access_key and secret_key:
-                        break
-                except Exception:
-                    pass
 
     return account_id, access_key, secret_key, bucket_name or R2_BUCKET_NAME
 
@@ -114,7 +93,7 @@ def list_r2_backups(bucket: str):
 def pull_from_r2(output_path: Path, bucket: str, object_key: str):
     account_id, access_key, secret_key, _ = load_r2_credentials()
     if not (account_id and access_key and secret_key):
-        print("❌ Cloudflare R2 credentials not found in r2_cred.json or environment.")
+        print("❌ Cloudflare R2 credentials not found in environment (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY).")
         sys.exit(1)
 
     print(f"☁️ Connecting to Cloudflare R2 bucket: {bucket}...")
@@ -146,10 +125,43 @@ def pull_from_r2(output_path: Path, bucket: str, object_key: str):
         print(f"❌ Connection error: {e}")
         sys.exit(1)
 
+def push_to_r2(input_path: Path, bucket: str, object_key: str):
+    account_id, access_key, secret_key, _ = load_r2_credentials()
+    if not (account_id and access_key and secret_key):
+        print("❌ Cloudflare R2 credentials not found in environment (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY).")
+        sys.exit(1)
+
+    if not input_path.exists():
+        print(f"❌ Error: Input file {input_path} does not exist.")
+        sys.exit(1)
+
+    payload_bytes = input_path.read_bytes()
+    if len(payload_bytes) == 0:
+        print(f"❌ Error: Input file {input_path} is empty (0 bytes).")
+        sys.exit(1)
+
+    print(f"☁️ Uploading {input_path} ({len(payload_bytes) / 1024:.1f} KB) to R2 bucket: {bucket} -> {object_key}...")
+    canonical_uri = f"/{bucket}/{object_key}"
+    headers = build_sigv4_headers("PUT", canonical_uri, "", payload_bytes, account_id, access_key, secret_key)
+    headers["Content-Type"] = "application/x-sqlite3"
+    endpoint_url = f"https://{headers['Host']}{canonical_uri}"
+
+    req = urllib.request.Request(endpoint_url, data=payload_bytes, headers=headers, method="PUT")
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            if resp.status in (200, 201, 204):
+                print(f"✅ Successfully uploaded to {object_key}")
+            else:
+                print(f"⚠️ Upload response status: {resp.status}")
+    except Exception as e:
+        print(f"❌ Error uploading to Cloudflare R2: {e}")
+        sys.exit(1)
+
 def main():
-    parser = argparse.ArgumentParser(description="Download latest SQLite snapshot from Cloudflare R2")
-    parser.add_argument("output", nargs="?", default="sans_finance_latest.sqlite", help="Destination output file")
-    parser.add_argument("--key", default=DEFAULT_BLOB_NAME, help="R2 object key to download")
+    parser = argparse.ArgumentParser(description="Download or upload SQLite snapshot from/to Cloudflare R2")
+    parser.add_argument("target", nargs="?", default="sans_finance_latest.sqlite", help="File path (destination for pull, source for push)")
+    parser.add_argument("--push", action="store_true", help="Push target file to R2 instead of downloading")
+    parser.add_argument("--key", default=DEFAULT_BLOB_NAME, help="R2 object key")
     parser.add_argument("--bucket", default=R2_BUCKET_NAME, help="Bucket name override")
     parser.add_argument("--list", action="store_true", help="List database backups in R2 bucket")
     args = parser.parse_args()
@@ -158,8 +170,11 @@ def main():
         list_r2_backups(args.bucket)
         return
 
-    out_path = Path(args.output)
-    pull_from_r2(out_path, args.bucket, args.key)
+    target_path = Path(args.target)
+    if args.push:
+        push_to_r2(target_path, args.bucket, args.key)
+    else:
+        pull_from_r2(target_path, args.bucket, args.key)
 
 if __name__ == "__main__":
     main()

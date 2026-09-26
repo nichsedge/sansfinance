@@ -44,3 +44,4 @@ push_portfolio.sh.bak
 .env
 .wrangler/
 .envrc
+*.bak

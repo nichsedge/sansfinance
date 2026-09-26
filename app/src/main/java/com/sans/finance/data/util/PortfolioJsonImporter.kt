@@ -88,7 +88,9 @@ data class HoldingJson(
     @SerialName("value_usd") val valueUsd: Double = 0.0,
     @SerialName("asset_class") val assetClass: String = "Other",
     val account: String = "",
-    val details: String? = null
+    val details: String? = null,
+    @SerialName("cost_basis") val costBasis: Double? = null,
+    @SerialName("yield_rate") val yieldRate: Double? = null
 )
 
 object PortfolioJsonImporter {
@@ -136,7 +138,9 @@ object PortfolioJsonImporter {
                 valueIdr = holding.valueIdr,
                 assetClass = holding.assetClass,
                 account = holding.account,
-                details = holding.details
+                details = holding.details,
+                costBasis = holding.costBasis,
+                yieldRate = holding.yieldRate
             )
         }
 

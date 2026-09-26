@@ -183,7 +183,7 @@ fun PortfolioBenchmarkCard(
                     color = alphaColor.copy(alpha = 0.15f)
                 ) {
                     Text(
-                        text = if (isPositiveAlpha) "+%.1f%% Alpha".format(comparison.alphaPct) else "%.1f%% Alpha".format(comparison.alphaPct),
+                        text = if (isPositiveAlpha) "+%.2f%% Alpha".format(comparison.alphaPct) else "%.2f%% Alpha".format(comparison.alphaPct),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Black,
@@ -227,7 +227,7 @@ fun PortfolioBenchmarkCard(
                     Column(modifier = Modifier.padding(10.dp)) {
                         Text("Portfolio Return", style = TextStyle(fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant))
                         Text(
-                            "%.1f%%".format(comparison.portfolioTotalReturnPct),
+                            "%.2f%%".format(comparison.portfolioTotalReturnPct),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Black,
                             color = if (comparison.portfolioTotalReturnPct >= 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
@@ -243,7 +243,7 @@ fun PortfolioBenchmarkCard(
                     Column(modifier = Modifier.padding(10.dp)) {
                         Text("${selectedBenchmark.name} Return", style = TextStyle(fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant))
                         Text(
-                            "%.1f%%".format(comparison.benchmarkTotalReturnPct),
+                            "%.2f%%".format(comparison.benchmarkTotalReturnPct),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.onSurface
@@ -470,7 +470,7 @@ fun BenchmarkComparisonChart(
                 val dateStr = dateFormatter.format(Date(pt.dateEpochMs))
                 val portRet = pt.portfolioIndex - 100.0
                 val benchRet = pt.benchmarkIndex - 100.0
-                val text = "$dateStr: Port ${if (portRet >= 0) "+" else ""}%.1f%% vs Bench ${if (benchRet >= 0) "+" else ""}%.1f%%".format(portRet, benchRet)
+                val text = "$dateStr: Port ${if (portRet >= 0) "+" else ""}%.2f%% vs Bench ${if (benchRet >= 0) "+" else ""}%.2f%%".format(portRet, benchRet)
                 val tooltipLayout = textMeasurer.measure(
                     text,
                     style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)

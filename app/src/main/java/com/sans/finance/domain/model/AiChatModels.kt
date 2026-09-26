@@ -82,7 +82,20 @@ data class FinancialContextSnapshot(
     val threeMonthAverageExpense: Long = 0L,
 
     // Big-ticket discrete expenses this month (e.g. "12 Sep: Kos (Rp 2.250.000) [Utility]")
-    val topBigTicketExpenses: List<String> = emptyList()
+    val topBigTicketExpenses: List<String> = emptyList(),
+
+    // Real-time Balance Sheet & Net Worth Grounding
+    val netWorth: Long = 0L,
+    val totalAssets: Long = 0L,
+    val liquidCashAssets: Long = 0L,
+    val portfolioInvestmentValue: Long = 0L,
+    val totalLiabilities: Long = 0L,
+    val runwayMonths: Double = 0.0,
+    val monthlyPassiveIncome: Long = 0L,
+    val annualPassiveIncome: Long = 0L,
+    val portfolioAssetClassBreakdown: List<Pair<String, Long>> = emptyList(),
+    val topPortfolioHoldings: List<Pair<String, Long>> = emptyList(),
+    val liabilityAccountBalances: List<Pair<String, Long>> = emptyList()
 )
 
 data class AiAssistantResponse(

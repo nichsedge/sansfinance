@@ -15,7 +15,7 @@ object PortfolioCsvExporter {
     fun toCsv(date: Long, holdings: List<PortfolioHoldingEntity>): String {
         val dateStr = DATE_FORMAT.format(Date(date))
         val sb = StringBuilder()
-        sb.append("date,source,category,asset,currency,quantity,price,value_idr,asset_class,account,details\n")
+        sb.append("date,source,category,asset,currency,quantity,price,value_idr,asset_class,account,details,cost_basis,yield_rate\n")
 
         holdings.forEach { holding ->
             sb.append(dateStr).append(",")
@@ -28,7 +28,9 @@ object PortfolioCsvExporter {
             sb.append(holding.valueIdr).append(",")
             sb.append(escapeCsv(holding.assetClass)).append(",")
             sb.append(escapeCsv(holding.account)).append(",")
-            sb.append(escapeCsv(holding.details ?: ""))
+            sb.append(escapeCsv(holding.details ?: "")).append(",")
+            sb.append(holding.costBasis ?: "").append(",")
+            sb.append(holding.yieldRate ?: "")
             sb.append("\n")
         }
 

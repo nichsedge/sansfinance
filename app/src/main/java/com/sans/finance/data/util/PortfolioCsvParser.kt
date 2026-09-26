@@ -41,7 +41,9 @@ object PortfolioCsvParser {
                     valueIdr = values[7].toDoubleOrNull() ?: 0.0,
                     assetClass = if (values.size > 8) values[8] else "Other",
                     account = if (values.size > 9) values[9] else "",
-                    details = if (values.size > 10) values[10] else null
+                    details = if (values.size > 10) values[10] else null,
+                    costBasis = if (values.size > 11) values[11].toDoubleOrNull() else null,
+                    yieldRate = if (values.size > 12) values[12].toDoubleOrNull() else null
                 )
 
                 holdingsByDate.getOrPut(currentLineDate) { mutableListOf() }.add(holding)

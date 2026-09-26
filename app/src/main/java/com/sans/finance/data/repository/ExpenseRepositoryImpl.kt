@@ -466,6 +466,11 @@ class ExpenseRepositoryImpl(
                 }
             } else {
                 val categories = categoryDao.getAllCategoriesSync()
+                val adjustmentTag = tagDao.getTagByName("Adjustment")
+                val tagId = adjustmentTag?.id ?: tagDao.insertTag(
+                    com.sans.finance.data.local.entity.TagEntity(name = "Adjustment")
+                )
+
                 dryRunResults.forEach { result ->
                     if (result.isDifferenceExist) {
                         val delta = result.delta
@@ -487,14 +492,22 @@ class ExpenseRepositoryImpl(
                                     it.type == newType && (it.name.contains("Misc", ignoreCase = true) || it.name.contains("Other", ignoreCase = true))
                                 } ?: categories.firstOrNull { it.type == newType }
 
+                                val resolvedCategoryId = targetCategory?.id
+                                    ?: categories.firstOrNull { it.type == newType }?.id
+                                    ?: categories.firstOrNull()?.id
+                                    ?: 1L
+
                                 dao.updateExpense(
                                     existingAdjustment.copy(
                                         amount = newAmount,
                                         type = newType,
-                                        categoryId = targetCategory?.id ?: 1L,
+                                        categoryId = resolvedCategoryId,
                                         updatedAt = System.currentTimeMillis()
                                     )
                                 )
+                                dao.insertExpenseTagCrossRefs(listOf(
+                                    com.sans.finance.data.local.entity.ExpenseTagCrossRef(existingAdjustment.id, tagId)
+                                ))
                             }
                         } else {
                             val isIncome = delta < 0L
@@ -504,12 +517,17 @@ class ExpenseRepositoryImpl(
                                 it.type == type && (it.name.contains("Misc", ignoreCase = true) || it.name.contains("Other", ignoreCase = true))
                             } ?: categories.firstOrNull { it.type == type }
 
+                            val resolvedCategoryId = targetCategory?.id
+                                ?: categories.firstOrNull { it.type == type }?.id
+                                ?: categories.firstOrNull()?.id
+                                ?: 1L
+
                             val expenseEntity = com.sans.finance.data.local.entity.ExpenseEntity(
                                 date = adjustmentDate,
                                 title = "Balance Adjustment",
                                 details = "System generated to match actual account balance during re-sync.",
                                 amount = amount,
-                                categoryId = targetCategory?.id ?: 1L,
+                                categoryId = resolvedCategoryId,
                                 accountId = result.accountId,
                                 type = type,
                                 currency = result.currency,
@@ -518,10 +536,8 @@ class ExpenseRepositoryImpl(
                                 isInstallment = false
                             )
                             val newId = dao.insertExpense(expenseEntity)
-                            // Note: Tag sync should be handled by TagRepository if needed,
-                            // but for simplicity here we might keep a direct DAO call if it's internal re-sync
                             dao.insertExpenseTagCrossRefs(listOf(
-                                com.sans.finance.data.local.entity.ExpenseTagCrossRef(newId, 1L) // Assuming tag 1 is Adjustment
+                                com.sans.finance.data.local.entity.ExpenseTagCrossRef(newId, tagId)
                             ))
                         }
                     }
@@ -700,10 +716,56 @@ class ExpenseRepositoryImpl(
             val projectedExpenses = projectRecurringOccurrences(
                 recurringEntities = recurringEntities,
                 since = 0L,
-                until = now + (365L * 86400000L),
+                until = now,
                 categoryIds = listOf(categoryId),
                 types = listOf(type)
             )
+
+            if (projectedExpenses.isEmpty()) {
+                dbMonthly
+            } else {
+                val monthlyMap = dbMonthly.associateBy { getStartOfMonth(it.day) }.toMutableMap()
+                for (expense in projectedExpenses) {
+                    val monthMs = getStartOfMonth(expense.date)
+                    val rate = if (expense.currency == "IDR") 1.0 else ratesMap[expense.currency] ?: 1.0
+                    val amountInIdr = (expense.amount * rate).toLong()
+                    val existing = monthlyMap[monthMs]
+                    if (existing != null) {
+                        monthlyMap[monthMs] = existing.copy(amount = existing.amount + amountInIdr)
+                    } else {
+                        monthlyMap[monthMs] = DaySpent(day = monthMs, amount = amountInIdr)
+                    }
+                }
+                monthlyMap.values.sortedBy { it.day }
+            }
+        }
+    }
+
+    override fun getMonthlyBreakdownByCategoryBetween(
+        since: Long,
+        until: Long,
+        categoryId: Long,
+        type: String
+    ): Flow<List<DaySpent>> {
+        val monthlyFlow = dao.getMonthlyBreakdownByCategoryBetween(since, until, categoryId, type)
+        val recurringFlow = dao.getRecurringExpenses()
+        val ratesFlow = db.currencyDao.getAllRates()
+
+        return combine(monthlyFlow, recurringFlow, ratesFlow) { dbMonthly, recurringEntities, rates ->
+            val ratesMap = rates.associate { it.code to it.rateToIdr }
+            val now = System.currentTimeMillis()
+            val effectiveUntil = minOf(until, now)
+            val projectedExpenses = if (since < effectiveUntil) {
+                projectRecurringOccurrences(
+                    recurringEntities = recurringEntities,
+                    since = since,
+                    until = effectiveUntil,
+                    categoryIds = listOf(categoryId),
+                    types = listOf(type)
+                )
+            } else {
+                emptyList()
+            }
 
             if (projectedExpenses.isEmpty()) {
                 dbMonthly

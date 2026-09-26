@@ -36,7 +36,8 @@ object PortfolioJsonExporter {
                 valueUsd = 0.0, // Assuming 0 for now as we mostly use IDR
                 assetClass = holding.assetClass,
                 account = holding.account,
-                details = holding.details
+                details = holding.details,
+                costBasis = holding.costBasis
             )
         }
 

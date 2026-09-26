@@ -23,30 +23,11 @@ if not DATA_DIR:
 SNAPSHOT_PATTERN = re.compile(r".*_snapshot\.json$")
 
 def load_r2_credentials():
-    """Load R2 credentials from environment or creds directory."""
+    """Load R2 credentials directly from environment variables."""
     account_id = os.getenv("R2_ACCOUNT_ID") or os.getenv("CLOUDFLARE_ACCOUNT_ID")
     access_key = os.getenv("R2_ACCESS_KEY_ID") or os.getenv("AWS_ACCESS_KEY_ID")
     secret_key = os.getenv("R2_SECRET_ACCESS_KEY") or os.getenv("AWS_SECRET_ACCESS_KEY")
     bucket_name = os.getenv("R2_BUCKET_NAME") or os.getenv("PORTFOLIO_R2_BUCKET")
-
-    if not (account_id and access_key and secret_key):
-        candidates = [
-            os.path.join(PROJECTS_DIR, "creds", "cloudflare", "r2_cred.json"),
-            os.path.join(SANS_FINANCE_DIR, "app", "src", "main", "assets", "r2_cred.json")
-        ]
-        for candidate in candidates:
-            if os.path.exists(candidate):
-                try:
-                    with open(candidate, "r") as f:
-                        data = json.load(f)
-                    account_id = account_id or data.get("account_id")
-                    access_key = access_key or data.get("access_key_id")
-                    secret_key = secret_key or data.get("secret_access_key")
-                    bucket_name = bucket_name or data.get("bucket_name")
-                    if account_id and access_key and secret_key:
-                        break
-                except Exception:
-                    pass
 
     return account_id, access_key, secret_key, bucket_name or "ichsanul-dev"
 
@@ -61,7 +42,7 @@ def download_snapshots_from_r2(bucket_name, temp_dir, existing_dates=None):
     account_id, access_key, secret_key, default_bucket = load_r2_credentials()
     bucket = bucket_name or default_bucket
     if not (account_id and access_key and secret_key):
-        print("ℹ️ Direct S3 API keys not found in creds/cloudflare/r2_cred.json. Checking for latest snapshot via Wrangler...")
+        print("ℹ️ Direct S3 API keys not found in environment variables. Checking for latest snapshot via Wrangler...")
         import shutil
         import subprocess
         wrangler_cmd = ["bunx", "wrangler"] if not shutil.which("wrangler") else ["wrangler"]
@@ -73,7 +54,7 @@ def download_snapshots_from_r2(bucket_name, temp_dir, existing_dates=None):
             print(f"✅ Downloaded snapshots/latest.json from Cloudflare R2.")
             return True
         else:
-            print("💡 Note: To download all historical snapshots from Cloudflare R2, add access_key_id & secret_access_key to creds/cloudflare/r2_cred.json")
+            print("💡 Note: To download all historical snapshots from Cloudflare R2, set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY in environment.")
             return False
 
     if existing_dates is None:

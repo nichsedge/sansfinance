@@ -320,13 +320,13 @@ interface ExpenseDao {
         FROM (
             SELECT CAST(strftime('%s', date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, amount as amount
             FROM expenses
-            WHERE type = :type AND category_id = :categoryId AND is_installment = 0
+            WHERE type = :type AND category_id = :categoryId AND is_installment = 0 AND date > 0
             UNION ALL
             SELECT CAST(strftime('%s', due_date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, ii.amount
             FROM installment_items ii
             JOIN installments i ON ii.installment_id = i.id
             JOIN expenses e ON i.expense_id = e.id
-            WHERE :type = 'EXPENSE' AND e.category_id = :categoryId AND ii.status = 'Paid'
+            WHERE :type = 'EXPENSE' AND e.category_id = :categoryId AND ii.status = 'Paid' AND ii.due_date > 0
         ) sub
         GROUP BY day
         ORDER BY day ASC
@@ -336,5 +336,31 @@ interface ExpenseDao {
         categoryId: Long,
         type: String
     ): Flow<List<com.sans.finance.domain.model.DaySpent>>
+
+    @Query(
+        """
+        SELECT day, SUM(amount) as amount
+        FROM (
+            SELECT CAST(strftime('%s', date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, amount as amount
+            FROM expenses
+            WHERE type = :type AND category_id = :categoryId AND is_installment = 0 AND date > 0 AND date >= :since AND date < :until
+            UNION ALL
+            SELECT CAST(strftime('%s', due_date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, ii.amount
+            FROM installment_items ii
+            JOIN installments i ON ii.installment_id = i.id
+            JOIN expenses e ON i.expense_id = e.id
+            WHERE :type = 'EXPENSE' AND e.category_id = :categoryId AND ii.status = 'Paid' AND ii.due_date > 0 AND ii.due_date >= :since AND ii.due_date < :until
+        ) sub
+        GROUP BY day
+        ORDER BY day ASC
+    """
+    )
+    fun getMonthlyBreakdownByCategoryBetween(
+        since: Long,
+        until: Long,
+        categoryId: Long,
+        type: String
+    ): Flow<List<com.sans.finance.domain.model.DaySpent>>
 }
+
 

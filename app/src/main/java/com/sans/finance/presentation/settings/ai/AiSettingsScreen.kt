@@ -54,7 +54,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -76,8 +76,7 @@ fun AiSettingsScreen(
     val models by viewModel.models.collectAsStateWithLifecycle()
     val isLoadingModels by viewModel.isLoadingModels.collectAsStateWithLifecycle()
 
-    @Suppress("DEPRECATION")
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -278,10 +277,12 @@ fun AiSettingsScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     IconButton(
                                         onClick = {
-                                            val clip = clipboardManager.getText()?.text
-                                            if (!clip.isNullOrBlank()) {
-                                                viewModel.setOpenRouterApiKey(clip.trim())
-                                                scope.launch {
+                                            scope.launch {
+                                                val clip = clipboard.getClipEntry()?.clipData
+                                                    ?.takeIf { it.itemCount > 0 }
+                                                    ?.getItemAt(0)?.text?.toString()
+                                                if (!clip.isNullOrBlank()) {
+                                                    viewModel.setOpenRouterApiKey(clip.trim())
                                                     snackbarHostState.showSnackbar("API key ditempel dari clipboard")
                                                 }
                                             }
@@ -382,10 +383,12 @@ fun AiSettingsScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     IconButton(
                                         onClick = {
-                                            val clip = clipboardManager.getText()?.text
-                                            if (!clip.isNullOrBlank()) {
-                                                viewModel.setOpenAiApiKey(clip.trim())
-                                                scope.launch {
+                                            scope.launch {
+                                                val clip = clipboard.getClipEntry()?.clipData
+                                                    ?.takeIf { it.itemCount > 0 }
+                                                    ?.getItemAt(0)?.text?.toString()
+                                                if (!clip.isNullOrBlank()) {
+                                                    viewModel.setOpenAiApiKey(clip.trim())
                                                     snackbarHostState.showSnackbar("API key ditempel dari clipboard")
                                                 }
                                             }

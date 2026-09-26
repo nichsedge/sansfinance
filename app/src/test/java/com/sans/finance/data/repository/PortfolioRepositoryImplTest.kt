@@ -24,7 +24,8 @@ class PortfolioRepositoryImplTest {
             dao = dao,
             targetDao = mockk(relaxed = true),
             expenseDao = mockk(relaxed = true),
-            accountDao = mockk(relaxed = true)
+            accountDao = mockk(relaxed = true),
+            accountTypeDao = mockk(relaxed = true)
         )
     }
 

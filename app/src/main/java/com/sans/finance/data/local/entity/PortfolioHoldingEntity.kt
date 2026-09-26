@@ -39,5 +39,7 @@ data class PortfolioHoldingEntity(
     @ColumnInfo(name = "account_key") val accountKey: String? = null,
     @ColumnInfo(name = "account_name") val accountName: String? = null,
     val account: String,
-    val details: String?
+    val details: String?,
+    @ColumnInfo(name = "cost_basis") val costBasis: Double? = null,
+    @ColumnInfo(name = "yield_rate") val yieldRate: Double? = null
 )

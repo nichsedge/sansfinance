@@ -41,13 +41,18 @@ class GetDividendYieldSummaryUseCase @Inject constructor(
                 val code = holding.asset.uppercase()
                 val meta = metadataMap[code]
 
-                // Default yield: Sukuk/Bond rate from metadata, or standard equity dividend yield if annotated
-                val yieldRate = meta?.rate ?: when {
-                    holding.assetClass.contains("Bond", ignoreCase = true) ||
-                    holding.assetClass.contains("Fixed Income", ignoreCase = true) -> 0.0625
-                    holding.assetClass.contains("Dividend", ignoreCase = true) -> 0.045
-                    else -> 0.0
-                }
+                // Real yield hierarchy:
+                // 1. Holding's own yieldRate (enriched from upstream R2 snapshot)
+                // 2. Metadata rate from investment_metadata table
+                // 3. Fallback rule based on asset class
+                val yieldRate = holding.yieldRate?.takeIf { it > 0 }
+                    ?: meta?.rate
+                    ?: when {
+                        holding.assetClass.contains("Bond", ignoreCase = true) ||
+                        holding.assetClass.contains("Fixed Income", ignoreCase = true) -> 0.0625
+                        holding.assetClass.contains("Dividend", ignoreCase = true) -> 0.045
+                        else -> 0.0
+                    }
 
                 val holdingValueInIdr = holding.valueIdr
                 val currentValueInBase = if (baseRate > 0) holdingValueInIdr / baseRate else holding.valueIdr

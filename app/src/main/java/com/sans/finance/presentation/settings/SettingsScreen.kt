@@ -1366,7 +1366,7 @@ private fun R2ConfigDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    "Enter your Cloudflare R2 API credentials or leave configured in assets/r2_cred.json.",
+                    "Enter your Cloudflare R2 API credentials.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

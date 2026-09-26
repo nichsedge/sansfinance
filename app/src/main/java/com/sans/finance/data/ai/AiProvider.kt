@@ -11,6 +11,23 @@ import kotlinx.coroutines.flow.Flow
 interface AiProvider {
     suspend fun generateMonthlyReview(input: MonthlyReviewInput): MonthlyReviewResult
     suspend fun generatePortfolioAnalysis(input: PortfolioAnalysisInput): PortfolioAnalysisResult
+
+    /**
+     * Stream a portfolio analysis via SSE or fallback. Emits [StreamEvent.TextDelta] for each token,
+     * [StreamEvent.Done] when complete, or [StreamEvent.Error] on failure.
+     * Default implementation falls back to non-streaming [generatePortfolioAnalysis].
+     */
+    fun streamPortfolioAnalysis(
+        input: PortfolioAnalysisInput
+    ): Flow<StreamEvent> = kotlinx.coroutines.flow.flow {
+        val response = generatePortfolioAnalysis(input)
+        val text = response.rawText ?: (response.summary + "\n\n" + response.insights.joinToString("\n\n") {
+            "• **${it.title}** (${it.importance})\n  *Observasi:* ${it.observation}\n  *Saran:* ${it.suggestion}"
+        })
+        emit(StreamEvent.TextDelta(text))
+        emit(StreamEvent.Done(text))
+    }
+
     suspend fun parseReceiptOrChat(
         userMessage: String,
         accounts: List<AccountSummary>,

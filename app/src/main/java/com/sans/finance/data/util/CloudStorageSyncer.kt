@@ -82,7 +82,7 @@ object CloudStorageSyncer {
     ): Result<File> = withContext(Dispatchers.IO) {
         val provider = getActiveProvider(prefs)
         when (provider) {
-            CloudStorageProvider.CLOUDFLARE_R2 -> downloadDatabaseBackupFromR2(context, destFile, prefs)
+            CloudStorageProvider.CLOUDFLARE_R2 -> downloadDatabaseBackupFromR2(destFile, prefs)
             CloudStorageProvider.GCS -> Result.failure(Exception("GCS backup download not supported"))
         }
     }
@@ -93,7 +93,7 @@ object CloudStorageSyncer {
     ): SnapshotImportResult = withContext(Dispatchers.IO) {
         val provider = getActiveProvider(prefs)
         when (provider) {
-            CloudStorageProvider.CLOUDFLARE_R2 -> downloadLatestSnapshotFromR2(context, prefs)
+            CloudStorageProvider.CLOUDFLARE_R2 -> downloadLatestSnapshotFromR2(prefs)
             CloudStorageProvider.GCS -> downloadLatestSnapshotFromGcs(context, prefs)
         }
     }
@@ -107,24 +107,7 @@ object CloudStorageSyncer {
         }
     }
 
-    fun loadR2Config(context: Context, prefs: UserPreferences): CloudflareR2Config {
-        if (prefs.r2AccountId.isNotBlank() && prefs.r2AccessKeyId.isNotBlank() && prefs.r2SecretAccessKey.isNotBlank()) {
-            return CloudflareR2Config(prefs.r2AccountId, prefs.r2AccessKeyId, prefs.r2SecretAccessKey, prefs.r2BucketName.ifBlank { "ichsanul-dev" })
-        }
-
-        try {
-            val jsonString = context.assets.open("r2_cred.json").use { inputStream ->
-                inputStream.bufferedReader().use { it.readText() }
-            }
-            val json = JSONObject(jsonString)
-            return CloudflareR2Config(
-                accountId = json.optString("account_id", ""),
-                accessKeyId = json.optString("access_key_id", ""),
-                secretAccessKey = json.optString("secret_access_key", ""),
-                bucketName = json.optString("bucket_name", prefs.r2BucketName.ifBlank { "ichsanul-dev" })
-            )
-        } catch (_: Exception) {}
-
+    fun loadR2Config(prefs: UserPreferences): CloudflareR2Config {
         return CloudflareR2Config(
             accountId = prefs.r2AccountId,
             accessKeyId = prefs.r2AccessKeyId,
@@ -209,7 +192,7 @@ object CloudStorageSyncer {
         try {
             if (!dbFile.exists()) return@withContext Result.failure(Exception("Database file not found"))
 
-            val r2Config = loadR2Config(context, prefs)
+            val r2Config = loadR2Config(prefs)
             if (!r2Config.isValid) return@withContext Result.failure(Exception("R2 not configured"))
 
             val fileBytes = dbFile.readBytes()
@@ -233,12 +216,11 @@ object CloudStorageSyncer {
     }
 
     private suspend fun downloadDatabaseBackupFromR2(
-        context: Context,
         destFile: File,
         prefs: UserPreferences
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
-            val r2Config = loadR2Config(context, prefs)
+            val r2Config = loadR2Config(prefs)
             if (!r2Config.isValid) return@withContext Result.failure(Exception("R2 not configured"))
 
             val objectKey = "db/sans_finance_latest.sqlite"
@@ -302,10 +284,9 @@ object CloudStorageSyncer {
     }
 
     private suspend fun downloadLatestSnapshotFromR2(
-        context: Context,
         prefs: UserPreferences
     ): SnapshotImportResult = withContext(Dispatchers.IO) {
-        val r2Config = loadR2Config(context, prefs)
+        val r2Config = loadR2Config(prefs)
         val objectKey = "snapshots/latest.json"
         val host = "${r2Config.accountId}.r2.cloudflarestorage.com"
         val canonicalUri = "/${r2Config.bucketName}/$objectKey"

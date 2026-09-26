@@ -12,7 +12,8 @@ data class ValuedHolding(
     val priceGainInBase: Double,
     val fxGainInBase: Double,
     val totalGainInBase: Double,
-    val totalGainPercentage: Double
+    val totalGainPercentage: Double,
+    val hasCostBasis: Boolean = false
 )
 
 data class MultiCurrencyPortfolioValuation(
@@ -24,7 +25,8 @@ data class MultiCurrencyPortfolioValuation(
     val totalGainInBase: Double,
     val totalGainPercentage: Double,
     val valuedHoldings: List<ValuedHolding>,
-    val currencyBreakdowns: Map<String, CurrencyValuationSummary>
+    val currencyBreakdowns: Map<String, CurrencyValuationSummary>,
+    val hasCostBasis: Boolean = false
 )
 
 data class CurrencyValuationSummary(

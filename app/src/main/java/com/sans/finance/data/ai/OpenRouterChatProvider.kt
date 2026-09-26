@@ -200,6 +200,126 @@ class OpenRouterChatProvider(
         )
     }
 
+    override fun streamPortfolioAnalysis(input: PortfolioAnalysisInput): Flow<StreamEvent> = callbackFlow {
+        val systemPrompt = """
+            You are an elite sovereign wealth advisor and portfolio strategist for a personal finance app.
+            Provide a thorough, highly insightful portfolio health diagnosis and tactical rebalancing advisory in Bahasa Indonesia (with clean financial terminology).
+            Format your response in clean, beautiful Markdown with these sections:
+            1. 🎯 **Ringkasan Kesehatan & Alokasi Portofolio** (Analisis diversifikasi, konsentrasi aset, cash drag)
+            2. ⚠️ **Observasi Kritis & Risiko** (Identifikasi aset overweight/underweight terhadap target, risiko likuiditas/inflasi)
+            3. 💡 **Rekomendasi Aksi Rebalancing Taktis** (Langkah konkret alokasi dana baru / cash injection tanpa memicu taxable sales, strategi optimasi imbal hasil)
+            Keep it sharp, actionable, realistic, and tailored strictly to the portfolio numbers provided.
+        """.trimIndent()
+
+        val userPrompt = """
+            Tanggal Snapshot: ${input.dateLabel}
+            Mata Uang Basis: ${input.currency}
+            Total Nilai Portofolio: ${input.totalValue}
+            XIRR Kinerja: ${input.xirr ?: "N/A"}
+            Alokasi Kelas Aset: ${input.assetAllocation.joinToString { "${it.first}=${String.format(java.util.Locale.US, "%.1f", it.second)}%" }}
+            Status Kesehatan vs Target: ${input.healthStatus.joinToString()}
+            Progres Target Goals: ${input.goals.joinToString()}
+            Catatan Tambahan: ${input.notes}
+        """.trimIndent()
+
+        val bodyJson = buildJsonObject {
+            put("model", JsonPrimitive(model))
+            put("stream", JsonPrimitive(true))
+            put(
+                "messages",
+                buildJsonArray {
+                    add(
+                        buildJsonObject {
+                            put("role", JsonPrimitive("system"))
+                            put("content", JsonPrimitive(systemPrompt))
+                        }
+                    )
+                    add(
+                        buildJsonObject {
+                            put("role", JsonPrimitive("user"))
+                            put("content", JsonPrimitive(userPrompt))
+                        }
+                    )
+                }
+            )
+            put("temperature", JsonPrimitive(0.3))
+            put("max_tokens", JsonPrimitive(2048))
+        }
+
+        val request = Request.Builder()
+            .url("https://openrouter.ai/api/v1/chat/completions")
+            .header("Authorization", "Bearer $apiKey")
+            .header("Content-Type", "application/json")
+            .header("HTTP-Referer", appUrl)
+            .header("X-Title", appName)
+            .header("X-OpenRouter-Title", appName)
+            .post(bodyJson.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        var activeCall = streamingClient.newCall(request)
+        try {
+            var response = activeCall.execute()
+
+            if (!response.isSuccessful && response.code == 400) {
+                val errorBody = response.body.string()
+                if (errorBody.contains("reasoning", ignoreCase = true) || errorBody.contains("unrecognized", ignoreCase = true)) {
+                    val fallbackBody = buildJsonObject {
+                        bodyJson.forEach { (k, v) ->
+                            if (k != "reasoning") put(k, v)
+                        }
+                    }
+                    val retryReq = request.newBuilder()
+                        .post(fallbackBody.toString().toRequestBody("application/json".toMediaType()))
+                        .build()
+                    activeCall = streamingClient.newCall(retryReq)
+                    response = activeCall.execute()
+                } else {
+                    trySend(StreamEvent.Error(parseOpenRouterError(response.code, errorBody)))
+                    close()
+                    return@callbackFlow
+                }
+            }
+
+            if (!response.isSuccessful) {
+                val errorBody = response.body.string()
+                trySend(StreamEvent.Error(parseOpenRouterError(response.code, errorBody)))
+                close()
+                return@callbackFlow
+            }
+
+            val fullText = StringBuilder()
+            val source = response.body.source()
+
+            while (!source.exhausted()) {
+                val line = source.readUtf8Line() ?: continue
+                if (line.isBlank() || !line.startsWith("data: ")) continue
+
+                val data = line.removePrefix("data: ").trim()
+                if (data == "[DONE]") break
+
+                try {
+                    val chunk = json.parseToJsonElement(data).jsonObject
+                    val deltaObj = chunk["choices"]?.jsonArray?.firstOrNull()?.jsonObject
+                        ?.get("delta")?.jsonObject
+                    val contentDelta = deltaObj?.get("content")?.jsonPrimitive?.contentOrNull
+
+                    if (!contentDelta.isNullOrEmpty()) {
+                        fullText.append(contentDelta)
+                        trySend(StreamEvent.TextDelta(contentDelta))
+                    }
+                } catch (_: Exception) {}
+            }
+
+            trySend(StreamEvent.Done(fullText.toString()))
+            close()
+        } catch (e: Exception) {
+            trySend(StreamEvent.Error(e.localizedMessage ?: e.message ?: "Unknown streaming error"))
+            close()
+        }
+
+        awaitClose { activeCall.cancel() }
+    }.flowOn(Dispatchers.IO)
+
     private fun parsePortfolioJsonResult(text: String): PortfolioAnalysisResult? {
         val clean = AiJsonParser.extractJsonString(text)
         return runCatching {
@@ -250,8 +370,9 @@ class OpenRouterChatProvider(
 
             Capabilities & Modes:
             1. CONVERSATIONAL & FINANCIAL ADVICE MODE:
-               - When the user asks financial questions, inquires about their current expenses, income, savings, cash balances, budgeting strategies (50/30/20, zero-based), emergency fund sizing, cash runway, FIRE targets, or debt payoff horizons:
+               - When the user asks financial questions, inquires about their net worth, portfolio, investments, current expenses, income, savings, cash balances, budgeting strategies (50/30/20, zero-based), emergency fund sizing, cash runway, FIRE targets, or debt payoff horizons:
                - Use the real figures provided in the Financial Snapshot above to answer accurately and concretely.
+               - Net Worth & Asset Invariant: When asked about net worth or total wealth, ALWAYS cite the exact Total Net Worth from [Balance Sheet & Net Worth Overview]. Net Worth = Total Assets (Liquid Cash + Investment Portfolio) - Liabilities. NEVER report net worth based solely on cash/bank accounts when an investment portfolio exists. Always clearly break down the composition (Net Worth, Liquid Cash & Bank, Investment Portfolio with allocation and top holdings, and any Liabilities/Debts).
                - Provide a clear, insightful, motivating, and mathematically sound answer in Indonesian (or English if prompted in English).
                - Set "proposals": [] (empty array). Do NOT invent fictional transactions.
 
@@ -537,6 +658,10 @@ class OpenRouterChatProvider(
         1. CONVERSATIONAL & FINANCIAL COPILOT MODE:
            - You are SansAI, an elite, data-driven personal wealth and cashflow intelligence copilot for Sans Finance.
            - Grounding Invariant: Thoroughly inspect the Real-time Financial Context provided in the context turn. Never say historical data is unavailable when previous month (M-1) or 3-month baseline is present. Always cite exact numbers, percentages, and deltas between months.
+           - Net Worth & Balance Sheet Invariant:
+             * When the user asks about their net worth ("berapa net worth saya?", "total kekayaan saya"), ALWAYS cite the exact Total Net Worth from [Balance Sheet & Net Worth Overview].
+             * Never fetch or calculate net worth from cash/bank accounts alone! Net Worth = Total Assets (Liquid Cash + Investment Portfolio) - Liabilities.
+             * Always break down the composition clearly: Net Worth, Liquid Cash & Bank, Investment Portfolio (including asset allocation and top holdings), and any Liabilities/Debts.
            - Deep Expense & Variance Analysis:
              * When the user asks why they spent so much ("kok boros?", "kenapa naik?"), do NOT give generic platitudes (e.g. "cabut colokan listrik", "kurangi AC", "gunakan metode 50/30/20").
              * Compare Current Month vs Previous Month and 3-Month Rolling Average directly.
@@ -694,7 +819,43 @@ class OpenRouterChatProvider(
         if (snapshot == null) return ""
         val sb = StringBuilder()
         sb.append("=== Real-time Financial Context & Metrics ===\n")
-        sb.append("[Current Month: ${snapshot.monthLabel.ifBlank { "Current Month" }}]\n")
+
+        // 1. Balance Sheet & Net Worth Overview
+        sb.append("[Balance Sheet & Net Worth Overview]\n")
+        sb.append("- Total Net Worth: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.netWorth, baseCurrency)}\n")
+        sb.append("- Total Assets: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.totalAssets, baseCurrency)}\n")
+        sb.append("  * Liquid Cash & Bank: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.liquidCashAssets, baseCurrency)}\n")
+        sb.append("  * Investment Portfolio: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.portfolioInvestmentValue, baseCurrency)}\n")
+        sb.append("- Total Liabilities / Debts: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.totalLiabilities, baseCurrency)}\n")
+        if (snapshot.runwayMonths > 0.0) {
+            sb.append("- Emergency Runway: ${String.format(java.util.Locale.US, "%.1f", snapshot.runwayMonths)} months of expenses\n")
+        }
+        if (snapshot.monthlyPassiveIncome > 0L || snapshot.annualPassiveIncome > 0L) {
+            sb.append("- Estimated Passive Income (Yield/Dividends/Coupons): ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.monthlyPassiveIncome, baseCurrency)}/month (${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.annualPassiveIncome, baseCurrency)}/year)\n")
+        }
+
+        // 2. Investment Portfolio Breakdown
+        if (snapshot.portfolioInvestmentValue > 0L || snapshot.portfolioAssetClassBreakdown.isNotEmpty() || snapshot.topPortfolioHoldings.isNotEmpty()) {
+            sb.append("\n[Investment Portfolio Allocation & Holdings]\n")
+            if (snapshot.portfolioAssetClassBreakdown.isNotEmpty()) {
+                sb.append("- Asset Allocation:\n")
+                snapshot.portfolioAssetClassBreakdown.forEach { (assetClass, amount) ->
+                    val pct = if (snapshot.portfolioInvestmentValue > 0) {
+                        (amount.toDouble() / snapshot.portfolioInvestmentValue.toDouble()) * 100.0
+                    } else 0.0
+                    sb.append("  * $assetClass: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(amount, baseCurrency)} (${String.format(java.util.Locale.US, "%.1f", pct)}%)\n")
+                }
+            }
+            if (snapshot.topPortfolioHoldings.isNotEmpty()) {
+                sb.append("- Top Holdings:\n")
+                snapshot.topPortfolioHoldings.forEach { (holdingName, amount) ->
+                    sb.append("  * $holdingName: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(amount, baseCurrency)}\n")
+                }
+            }
+        }
+
+        // 3. Current Month Cashflow
+        sb.append("\n[Current Month Cashflow: ${snapshot.monthLabel.ifBlank { "Current Month" }}]\n")
         sb.append("- Total Income: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.totalIncomeThisMonth, baseCurrency)}\n")
         sb.append("- Total Expense: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.totalExpenseThisMonth, baseCurrency)}\n")
         sb.append("- Net Cashflow: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.netCashflowThisMonth, baseCurrency)}\n")
@@ -732,8 +893,15 @@ class OpenRouterChatProvider(
         }
 
         if (snapshot.accountBalances.isNotEmpty()) {
-            sb.append("\n[Current Liquid Account Balances]:\n")
+            sb.append("\n[Liquid Bank & Cash Account Balances]:\n")
             snapshot.accountBalances.forEach { (name, balance) ->
+                sb.append("  * $name: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(balance, baseCurrency)}\n")
+            }
+        }
+
+        if (snapshot.liabilityAccountBalances.isNotEmpty()) {
+            sb.append("\n[Liabilities & Credit Accounts]:\n")
+            snapshot.liabilityAccountBalances.forEach { (name, balance) ->
                 sb.append("  * $name: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(balance, baseCurrency)}\n")
             }
         }

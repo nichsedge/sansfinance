@@ -149,7 +149,8 @@ class WealthViewModel @Inject constructor(
         val nextPayoutDateStr = "10 " + DateFormatterUtils.getMonthYearFormatter().format(nextPayoutCal.time)
 
         val liabilityTypeNames = accountTypes.filter { it.isLiability }.map { it.name }.toSet()
-        val nonLiabilityAccounts = accounts.filter { it.type !in liabilityTypeNames && it.type != "Investment" }
+        val investmentTypeNames = accountTypes.filter { it.isInvestment }.map { it.name }.toSet()
+        val nonLiabilityAccounts = accounts.filter { it.type !in liabilityTypeNames && it.type !in investmentTypeNames }
         val liabilityAccounts = accounts.filter { it.type in liabilityTypeNames }
 
         val latestPortfolioTotalIdr = portfolioHistory.lastOrNull()?.totalIdr ?: 0.0

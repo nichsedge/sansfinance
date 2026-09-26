@@ -27,14 +27,6 @@ class TagSettingsViewModel @Inject constructor(
         }
     }
 
-    fun onTagsReordered(reorderedTags: List<Tag>) {
-        viewModelScope.launch {
-            val updatedTags = reorderedTags.mapIndexed { index, tag ->
-                tag.copy(orderIndex = index)
-            }
-            repository.updateTags(updatedTags)
-        }
-    }
 
     fun deleteTag(tag: Tag) {
         viewModelScope.launch {

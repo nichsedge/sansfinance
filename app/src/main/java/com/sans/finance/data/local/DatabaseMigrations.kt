@@ -231,6 +231,26 @@ object DatabaseMigrations {
         }
     }
 
+    val MIGRATION_38_39 = object : Migration(38, 39) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `portfolio_holdings` ADD COLUMN `cost_basis` REAL")
+            db.execSQL("ALTER TABLE `account_types` ADD COLUMN `is_investment` INTEGER NOT NULL DEFAULT 0")
+            db.execSQL(
+                """
+                UPDATE `account_types` 
+                SET `is_investment` = 1 
+                WHERE LOWER(name) IN ('investment', 'rdn', 'broker', 'stocks', 'crypto', 'p2p lending')
+                """.trimIndent()
+            )
+        }
+    }
+
+    val MIGRATION_39_40 = object : Migration(39, 40) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `portfolio_holdings` ADD COLUMN `yield_rate` REAL")
+        }
+    }
+
     val ALL = arrayOf(
         MIGRATION_25_27,
         MIGRATION_27_28,
@@ -243,6 +263,8 @@ object DatabaseMigrations {
         MIGRATION_34_35,
         MIGRATION_35_36,
         MIGRATION_36_37,
-        MIGRATION_37_38
+        MIGRATION_37_38,
+        MIGRATION_38_39,
+        MIGRATION_39_40
     )
 }

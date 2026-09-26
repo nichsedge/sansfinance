@@ -250,6 +250,10 @@ class OpenAiResponsesProvider(
             1. CONVERSATIONAL & FINANCIAL COPILOT MODE:
                - You are SansAI, an elite, data-driven personal wealth and cashflow intelligence copilot for Sans Finance.
                - Grounding Invariant: Thoroughly inspect the Real-time Financial Context provided in the input. Never say historical data is unavailable when previous month (M-1) or 3-month baseline is present. Always cite exact numbers, percentages, and deltas between months.
+               - Net Worth & Balance Sheet Invariant:
+                 * When the user asks about their net worth ("berapa net worth saya?", "total kekayaan saya"), ALWAYS cite the exact Total Net Worth from [Balance Sheet & Net Worth Overview].
+                 * Never fetch or calculate net worth from cash/bank accounts alone! Net Worth = Total Assets (Liquid Cash + Investment Portfolio) - Liabilities.
+                 * Always break down the composition clearly: Net Worth, Liquid Cash & Bank, Investment Portfolio (including asset allocation and top holdings), and any Liabilities/Debts.
                - Deep Expense & Variance Analysis:
                  * When the user asks why they spent so much ("kok boros?", "kenapa naik?"), do NOT give generic platitudes (e.g. "cabut colokan listrik", "kurangi AC", "gunakan metode 50/30/20").
                  * Compare Current Month vs Previous Month and 3-Month Rolling Average directly.
@@ -347,7 +351,43 @@ class OpenAiResponsesProvider(
         if (snapshot == null) return ""
         val sb = StringBuilder()
         sb.append("=== Real-time Financial Context & Metrics ===\n")
-        sb.append("[Current Month: ${snapshot.monthLabel.ifBlank { "Current Month" }}]\n")
+
+        // 1. Balance Sheet & Net Worth Overview
+        sb.append("[Balance Sheet & Net Worth Overview]\n")
+        sb.append("- Total Net Worth: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.netWorth, baseCurrency)}\n")
+        sb.append("- Total Assets: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.totalAssets, baseCurrency)}\n")
+        sb.append("  * Liquid Cash & Bank: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.liquidCashAssets, baseCurrency)}\n")
+        sb.append("  * Investment Portfolio: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.portfolioInvestmentValue, baseCurrency)}\n")
+        sb.append("- Total Liabilities / Debts: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.totalLiabilities, baseCurrency)}\n")
+        if (snapshot.runwayMonths > 0.0) {
+            sb.append("- Emergency Runway: ${String.format(java.util.Locale.US, "%.1f", snapshot.runwayMonths)} months of expenses\n")
+        }
+        if (snapshot.monthlyPassiveIncome > 0L || snapshot.annualPassiveIncome > 0L) {
+            sb.append("- Estimated Passive Income (Yield/Dividends/Coupons): ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.monthlyPassiveIncome, baseCurrency)}/month (${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.annualPassiveIncome, baseCurrency)}/year)\n")
+        }
+
+        // 2. Investment Portfolio Breakdown
+        if (snapshot.portfolioInvestmentValue > 0L || snapshot.portfolioAssetClassBreakdown.isNotEmpty() || snapshot.topPortfolioHoldings.isNotEmpty()) {
+            sb.append("\n[Investment Portfolio Allocation & Holdings]\n")
+            if (snapshot.portfolioAssetClassBreakdown.isNotEmpty()) {
+                sb.append("- Asset Allocation:\n")
+                snapshot.portfolioAssetClassBreakdown.forEach { (assetClass, amount) ->
+                    val pct = if (snapshot.portfolioInvestmentValue > 0) {
+                        (amount.toDouble() / snapshot.portfolioInvestmentValue.toDouble()) * 100.0
+                    } else 0.0
+                    sb.append("  * $assetClass: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(amount, baseCurrency)} (${String.format(java.util.Locale.US, "%.1f", pct)}%)\n")
+                }
+            }
+            if (snapshot.topPortfolioHoldings.isNotEmpty()) {
+                sb.append("- Top Holdings:\n")
+                snapshot.topPortfolioHoldings.forEach { (holdingName, amount) ->
+                    sb.append("  * $holdingName: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(amount, baseCurrency)}\n")
+                }
+            }
+        }
+
+        // 3. Current Month Cashflow
+        sb.append("\n[Current Month Cashflow: ${snapshot.monthLabel.ifBlank { "Current Month" }}]\n")
         sb.append("- Total Income: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.totalIncomeThisMonth, baseCurrency)}\n")
         sb.append("- Total Expense: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.totalExpenseThisMonth, baseCurrency)}\n")
         sb.append("- Net Cashflow: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.netCashflowThisMonth, baseCurrency)}\n")
@@ -385,8 +425,15 @@ class OpenAiResponsesProvider(
         }
 
         if (snapshot.accountBalances.isNotEmpty()) {
-            sb.append("\n[Current Liquid Account Balances]:\n")
+            sb.append("\n[Liquid Bank & Cash Account Balances]:\n")
             snapshot.accountBalances.forEach { (name, balance) ->
+                sb.append("  * $name: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(balance, baseCurrency)}\n")
+            }
+        }
+
+        if (snapshot.liabilityAccountBalances.isNotEmpty()) {
+            sb.append("\n[Liabilities & Credit Accounts]:\n")
+            snapshot.liabilityAccountBalances.forEach { (name, balance) ->
                 sb.append("  * $name: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(balance, baseCurrency)}\n")
             }
         }

@@ -80,14 +80,18 @@ class GetDashboardSummaryUseCase @Inject constructor(
             val portfolioAssets = if (baseRate > 0) ((latestPortfolioIdr / baseRate) * 100).toLong() else 0L
 
             val liabilityTypeNames = finance.types.filter { it.isLiability }.map { it.name }.toSet()
+            val investmentTypeNames = finance.types.filter { it.isInvestment }.map { it.name }.toSet()
             val accountAssets = finance.accounts
-                .filter { it.type !in liabilityTypeNames && it.type != "Investment" }
+                .filter { it.type !in liabilityTypeNames && it.type !in investmentTypeNames }
+                .sumOf { convertToBase(it.balance, it.currency) }
+            val investmentAccountAssets = finance.accounts
+                .filter { it.type in investmentTypeNames }
                 .sumOf { convertToBase(it.balance, it.currency) }
             val accountLiabilities = finance.accounts
                 .filter { it.type in liabilityTypeNames }
                 .sumOf { convertToBase(it.balance, it.currency) }
 
-            val totalAssets = portfolioAssets + accountAssets
+            val totalAssets = portfolioAssets + accountAssets + investmentAccountAssets
             val totalLiabilities = accountLiabilities
 
             // Monthly Stats (converted from IDR aggregation)

@@ -209,9 +209,11 @@ fun AppNavigation(
         }
         composable<Screen.TransactionStats> {
             com.sans.finance.presentation.transaction_stats.TransactionStatsScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onExpenseClick = { id -> navController.navigate(Screen.EditExpense(id)) }
             )
         }
+
         composable<Screen.Settings> {
             SettingsScreen(
                 onBack = { navController.popBackStack() },

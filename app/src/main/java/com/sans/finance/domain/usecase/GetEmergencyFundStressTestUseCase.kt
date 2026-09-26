@@ -69,9 +69,10 @@ class GetEmergencyFundStressTestUseCase @Inject constructor(
             }
 
             val liabilityTypeNames = types.filter { it.isLiability }.map { it.name }.toSet()
+            val investmentTypeNames = types.filter { it.isInvestment }.map { it.name }.toSet()
 
             val liquidCash = accounts
-                .filter { it.type !in liabilityTypeNames && it.type != "Investment" }
+                .filter { it.type !in liabilityTypeNames && it.type !in investmentTypeNames }
                 .sumOf { convertToBase(it.balance, it.currency) }
 
             val portfolioValueIdr = holdings.sumOf { it.valueIdr }

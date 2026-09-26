@@ -12,10 +12,14 @@ import com.sans.finance.domain.model.ChatMessage
 import com.sans.finance.domain.model.ChatSender
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.model.StreamEvent
+import com.sans.finance.data.local.dao.CurrencyDao
 import com.sans.finance.domain.repository.AccountRepository
+import com.sans.finance.domain.repository.AccountTypeRepository
 import com.sans.finance.domain.repository.CategoryRepository
 import com.sans.finance.domain.repository.ExpenseRepository
+import com.sans.finance.domain.repository.PortfolioRepository
 import com.sans.finance.domain.usecase.AddTransactionUseCase
+import com.sans.finance.domain.usecase.GetWealthMetricsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -48,7 +52,11 @@ class AiChatViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val categoryRepository: CategoryRepository,
     private val expenseRepository: ExpenseRepository,
-    private val addTransactionUseCase: AddTransactionUseCase
+    private val addTransactionUseCase: AddTransactionUseCase,
+    private val getWealthMetricsUseCase: GetWealthMetricsUseCase,
+    private val portfolioRepository: PortfolioRepository,
+    private val accountTypeRepository: AccountTypeRepository,
+    private val currencyDao: CurrencyDao
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AiChatUiState())
@@ -450,7 +458,87 @@ class AiChatViewModel @Inject constructor(
             .take(5)
             .map { it.categoryName to it.totalAmount }
 
-        val accounts = accountRepository.getAllAccounts().first().map { it.name to it.balance }
+        // Wealth & Balance Sheet metrics
+        val wealthMetrics = runCatching { getWealthMetricsUseCase().first() }.getOrNull()
+        val rawAccounts = accountRepository.getAllAccounts().first()
+        val accountTypes = accountTypeRepository.getAllAccountTypes().first()
+        val holdings = runCatching { portfolioRepository.getLatestSnapshot().first() }.getOrDefault(emptyList())
+        val rates = currencyDao.getAllRates().first()
+        val ratesMap = rates.associate { it.code to it.rateToIdr }
+        val baseRate = if (baseCurrency == "IDR") 1.0 else ratesMap[baseCurrency] ?: 1.0
+
+        val convertToBase: (Long, String) -> Long = { amount, from ->
+            if (from == baseCurrency) amount
+            else {
+                val fromRate = if (from == "IDR") 1.0 else ratesMap[from] ?: 1.0
+                val toRate = baseRate
+                if (toRate == 0.0) amount else ((amount * fromRate) / toRate).toLong()
+            }
+        }
+
+        val convertHoldingIdrToCents: (Double) -> Long = { idrValue ->
+            if (baseRate > 0) ((idrValue / baseRate) * 100).toLong() else (idrValue * 100).toLong()
+        }
+
+        val liabilityTypeNames = accountTypes.filter { it.isLiability }.map { it.name }.toSet()
+        val investmentTypeNames = accountTypes.filter { it.isInvestment }.map { it.name }.toSet()
+
+        val liquidAccounts = rawAccounts
+            .filter { it.type !in liabilityTypeNames && it.type !in investmentTypeNames }
+            .map { "${it.name} (${it.type})" to convertToBase(it.balance, it.currency) }
+
+        val liabilityAccounts = rawAccounts
+            .filter { it.type in liabilityTypeNames }
+            .map { "${it.name} (${it.type})" to convertToBase(it.balance, it.currency) }
+
+        val investmentAccountAssets = rawAccounts
+            .filter { it.type in investmentTypeNames }
+            .sumOf { convertToBase(it.balance, it.currency) }
+
+        val liquidCashAssets = wealthMetrics?.cashAssets ?: liquidAccounts.sumOf { it.second }
+        val totalLiabilities = wealthMetrics?.liabilities ?: liabilityAccounts.sumOf { it.second }
+        val portfolioInvestmentValue = wealthMetrics?.portfolioValue ?: run {
+            val holdingsCents = convertHoldingIdrToCents(holdings.sumOf { it.valueIdr })
+            holdingsCents + investmentAccountAssets
+        }
+        val totalAssets = liquidCashAssets + portfolioInvestmentValue
+        val netWorth = totalAssets - totalLiabilities
+
+        val portfolioAssetClasses = holdings
+            .groupBy { holding ->
+                when {
+                    holding.assetClass.isNotBlank() -> holding.assetClass
+                    holding.category.isNotBlank() -> holding.category.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }
+                    else -> "Other Investments"
+                }
+            }
+            .mapValues { entry ->
+                convertHoldingIdrToCents(entry.value.sumOf { it.valueIdr })
+            }
+            .toList()
+            .filter { it.second > 0L }
+            .sortedByDescending { it.second }
+            .let { list ->
+                if (list.isEmpty() && investmentAccountAssets > 0L) {
+                    rawAccounts.filter { it.type in investmentTypeNames && it.balance > 0L }
+                        .map { it.type to convertToBase(it.balance, it.currency) }
+                } else list
+            }
+
+        val topHoldings = holdings
+            .sortedByDescending { it.valueIdr }
+            .take(8)
+            .map { holding ->
+                val assetName = holding.asset.ifBlank { holding.category }
+                val assetClass = holding.assetClass.ifBlank { holding.category }
+                "$assetName ($assetClass)" to convertHoldingIdrToCents(holding.valueIdr)
+            }
+            .let { list ->
+                if (list.isEmpty() && investmentAccountAssets > 0L) {
+                    rawAccounts.filter { it.type in investmentTypeNames && it.balance > 0L }
+                        .map { "${it.name} (${it.type})" to convertToBase(it.balance, it.currency) }
+                } else list
+            }
 
         val allMonthExpenses = expenseRepository.getExpensesBetween(startOfMonth, endOfMonth).first()
 
@@ -509,7 +597,8 @@ class AiChatViewModel @Inject constructor(
             netCashflowThisMonth = net,
             savingsRatePercentage = savingsRate,
             topExpenseCategories = topCategories,
-            accountBalances = accounts,
+            accountBalances = liquidAccounts,
+            liabilityAccountBalances = liabilityAccounts,
             recentTransactions = recentTx,
             prevMonthLabel = prevMonthLabel,
             prevMonthIncome = prevIncome,
@@ -517,7 +606,17 @@ class AiChatViewModel @Inject constructor(
             prevMonthSavingsRate = prevSavingsRate,
             prevMonthTopCategories = prevTopCategories,
             threeMonthAverageExpense = threeMonthAverageExpense,
-            topBigTicketExpenses = topBigTickets
+            topBigTicketExpenses = topBigTickets,
+            netWorth = netWorth,
+            totalAssets = totalAssets,
+            liquidCashAssets = liquidCashAssets,
+            portfolioInvestmentValue = portfolioInvestmentValue,
+            totalLiabilities = totalLiabilities,
+            runwayMonths = wealthMetrics?.runwayMonths ?: 0.0,
+            monthlyPassiveIncome = wealthMetrics?.monthlyPassiveIncome ?: 0L,
+            annualPassiveIncome = wealthMetrics?.annualPassiveIncome ?: 0L,
+            portfolioAssetClassBreakdown = portfolioAssetClasses,
+            topPortfolioHoldings = topHoldings
         )
     }
 }

@@ -77,11 +77,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalClipboard
+import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.sans.finance.core.util.CurrencyFormatter
 import com.sans.finance.domain.model.AccountSummary
 import com.sans.finance.domain.model.AiTransactionProposal
@@ -104,7 +106,8 @@ fun AiChatScreen(
     val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(state.messages.size) {
         if (state.messages.isNotEmpty()) {
@@ -166,9 +169,13 @@ fun AiChatScreen(
                             trailingIcon = {
                                 IconButton(
                                     onClick = {
-                                        val clip = clipboardManager.getText()?.text
-                                        if (!clip.isNullOrBlank()) {
-                                            viewModel.onInputTextChanged(clip)
+                                        coroutineScope.launch {
+                                            val clip = clipboard.getClipEntry()?.clipData
+                                                ?.takeIf { it.itemCount > 0 }
+                                                ?.getItemAt(0)?.text?.toString()
+                                            if (!clip.isNullOrBlank()) {
+                                                viewModel.onInputTextChanged(clip)
+                                            }
                                         }
                                     }
                                 ) {
@@ -521,7 +528,7 @@ fun AiProposalCard(
     val accentColor = if (isIncome) Color(0xFF2E7D32) else Color(0xFFC62828)
     val displayAmount = CurrencyFormatter.formatAmount(proposal.amountInCents, "IDR")
     val dateFormatted = remember(proposal.date) {
-        SimpleDateFormat("dd MMM yyyy", Locale("id", "ID")).format(Date(proposal.date))
+        SimpleDateFormat("dd MMM yyyy", Locale.of("id", "ID")).format(Date(proposal.date))
     }
 
     var showAccountMenu by remember { mutableStateOf(false) }

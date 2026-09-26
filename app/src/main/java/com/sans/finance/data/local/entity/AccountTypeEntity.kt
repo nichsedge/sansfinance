@@ -10,6 +10,7 @@ data class AccountTypeEntity(
     val name: String,
     val icon: String, // Icon name (e.g. "AccountBalance")
     val isLiability: Boolean = false,
+    @ColumnInfo(name = "is_investment") val isInvestment: Boolean = false,
     @ColumnInfo(name = "display_order") val displayOrder: Int = 0,
     val createdAt: Long = System.currentTimeMillis()
 )

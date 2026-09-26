@@ -42,20 +42,24 @@ Alternatively, use the Gradle wrapper:
 
 Min/target SDK is 36.
 
-## Remote Android Debugging & Deployment (Tailscale + Wireless ADB)
+## Android Debugging & Deployment (USB & Wireless ADB)
 
+### 1. Direct USB Deployment (Default / Wired)
+When connected via USB cable with **USB debugging** (and **Install via USB** on Xiaomi/HyperOS) enabled:
+- Verify device: `adb devices`
+- Build & install: `make run` (or `./gradlew :app:assembleDebug && adb install -r app/build/outputs/apk/debug/app-debug.apk`)
+
+### 2. Remote Wireless ADB (Tailscale)
 To deploy and debug on physical Android devices remotely without a USB cable:
-
 1. **Verify Tailscale Connection**:
    - Check device IP via `tailscale status` (e.g. `100.110.101.84 xiaomi-14t-pro`).
 2. **Wireless Debugging & Pairing**:
-   - On Android (Developer Options): Enable **Wireless debugging** (and **Install via USB** on Xiaomi/HyperOS).
+   - On Android (Developer Options): Enable **Wireless debugging**.
    - Tap *Pair device with pairing code*.
    - Run `adb pair <TAILSCALE_IP>:<PAIRING_PORT> <6_DIGIT_CODE>`.
 3. **ADB Connect & Port Discovery**:
-   - Android uses a dynamic port for the ADB daemon (separate from the pairing port). Connect via `adb connect <TAILSCALE_IP>:<PORT>`.
+   - Connect via dynamic daemon port: `adb connect <TAILSCALE_IP>:<PORT>`.
 4. **Build & Install**:
-   - Build: `./gradlew :app:assembleDebug`
    - Install: `adb -s <TAILSCALE_IP>:<PORT> install -r app/build/outputs/apk/debug/app-debug.apk`
 
 ## High-Level Architecture
@@ -78,19 +82,22 @@ The project follows **Clean Architecture** with a Kotlin Multiplatform core.
   - `MaintainDatabaseUseCase` — SQLite `VACUUM` defragmentation, `PRAGMA optimize`, `ANALYZE`, and orphaned tag cleanup.
 
 **Data** (`app/src/main/java/com/sans/finance/data/`)
-- `local/entity/` — Room entities (database version 37).
+- `local/entity/` — Room entities (database version 40).
 - `local/dao/` — Room DAOs with complex queries for analytics.
 - `repository/` — Implementations mapping entities to domain models.
 
 **Presentation** (`app/presentation/`) — Compose + ViewModel + Jetpack Glance.
 - ViewModels use `StateFlow` to expose UI state.
-- Screen list: `Dashboard`, `ExpenseList`, `AddTransaction`, `SansAI` (Financial Copilot & Universal Transaction Ingestion with HITL Confirmation), `Wealth`, `Portfolio` (Overview, Health, Yield), `Goals`, `Budgets` (Safe-to-Spend runway), `Installments` (Horizon timeline), `MonthlyReview`, `DataManagement` (Database Optimization & Audit), `WealthForecasting` (Monte Carlo Simulation), etc.
+- Screen list: `Dashboard`, `ExpenseList`, `AddTransaction`, `SansAI` (Financial Copilot & Universal Transaction Ingestion with HITL Confirmation), `Wealth`, `Portfolio` (Overview with Interactive Search/Filter/Sort, Expandable Category Groups, Yield/Allocation Micro-Bars, Holding Detail Bottom Sheet, Helper Icon & Guide Bottom Sheet for Beginners/Experts with CSV & JSON ingestion, Real-Time Streaming AI Strategist with Auto-Navigation to Health & SSE Token Rendering, Health, Yield), `Goals`, `Budgets` (Safe-to-Spend runway), `Installments` (Horizon timeline), `MonthlyReview`, `DataManagement` (Database Optimization & Audit), `WealthForecasting` (Monte Carlo Simulation), etc.
 - Navigation: Type-safe routes using Kotlinx Serialization in `Screen.kt` with fluid Material 3 enter/exit motion transitions.
 - AppWidgets: Jetpack Glance-powered home screen widgets (`FinancialSummaryGlanceWidget`, `QuickAddGlanceWidget`) alongside legacy RemoteViews.
 
 ## Database
 
-Room database is at **version 38**. It includes:
+Room database is at **version 40**. It includes:
+- Typed `yield_rate` column on `portfolio_holdings` for real-world forward yield (APY / Dividend Yield) ingestion from upstream R2 snapshots without hardcoded fallbacks.
+- Typed `cost_basis` column on `portfolio_holdings` for deterministic unrealized capital gain tracking without string parsing.
+- Typed `is_investment` classification on `account_types` for first-class XIRR cashflow attribution without hardcoded broker names.
 - Recurring expense projection with end conditions (`recurrence_end_type`, `recurrence_end_date`, `recurrence_total_occurrences`, `recurrence_interval_multiplier`, `recurrence_status`)
 - Compound indices on `installment_items` (`due_date`, `status`) and `expenses` (`is_recurring`, `date`)
 - Multi-currency valuation with historical FX rates (`fx_rates` table via `FxRateEntity`)
@@ -112,6 +119,7 @@ Reference snapshot: `sans_finance_db_snapshot.sqlite`.
 - **Dual-Destination Archiving**: Every backup operation writes to both `db/sans_finance_latest.sqlite` and an immutable timestamped key `db/archive/sans_finance_yyyyMMdd_HHmmss.sqlite`.
 - **In-App Cloud Restore**: Settings screen provides a one-tap `[Restore]` button that verifies SQLite integrity before replacing local files and cleanly restarting the app.
 - **CLI Recovery Utility**: `scripts/restore_from_r2.sh` allows pulling and restoring verified snapshots directly to connected devices via ADB.
+- **CLI Cloud Sync Utility**: `scripts/pull_cloud_db.py` supports bidirectional SQLite snapshot transfers with Cloudflare R2 (`--push` to upload, default to download, `--list` to inspect archives).
 - Background sync and automated backups scheduled via Android `WorkManager` with exponential backoff retry policies.
 
 ## AI Integration Strategy
@@ -136,9 +144,11 @@ Reference snapshot: `sans_finance_db_snapshot.sqlite`.
   - **Account Currency Inheritance**: Created expenses must inherit the parent account's native currency (defaulting to `IDR`), never falling back to legacy `USD`.
 - **No On-Device AI / LLM**: Do not implement or suggest on-device LLMs or on-device AI engines (such as LiteRT-LM / edge SLMs). They introduce excessive battery drain, thermal throttling, and large binary footprints with negligible user benefit for personal finance. All core calculations must remain pure deterministic Kotlin algorithms, while complex LLM summaries use cloud APIs.
 
-## Coding Style
+## Coding Style & Modern Engineering Standards
 
-- Kotlin, JDK 17, 4-space indentation.
+- **Zero Deprecation Tolerance (`@Suppress("DEPRECATION")` Banned)**: Never suppress deprecations with `@Suppress("DEPRECATION")`. When an API, function, or class is deprecated, migrate immediately to the newest standard, non-deprecated alternative (e.g., `LocalClipboard` with `ClipEntry`, `Locale.of()`, `androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel`).
+- **No Backward Compatibility Shims**: Always target modern standards natively. Never write backward compatibility fallbacks or runtime SDK checks for APIs below `minSdk` (e.g., `Build.VERSION.SDK_INT >= UPSIDE_DOWN_CAKE` when `minSdk = 36`).
+- Kotlin, JDK 21, 4-space indentation.
 - Follow Clean Architecture patterns—keep business logic in Use Cases.
 - Use `MutableStateFlow` in ViewModels for state management.
 - Small, focused `@Composable` functions.

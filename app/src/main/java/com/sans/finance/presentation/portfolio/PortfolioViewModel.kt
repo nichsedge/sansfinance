@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -45,6 +46,7 @@ data class PortfolioScreenState(
     val totalPriceGainInBase: Double = 0.0,
     val totalGainInBase: Double = 0.0,
     val totalGainPercentage: Double = 0.0,
+    val hasCostBasis: Boolean = false,
     val currencyBreakdowns: List<com.sans.finance.domain.model.CurrencyValuationSummary> = emptyList(),
     val snapshotDates: List<Long> = emptyList(),
     val selectedDateIndex: Int = 0,
@@ -70,8 +72,15 @@ data class PortfolioScreenState(
     val cashInjectionResult: com.sans.finance.domain.usecase.CashInjectionRebalanceResult? = null,
     val aiAnalysis: com.sans.finance.data.ai.PortfolioAnalysisResult? = null,
     val isAiAnalyzing: Boolean = false,
+    val aiStreamingText: String = "",
     val benchmarkComparison: com.sans.finance.domain.model.PortfolioBenchmarkComparison? = null,
     val selectedBenchmark: com.sans.finance.domain.model.BenchmarkType = com.sans.finance.domain.model.BenchmarkType.SP500
+)
+
+data class PortfolioAiState(
+    val isAnalyzing: Boolean = false,
+    val streamingText: String = "",
+    val analysis: com.sans.finance.data.ai.PortfolioAnalysisResult? = null
 )
 
 @HiltViewModel
@@ -101,8 +110,8 @@ class PortfolioViewModel @Inject constructor(
     private val _selectedBenchmark = MutableStateFlow(com.sans.finance.domain.model.BenchmarkType.SP500)
     private val _chartMode = MutableStateFlow(0)
     private val _xirr = MutableStateFlow<Double?>(null)
-    private val _aiAnalysis = MutableStateFlow<com.sans.finance.data.ai.PortfolioAnalysisResult?>(null)
-    private val _isAiAnalyzing = MutableStateFlow(false)
+    private val _aiState = MutableStateFlow(PortfolioAiState())
+    private var aiStreamingJob: kotlinx.coroutines.Job? = null
     private val _sovereignAdvisor = MutableStateFlow<com.sans.finance.data.util.SovereignAdvisorJson?>(null)
     val sovereignAdvisor: StateFlow<com.sans.finance.data.util.SovereignAdvisorJson?> = _sovereignAdvisor.asStateFlow()
 
@@ -146,8 +155,7 @@ class PortfolioViewModel @Inject constructor(
         _cashInjectionAmount,
         _chartMode,
         _xirr,
-        _aiAnalysis,
-        _isAiAnalyzing,
+        _aiState,
         accountRepository.getAllAccounts(),
         accountTypeRepository.getAllAccountTypes(),
         currencyDao.getAllRates(),
@@ -171,20 +179,19 @@ class PortfolioViewModel @Inject constructor(
         val cashInjectionDeposit = args[8] as Double
         val chartMode = args[9] as Int
         val xirrValue = args[10] as Double?
-        val aiAnalysis = args[11] as com.sans.finance.data.ai.PortfolioAnalysisResult?
-        val isAiAnalyzing = args[12] as Boolean
+        val aiState = args[11] as PortfolioAiState
         @Suppress("UNCHECKED_CAST")
-        val accounts = args[13] as List<com.sans.finance.data.local.entity.AccountEntity>
+        val accounts = args[12] as List<com.sans.finance.data.local.entity.AccountEntity>
         @Suppress("UNCHECKED_CAST")
-        val accountTypes = args[14] as List<com.sans.finance.data.local.entity.AccountTypeEntity>
+        val accountTypes = args[13] as List<com.sans.finance.data.local.entity.AccountTypeEntity>
         @Suppress("UNCHECKED_CAST")
-        val rates = args[15] as List<com.sans.finance.data.local.entity.ExchangeRateEntity>
+        val rates = args[14] as List<com.sans.finance.data.local.entity.ExchangeRateEntity>
         @Suppress("UNCHECKED_CAST")
-        val aliases = args[16] as List<com.sans.finance.data.local.entity.AccountAliasEntity>
+        val aliases = args[15] as List<com.sans.finance.data.local.entity.AccountAliasEntity>
         @Suppress("UNCHECKED_CAST")
-        val allExpenses = args[17] as List<com.sans.finance.domain.model.Expense>
-        val dividendSummary = args[18] as com.sans.finance.domain.model.DividendYieldSummary
-        val selectedBenchmark = args[19] as com.sans.finance.domain.model.BenchmarkType
+        val allExpenses = args[16] as List<com.sans.finance.domain.model.Expense>
+        val dividendSummary = args[17] as com.sans.finance.domain.model.DividendYieldSummary
+        val selectedBenchmark = args[18] as com.sans.finance.domain.model.BenchmarkType
 
         val currency = localeManager.getCurrency()
 
@@ -205,28 +212,36 @@ class PortfolioViewModel @Inject constructor(
 
         val holdings = repository.getSnapshotByDateSync(selectedDate)
         val liabilityTypeNames = accountTypes.filter { it.isLiability }.map { it.name }.toSet()
+        val investmentTypeNames = accountTypes.filter { it.isInvestment }.map { it.name }.toSet()
         val ratesMap = rates.associate { it.code to it.rateToIdr }
         val accountCashHoldings = accounts
-            .filter { it.type !in liabilityTypeNames && it.type != "Investment" }
-            .map { account ->
+            .filter { it.type !in liabilityTypeNames }
+            .mapIndexed { index, account ->
                 val amount = account.balance / 100.0
                 val rateToIdr = if (account.currency == "IDR") 1.0 else (ratesMap[account.currency] ?: 1.0)
                 val valueIdr = amount * rateToIdr
+                val isInv = account.type in investmentTypeNames
+                val assetClass = if (isInv) {
+                    if (account.type.contains("P2P", ignoreCase = true)) "Fixed Income" else "Investment"
+                } else {
+                    "Cash & Equivalents"
+                }
                 PortfolioHoldingEntity(
+                    id = -((index + 1L) * 100000L + (account.id.takeIf { it > 0 } ?: 0L)),
                     snapshotDate = selectedDate,
-                    source = "Accounts",
+                    source = if (isInv) account.type else "Accounts",
                     category = account.type,
                     asset = account.name,
                     currency = account.currency,
                     quantity = amount,
                     price = if (account.currency == "IDR") 1.0 else null,
                     valueIdr = valueIdr,
-                    assetClass = "Cash & Equivalents",
+                    assetClass = assetClass,
                     accountId = account.id,
                     accountKey = "account:${account.id}",
                     accountName = account.name,
                     account = account.name,
-                    details = "From account balance"
+                    details = if (isInv) "From ${account.type} account" else "From account balance"
                 )
             }
             .filter { it.valueIdr != 0.0 }
@@ -292,7 +307,7 @@ class PortfolioViewModel @Inject constructor(
 
         val baseRate = if (currency == "IDR") 1.0 else (ratesMap[currency] ?: 1.0)
 
-        val nonLiabilityAccounts = accounts.filter { it.type !in liabilityTypeNames && it.type != "Investment" }
+        val nonLiabilityAccounts = accounts.filter { it.type !in liabilityTypeNames }
         val nonLiabilityAccountIds = nonLiabilityAccounts.map { it.id }.toSet()
         val currentAccountBalances = nonLiabilityAccounts.associate { it.id to it.balance }
 
@@ -359,7 +374,8 @@ class PortfolioViewModel @Inject constructor(
         }
 
         val totalValueIdr = assetClassTotals.sumOf { it.totalIdr }
-        val benchmarkComparison = getPortfolioBenchmarkComparisonUseCase(history, selectedBenchmark)
+        val convertedHistory = history.map { it.copy(totalIdr = if (baseRate > 0) it.totalIdr / baseRate else it.totalIdr) }
+        val benchmarkComparison = getPortfolioBenchmarkComparisonUseCase(convertedHistory, selectedBenchmark)
 
         val previousDate = dates.getOrNull(validIndex + 1)
         val previousTotalInBase = if (previousDate != null) {
@@ -384,6 +400,7 @@ class PortfolioViewModel @Inject constructor(
             totalPriceGainInBase = valuation.totalPriceGainInBase,
             totalGainInBase = valuation.totalGainInBase,
             totalGainPercentage = valuation.totalGainPercentage,
+            hasCostBasis = valuation.hasCostBasis,
             currencyBreakdowns = valuation.currencyBreakdowns.values.toList(),
             snapshotDates = dates,
             selectedDateIndex = validIndex,
@@ -407,8 +424,9 @@ class PortfolioViewModel @Inject constructor(
             dividendSummary = dividendSummary,
             cashInjectionDepositAmount = cashInjectionDeposit,
             cashInjectionResult = cashInjectionResult,
-            aiAnalysis = aiAnalysis,
-            isAiAnalyzing = isAiAnalyzing,
+            aiAnalysis = aiState.analysis,
+            isAiAnalyzing = aiState.isAnalyzing,
+            aiStreamingText = aiState.streamingText,
             benchmarkComparison = benchmarkComparison,
             selectedBenchmark = selectedBenchmark
         )
@@ -462,10 +480,17 @@ class PortfolioViewModel @Inject constructor(
     fun importFile(uri: Uri) {
         viewModelScope.launch {
             try {
-                val (date, items, exchangeRate) = PortfolioJsonImporter.parse(context, uri)
+                val content = context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
+                    ?: throw Exception("Could not read file")
+
+                val (date, items, exchangeRate) = if (content.trim().startsWith("{") || content.trim().startsWith("[")) {
+                    com.sans.finance.data.util.PortfolioJsonImporter.parseContent(content).toTriple()
+                } else {
+                    com.sans.finance.data.util.PortfolioCsvParser.parse(content)
+                }
 
                 if (items.isEmpty()) {
-                    _importMessage.value = "No valid entries found in file"
+                    _importMessage.value = "No valid holdings found in file"
                     return@launch
                 }
                 repository.importSnapshot(date, items, exchangeRate)
@@ -609,12 +634,17 @@ class PortfolioViewModel @Inject constructor(
 
     fun analyzePortfolioWithAi() {
         val currentState = state.value
-        if (currentState.holdings.isEmpty() || _isAiAnalyzing.value) return
+        if (currentState.holdings.isEmpty() || currentState.isAiAnalyzing) return
 
-        viewModelScope.launch {
-            _isAiAnalyzing.value = true
+        // Auto-navigate to Health content tab immediately
+        _selectedTab.value = 1
+
+        aiStreamingJob?.cancel()
+        _aiState.value = PortfolioAiState(isAnalyzing = true, streamingText = "", analysis = null)
+
+        aiStreamingJob = viewModelScope.launch {
             try {
-                val provider = aiProviderFactory.create() ?: throw Exception("AI Provider not configured")
+                val provider = aiProviderFactory.create() ?: throw Exception("AI Provider belum dikonfigurasi. Atur API key di Pengaturan > AI Settings.")
 
                 val dateFormat = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())
                 val dateLabel = currentState.selectedDate?.let { dateFormat.format(java.util.Date(it)) } ?: "Current"
@@ -622,26 +652,78 @@ class PortfolioViewModel @Inject constructor(
                 val input = com.sans.finance.data.ai.PortfolioAnalysisInput(
                     dateLabel = dateLabel,
                     currency = currentState.currentCurrency,
-                    totalValue = currentState.totalValueIdr,
-                    assetAllocation = currentState.assetClassTotals.map { it.assetClass to (it.totalIdr / currentState.totalValueIdr * 100.0) },
-                    healthStatus = currentState.healthList.map { "${it.assetClass}: ${it.status}" },
+                    totalValue = currentState.totalValueInBase,
+                    assetAllocation = currentState.assetClassTotals.map { it.assetClass to (if (currentState.totalValueInBase > 0) it.totalIdr / currentState.totalValueInBase * 100.0 else 0.0) },
+                    healthStatus = currentState.healthList.map { "${it.assetClass}: ${it.status} (target: ${it.targetPercentage}%, aktual: ${String.format(java.util.Locale.US, "%.1f", it.currentPercentage)}%)" },
                     xirr = currentState.xirr,
-                    goals = currentState.goals.map { "${it.goal.name}: ${String.format("%.2f%%", (it.currentAmount / it.goal.targetAmount * 100))}" },
+                    goals = currentState.goals.map { "${it.goal.name}: ${String.format(java.util.Locale.US, "%.1f%%", (it.currentAmount / it.goal.targetAmount * 100))}" },
                     notes = "Portfolio rebalancing target check."
                 )
 
-                val result = provider.generatePortfolioAnalysis(input)
-                _aiAnalysis.value = result
+                provider.streamPortfolioAnalysis(input).collect { event ->
+                    when (event) {
+                        is com.sans.finance.domain.model.StreamEvent.TextDelta -> {
+                            _aiState.update { current ->
+                                current.copy(streamingText = current.streamingText + event.text)
+                            }
+                        }
+                        is com.sans.finance.domain.model.StreamEvent.Done -> {
+                            val parsed = parsePortfolioJsonResult(event.fullText) ?: com.sans.finance.data.ai.PortfolioAnalysisResult(
+                                summary = "Rekomendasi Strategis Portofolio",
+                                insights = emptyList(),
+                                rawText = event.fullText
+                            )
+                            _aiState.value = PortfolioAiState(isAnalyzing = false, streamingText = "", analysis = parsed)
+                        }
+                        is com.sans.finance.domain.model.StreamEvent.Error -> {
+                            _aiState.value = PortfolioAiState(isAnalyzing = false, streamingText = "", analysis = null)
+                            _importMessage.value = "AI Analysis gagal: ${event.message}"
+                        }
+                    }
+                }
             } catch (e: Exception) {
-                _importMessage.value = "AI Analysis failed: ${e.message}"
-            } finally {
-                _isAiAnalyzing.value = false
+                _aiState.value = PortfolioAiState(isAnalyzing = false, streamingText = "", analysis = null)
+                _importMessage.value = "AI Analysis gagal: ${e.message}"
             }
         }
     }
 
+    private fun parsePortfolioJsonResult(text: String): com.sans.finance.data.ai.PortfolioAnalysisResult? {
+        val clean = com.sans.finance.data.ai.AiJsonParser.extractJsonString(text)
+        return runCatching {
+            val obj = kotlinx.serialization.json.Json.parseToJsonElement(clean) as? kotlinx.serialization.json.JsonObject ?: return null
+            val summary = obj["summary"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content } ?: "Portfolio Analysis"
+            val insightsJson = obj["insights"]
+            val insights = if (insightsJson == null) {
+                emptyList()
+            } else {
+                kotlinx.serialization.json.Json { ignoreUnknownKeys = true }.decodeFromString<List<com.sans.finance.data.ai.PortfolioAnalysisInsight>>(insightsJson.toString())
+            }
+            com.sans.finance.data.ai.PortfolioAnalysisResult(summary = summary, insights = insights, rawText = null)
+        }.getOrNull()
+    }
+
+    fun stopAiAnalysis() {
+        aiStreamingJob?.cancel()
+        val currentText = _aiState.value.streamingText
+        if (currentText.isNotBlank()) {
+            _aiState.value = PortfolioAiState(
+                isAnalyzing = false,
+                streamingText = "",
+                analysis = com.sans.finance.data.ai.PortfolioAnalysisResult(
+                    summary = "Rekomendasi Strategis Portofolio",
+                    insights = emptyList(),
+                    rawText = currentText
+                )
+            )
+        } else {
+            _aiState.value = PortfolioAiState(isAnalyzing = false, streamingText = "", analysis = null)
+        }
+    }
+
     fun clearAiAnalysis() {
-        _aiAnalysis.value = null
+        aiStreamingJob?.cancel()
+        _aiState.value = PortfolioAiState()
     }
 
     fun pruneMonthlySnapshots() {

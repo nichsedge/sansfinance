@@ -40,6 +40,9 @@ interface AccountDao {
     @Query("UPDATE accounts SET type = :newType, updated_at = :updatedAt WHERE type = :oldType")
     suspend fun renameTypeForAccounts(oldType: String, newType: String, updatedAt: Long)
 
+    @Query("UPDATE accounts SET balance = balance + :delta, updated_at = :updatedAt WHERE id = :accountId")
+    suspend fun adjustBalance(accountId: Long, delta: Long, updatedAt: Long)
+
     @Query("DELETE FROM accounts WHERE id = :accountId")
     suspend fun deleteAccountById(accountId: Long)
 }

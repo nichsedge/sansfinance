@@ -137,11 +137,11 @@ fun AccountTypeSettingsScreen(
                     showAddDialog = false
                     accountTypeToEdit = null
                 },
-                onConfirm = { name, icon, isLiability ->
+                onConfirm = { name, icon, isLiability, isInvestment ->
                     if (accountTypeToEdit != null) {
-                        viewModel.updateAccountType(accountTypeToEdit!!, name, icon, isLiability)
+                        viewModel.updateAccountType(accountTypeToEdit!!, name, icon, isLiability, isInvestment)
                     } else {
-                        viewModel.addAccountType(name, icon, isLiability)
+                        viewModel.addAccountType(name, icon, isLiability, isInvestment)
                     }
                     showAddDialog = false
                     accountTypeToEdit = null
@@ -229,10 +229,20 @@ fun AccountTypeItem(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                val typeLabel = when {
+                    accountType.isLiability -> "Liability"
+                    accountType.isInvestment -> "Investment"
+                    else -> "Asset"
+                }
+                val typeColor = when {
+                    accountType.isLiability -> MaterialTheme.colorScheme.error
+                    accountType.isInvestment -> MaterialTheme.colorScheme.primary
+                    else -> MaterialTheme.colorScheme.tertiary
+                }
                 Text(
-                    text = if (accountType.isLiability) "Liability" else "Asset",
+                    text = typeLabel,
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (accountType.isLiability) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
+                    color = typeColor
                 )
             }
             if (isReorderMode) {
@@ -257,11 +267,12 @@ fun AccountTypeItem(
 fun AccountTypeEditDialog(
     accountType: AccountTypeEntity? = null,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, Boolean) -> Unit
+    onConfirm: (String, String, Boolean, Boolean) -> Unit
 ) {
     var name by remember(accountType) { mutableStateOf(accountType?.name ?: "") }
     var icon by remember(accountType) { mutableStateOf(accountType?.icon ?: "AccountBalance") }
     var isLiability by remember(accountType) { mutableStateOf(accountType?.isLiability ?: false) }
+    var isInvestment by remember(accountType) { mutableStateOf(accountType?.isInvestment ?: false) }
 
     val icons = listOf(
         "AccountBalanceWallet" to Icons.Default.AccountBalanceWallet,
@@ -310,16 +321,31 @@ fun AccountTypeEditDialog(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = isLiability,
-                        onCheckedChange = { isLiability = it }
+                        onCheckedChange = {
+                            isLiability = it
+                            if (it) isInvestment = false
+                        }
                     )
                     Spacer(Modifier.width(8.dp))
                     Text("Treat this type as liability")
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = isInvestment,
+                        onCheckedChange = {
+                            isInvestment = it
+                            if (it) isLiability = false
+                        }
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Investment / RDN account (tracked for XIRR)")
                 }
             }
         },
         confirmButton = {
             Button(
-                onClick = { if (name.isNotBlank()) onConfirm(name, icon, isLiability) },
+                onClick = { if (name.isNotBlank()) onConfirm(name, icon, isLiability, isInvestment) },
                 shape = MaterialTheme.shapes.large
             ) {
                 Text("Confirm")

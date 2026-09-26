@@ -14,7 +14,8 @@ class PortfolioRepositoryImpl(
     private val dao: PortfolioDao,
     private val targetDao: com.sans.finance.data.local.dao.PortfolioTargetDao,
     private val expenseDao: com.sans.finance.data.local.dao.ExpenseDao,
-    private val accountDao: com.sans.finance.data.local.dao.AccountDao
+    private val accountDao: com.sans.finance.data.local.dao.AccountDao,
+    private val accountTypeDao: com.sans.finance.data.local.dao.AccountTypeDao
 ) : PortfolioRepository {
 
     override fun getLatestSnapshot(): Flow<List<PortfolioHoldingEntity>> =
@@ -161,15 +162,12 @@ class PortfolioRepositoryImpl(
 
     override suspend fun calculateXirr(endDate: Long): Double {
         val accounts = accountDao.getAllAccounts().first()
+        val accountTypes = accountTypeDao.getAllAccountTypes().first()
+        val investmentTypeNames = accountTypes.filter { it.isInvestment }.map { it.name.trim().lowercase() }.toSet()
+
         val investmentAccounts = accounts.filter { account ->
-            account.type.equals("Investment", ignoreCase = true) ||
-            account.type.contains("Invest", ignoreCase = true) ||
-            account.name.contains("RDN", ignoreCase = true) ||
-            account.name.contains("Stockbit", ignoreCase = true) ||
-            account.name.contains("Ajaib", ignoreCase = true) ||
-            account.name.contains("Bibit", ignoreCase = true) ||
-            account.name.contains("Binance", ignoreCase = true) ||
-            account.name.contains("Pluang", ignoreCase = true)
+            val lowerType = account.type.trim().lowercase()
+            lowerType in investmentTypeNames || lowerType == "investment"
         }.map { it.id }.toSet()
         if (investmentAccounts.isEmpty()) return Double.NaN
 

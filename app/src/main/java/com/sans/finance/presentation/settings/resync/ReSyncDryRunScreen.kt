@@ -16,9 +16,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Warning
@@ -55,7 +59,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sans.finance.core.util.CurrencyFormatter
@@ -72,6 +79,7 @@ fun ReSyncDryRunScreen(
     onBack: () -> Unit,
     viewModel: ReSyncDryRunViewModel = hiltViewModel()
 ) {
+    val haptic = LocalHapticFeedback.current
     val isLoading by viewModel.isLoading
     val dryRunResults by viewModel.dryRunResults
     val error by viewModel.error
@@ -186,36 +194,41 @@ fun ReSyncDryRunScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            val isFixMode = selectedMode == com.sans.finance.domain.model.ReSyncMode.TRANSACTIONS_AS_TRUTH
+                            val isKeepMode = selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH
+
                             Card(
                                 modifier = Modifier.weight(1f),
                                 onClick = { viewModel.setSyncMode(com.sans.finance.domain.model.ReSyncMode.TRANSACTIONS_AS_TRUTH) },
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (selectedMode == com.sans.finance.domain.model.ReSyncMode.TRANSACTIONS_AS_TRUTH) {
-                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
+                                    containerColor = if (isFixMode) {
+                                        Color(0xFFF43F5E).copy(alpha = 0.16f)
                                     } else {
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                                     }
                                 ),
-                                border = if (selectedMode == com.sans.finance.domain.model.ReSyncMode.TRANSACTIONS_AS_TRUTH) {
-                                    androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                                } else null,
+                                border = if (isFixMode) {
+                                    BorderStroke(2.dp, Color(0xFFF43F5E))
+                                } else {
+                                    BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                                },
                                 shape = MaterialTheme.shapes.large
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(12.dp),
+                                    modifier = Modifier.padding(14.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Text(
                                         text = "Fix Balances",
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (selectedMode == com.sans.finance.domain.model.ReSyncMode.TRANSACTIONS_AS_TRUTH) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        color = if (isFixMode) Color(0xFFF43F5E) else MaterialTheme.colorScheme.onSurface
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = "Adjust accounts to match transaction sum",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = if (isFixMode) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                                         textAlign = TextAlign.Center,
                                         minLines = 2
                                     )
@@ -226,32 +239,34 @@ fun ReSyncDryRunScreen(
                                 modifier = Modifier.weight(1f),
                                 onClick = { viewModel.setSyncMode(com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) },
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) {
-                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
+                                    containerColor = if (isKeepMode) {
+                                        Color(0xFF10B981).copy(alpha = 0.16f)
                                     } else {
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                                     }
                                 ),
-                                border = if (selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) {
-                                    androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                                } else null,
+                                border = if (isKeepMode) {
+                                    BorderStroke(2.dp, Color(0xFF10B981))
+                                } else {
+                                    BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                                },
                                 shape = MaterialTheme.shapes.large
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(12.dp),
+                                    modifier = Modifier.padding(14.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Text(
                                         text = "Keep Balances",
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        color = if (isKeepMode) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurface
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = "Add adjustments to match account balances",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = if (isKeepMode) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                                         textAlign = TextAlign.Center,
                                         minLines = 2
                                     )
@@ -457,45 +472,110 @@ fun ReSyncDryRunScreen(
                 // Bottom Buttons Sticky Footer
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    tonalElevation = 8.dp,
+                    tonalElevation = 3.dp,
+                    shadowElevation = 8.dp,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
                     color = MaterialTheme.colorScheme.surface
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedButton(
-                            onClick = onBack,
-                            modifier = Modifier.weight(1f),
-                            shape = MaterialTheme.shapes.large
+                        Button(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onBack()
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(50.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
                         ) {
-                            Text("Cancel")
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "Cancel",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                         }
 
+                        val isBalanceMode = selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH
+                        val actionColor = if (isBalanceMode) Color(0xFF10B981) else Color(0xFFF43F5E)
+
                         Button(
-                            onClick = { viewModel.applyReSync() },
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                viewModel.applyReSync()
+                            },
                             enabled = differencesCount > 0 && !isLoading,
-                            modifier = Modifier.weight(1f),
-                            shape = MaterialTheme.shapes.large,
+                            modifier = Modifier
+                                .weight(1.75f)
+                                .height(50.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            elevation = ButtonDefaults.buttonElevation(
+                                defaultElevation = 2.dp,
+                                pressedElevation = 0.dp
+                            ),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (differencesCount > 0) {
-                                    if (selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                                } else MaterialTheme.colorScheme.primary
+                                containerColor = actionColor,
+                                contentColor = Color.White,
+                                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                                disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
                             )
                         ) {
                             if (isLoading) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onPrimary
+                                    strokeWidth = 2.5.dp,
+                                    color = Color.White
                                 )
                             } else {
-                                Text(
-                                    if (selectedMode == com.sans.finance.domain.model.ReSyncMode.BALANCE_AS_TRUTH) "Apply Adjustments" else "Apply Re-sync"
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (differencesCount == 0) {
+                                            Icons.Default.CheckCircle
+                                        } else if (isBalanceMode) {
+                                            Icons.Default.Check
+                                        } else {
+                                            Icons.Default.Sync
+                                        },
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = if (differencesCount > 0) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = if (differencesCount == 0) {
+                                            "All in Sync"
+                                        } else if (isBalanceMode) {
+                                            "Apply Adjustments"
+                                        } else {
+                                            "Apply Re-sync"
+                                        },
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        letterSpacing = 0.2.sp
+                                    )
+                                }
                             }
                         }
                     }

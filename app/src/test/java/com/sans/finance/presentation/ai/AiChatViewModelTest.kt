@@ -18,6 +18,14 @@ import com.sans.finance.domain.repository.AccountRepository
 import com.sans.finance.domain.repository.CategoryRepository
 import com.sans.finance.domain.repository.ExpenseRepository
 import com.sans.finance.domain.usecase.AddTransactionUseCase
+import com.sans.finance.data.local.dao.CurrencyDao
+import com.sans.finance.data.local.entity.AccountTypeEntity
+import com.sans.finance.data.local.entity.ExchangeRateEntity
+import com.sans.finance.data.local.entity.PortfolioHoldingEntity
+import com.sans.finance.domain.model.WealthMetrics
+import com.sans.finance.domain.repository.AccountTypeRepository
+import com.sans.finance.domain.repository.PortfolioRepository
+import com.sans.finance.domain.usecase.GetWealthMetricsUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -48,16 +56,36 @@ class AiChatViewModelTest {
     private lateinit var categoryRepository: CategoryRepository
     private lateinit var expenseRepository: ExpenseRepository
     private lateinit var addTransactionUseCase: AddTransactionUseCase
+    private lateinit var getWealthMetricsUseCase: GetWealthMetricsUseCase
+    private lateinit var portfolioRepository: PortfolioRepository
+    private lateinit var accountTypeRepository: AccountTypeRepository
+    private lateinit var currencyDao: CurrencyDao
     private lateinit var aiProvider: AiProvider
 
     private val accountsFlow = MutableStateFlow<List<AccountEntity>>(emptyList())
     private val categoriesFlow = MutableStateFlow<List<Category>>(emptyList())
+    private val holdingsFlow = MutableStateFlow<List<PortfolioHoldingEntity>>(emptyList())
+    private val accountTypesFlow = MutableStateFlow<List<AccountTypeEntity>>(emptyList())
+    private val ratesFlow = MutableStateFlow<List<ExchangeRateEntity>>(emptyList())
     private val settingsFlow = MutableStateFlow(
         AiSettings(
             provider = AiProviderType.OPENROUTER,
             openRouterApiKey = "sk-or-v1-test",
             openRouterModel = "openai/gpt-4.1-mini"
         )
+    )
+
+    private fun createViewModel(): AiChatViewModel = AiChatViewModel(
+        aiProviderFactory = aiProviderFactory,
+        aiSettingsRepository = aiSettingsRepository,
+        accountRepository = accountRepository,
+        categoryRepository = categoryRepository,
+        expenseRepository = expenseRepository,
+        addTransactionUseCase = addTransactionUseCase,
+        getWealthMetricsUseCase = getWealthMetricsUseCase,
+        portfolioRepository = portfolioRepository,
+        accountTypeRepository = accountTypeRepository,
+        currencyDao = currencyDao
     )
 
     @Before
@@ -70,6 +98,10 @@ class AiChatViewModelTest {
         categoryRepository = mockk(relaxed = true)
         expenseRepository = mockk(relaxed = true)
         addTransactionUseCase = mockk(relaxed = true)
+        getWealthMetricsUseCase = mockk(relaxed = true)
+        portfolioRepository = mockk(relaxed = true)
+        accountTypeRepository = mockk(relaxed = true)
+        currencyDao = mockk(relaxed = true)
         aiProvider = mockk(relaxed = true)
 
         every { accountRepository.getAllAccounts() } returns accountsFlow
@@ -78,6 +110,27 @@ class AiChatViewModelTest {
         every { expenseRepository.getTotalAmountByTypeBetween(any(), any(), any()) } returns flowOf(0L)
         every { expenseRepository.getBreakdownByCategoryBetween(any(), any(), any()) } returns flowOf(emptyList())
         every { expenseRepository.getExpensesBetween(any(), any()) } returns flowOf(emptyList())
+        every { portfolioRepository.getLatestSnapshot() } returns holdingsFlow
+        every { accountTypeRepository.getAllAccountTypes() } returns accountTypesFlow
+        every { currencyDao.getAllRates() } returns ratesFlow
+        every { getWealthMetricsUseCase() } returns flowOf(
+            WealthMetrics(
+                cashAssets = 50_000_000_00L,
+                liabilities = 5_000_000_00L,
+                portfolioValue = 150_000_000_00L,
+                monthlyBurn = 10_000_000_00L,
+                runwayMonths = 5.0,
+                monthlyPassiveIncome = 1_000_000_00L,
+                annualPassiveIncome = 12_000_000_00L,
+                fiCoveragePct = 10.0,
+                fiStage = "LeanFIRE",
+                fiNextStageGap = 0L,
+                monthlyIncome = 0L,
+                monthlyExpense = 0L,
+                monthlySavings = 0L,
+                currencyCode = "IDR"
+            )
+        )
 
         every {
             aiProvider.streamChat(any(), any(), any(), any(), any(), any())
@@ -129,14 +182,7 @@ class AiChatViewModelTest {
 
     @Test
     fun `initial state has welcome message and config`() = runTest {
-        val viewModel = AiChatViewModel(
-            aiProviderFactory = aiProviderFactory,
-            aiSettingsRepository = aiSettingsRepository,
-            accountRepository = accountRepository,
-            categoryRepository = categoryRepository,
-            expenseRepository = expenseRepository,
-            addTransactionUseCase = addTransactionUseCase
-        )
+        val viewModel = createViewModel()
 
         val state = viewModel.uiState.value
         assertEquals(1, state.messages.size)
@@ -181,14 +227,7 @@ class AiChatViewModelTest {
             proposals = listOf(proposal1, proposal2)
         )
 
-        val viewModel = AiChatViewModel(
-            aiProviderFactory = aiProviderFactory,
-            aiSettingsRepository = aiSettingsRepository,
-            accountRepository = accountRepository,
-            categoryRepository = categoryRepository,
-            expenseRepository = expenseRepository,
-            addTransactionUseCase = addTransactionUseCase
-        )
+        val viewModel = createViewModel()
 
         viewModel.onInputTextChanged("Kupon ORI024 1.5jt dan Kupon SR019 750rb di CIMB")
         viewModel.sendMessage()
@@ -224,14 +263,7 @@ class AiChatViewModelTest {
             proposals = listOf(proposal)
         )
 
-        val viewModel = AiChatViewModel(
-            aiProviderFactory = aiProviderFactory,
-            aiSettingsRepository = aiSettingsRepository,
-            accountRepository = accountRepository,
-            categoryRepository = categoryRepository,
-            expenseRepository = expenseRepository,
-            addTransactionUseCase = addTransactionUseCase
-        )
+        val viewModel = createViewModel()
 
         viewModel.sendMessage("receipt")
         val assistantMsg = viewModel.uiState.value.messages.last()
@@ -283,14 +315,7 @@ class AiChatViewModelTest {
             proposals = listOf(proposal1, proposal2)
         )
 
-        val viewModel = AiChatViewModel(
-            aiProviderFactory = aiProviderFactory,
-            aiSettingsRepository = aiSettingsRepository,
-            accountRepository = accountRepository,
-            categoryRepository = categoryRepository,
-            expenseRepository = expenseRepository,
-            addTransactionUseCase = addTransactionUseCase
-        )
+        val viewModel = createViewModel()
 
         viewModel.sendMessage("bulk receipts")
         val msgId = viewModel.uiState.value.messages.last().id
@@ -324,14 +349,7 @@ class AiChatViewModelTest {
             proposals = listOf(proposal)
         )
 
-        val viewModel = AiChatViewModel(
-            aiProviderFactory = aiProviderFactory,
-            aiSettingsRepository = aiSettingsRepository,
-            accountRepository = accountRepository,
-            categoryRepository = categoryRepository,
-            expenseRepository = expenseRepository,
-            addTransactionUseCase = addTransactionUseCase
-        )
+        val viewModel = createViewModel()
 
         viewModel.sendMessage("admin fee")
         val msgId = viewModel.uiState.value.messages.last().id
@@ -370,14 +388,7 @@ class AiChatViewModelTest {
             proposals = listOf(proposal)
         )
 
-        val viewModel = AiChatViewModel(
-            aiProviderFactory = aiProviderFactory,
-            aiSettingsRepository = aiSettingsRepository,
-            accountRepository = accountRepository,
-            categoryRepository = categoryRepository,
-            expenseRepository = expenseRepository,
-            addTransactionUseCase = addTransactionUseCase
-        )
+        val viewModel = createViewModel()
 
         viewModel.sendMessage("makan siang 35rb")
         val assistantMsg = viewModel.uiState.value.messages.last()
@@ -394,6 +405,109 @@ class AiChatViewModelTest {
                         expense.date != 1726000000000L // Normalized away from legacy dummy date!
                 }
             )
+        }
+    }
+
+    @Test
+    fun `sendMessage injects accurate Net Worth and portfolio holdings into FinancialContextSnapshot`() = runTest {
+        accountsFlow.value = listOf(
+            AccountEntity(id = 1L, name = "BCA Main", type = "Bank", balance = 20_000_000_00L, currency = "IDR"),
+            AccountEntity(id = 2L, name = "SPayLater", type = "PayLater", balance = 5_000_000_00L, currency = "IDR")
+        )
+        accountTypesFlow.value = listOf(
+            AccountTypeEntity(id = 1L, name = "Bank", icon = "Bank", isLiability = false, isInvestment = false),
+            AccountTypeEntity(id = 2L, name = "PayLater", icon = "CreditCard", isLiability = true, isInvestment = false)
+        )
+        holdingsFlow.value = listOf(
+            PortfolioHoldingEntity(
+                id = 1L,
+                snapshotDate = 1700000000000L,
+                source = "ksei",
+                category = "equity",
+                asset = "BBCA",
+                currency = "IDR",
+                quantity = 100.0,
+                price = 10000.0,
+                valueIdr = 100_000_000.0,
+                assetClass = "Indonesian Equity",
+                account = "Stockbit",
+                details = null
+            ),
+            PortfolioHoldingEntity(
+                id = 2L,
+                snapshotDate = 1700000000000L,
+                source = "debank",
+                category = "crypto",
+                asset = "ETH",
+                currency = "USD",
+                quantity = 1.0,
+                price = 3000.0,
+                valueIdr = 50_000_000.0,
+                assetClass = "Crypto",
+                account = "MetaMask",
+                details = null
+            )
+        )
+        ratesFlow.value = listOf(
+            ExchangeRateEntity(code = "IDR", rateToIdr = 1.0),
+            ExchangeRateEntity(code = "USD", rateToIdr = 16000.0)
+        )
+        every { getWealthMetricsUseCase() } returns flowOf(
+            WealthMetrics(
+                cashAssets = 20_000_000_00L,
+                liabilities = 5_000_000_00L,
+                portfolioValue = 150_000_000_00L,
+                monthlyBurn = 10_000_000_00L,
+                runwayMonths = 2.0,
+                monthlyPassiveIncome = 1_000_000_00L,
+                annualPassiveIncome = 12_000_000_00L,
+                fiCoveragePct = 10.0,
+                fiStage = "LeanFIRE",
+                fiNextStageGap = 0L,
+                monthlyIncome = 0L,
+                monthlyExpense = 0L,
+                monthlySavings = 0L,
+                currencyCode = "IDR"
+            )
+        )
+
+        var capturedSnapshot: com.sans.finance.domain.model.FinancialContextSnapshot? = null
+        every {
+            aiProvider.streamChat(any(), any(), any(), any(), any(), any())
+        } answers {
+            capturedSnapshot = arg<com.sans.finance.domain.model.FinancialContextSnapshot?>(5)
+            kotlinx.coroutines.flow.flowOf(com.sans.finance.domain.model.StreamEvent.Done("Net worth Anda terhitung."))
+        }
+
+        val viewModel = createViewModel()
+        viewModel.sendMessage("Berapa net worth saya?")
+
+        assertNotNull(capturedSnapshot)
+        capturedSnapshot?.let { snap ->
+            // Portfolio value: 100m + 50m = 150m IDR (150_000_000_00 cents)
+            assertEquals(150_000_000_00L, snap.portfolioInvestmentValue)
+            // Liquid cash: 20m IDR (20_000_000_00 cents)
+            assertEquals(20_000_000_00L, snap.liquidCashAssets)
+            // Liabilities: 5m IDR (5_000_000_00 cents)
+            assertEquals(5_000_000_00L, snap.totalLiabilities)
+            // Total assets: 20m + 150m = 170m IDR
+            assertEquals(170_000_000_00L, snap.totalAssets)
+            // Net worth: 170m - 5m = 165m IDR
+            assertEquals(165_000_000_00L, snap.netWorth)
+
+            // Asset class breakdown
+            assertEquals(2, snap.portfolioAssetClassBreakdown.size)
+            assertEquals("Indonesian Equity", snap.portfolioAssetClassBreakdown[0].first)
+            assertEquals(100_000_000_00L, snap.portfolioAssetClassBreakdown[0].second)
+            assertEquals("Crypto", snap.portfolioAssetClassBreakdown[1].first)
+            assertEquals(50_000_000_00L, snap.portfolioAssetClassBreakdown[1].second)
+
+            // Top holdings
+            assertEquals(2, snap.topPortfolioHoldings.size)
+            assertEquals("BBCA (Indonesian Equity)", snap.topPortfolioHoldings[0].first)
+            assertEquals(100_000_000_00L, snap.topPortfolioHoldings[0].second)
+            assertEquals("ETH (Crypto)", snap.topPortfolioHoldings[1].first)
+            assertEquals(50_000_000_00L, snap.topPortfolioHoldings[1].second)
         }
     }
 }

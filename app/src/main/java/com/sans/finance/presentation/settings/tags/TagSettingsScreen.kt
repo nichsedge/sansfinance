@@ -14,11 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
@@ -93,27 +91,11 @@ fun TagSettingsScreen(
                 }
             }
 
-            itemsIndexed(tags, key = { _, item -> item.id }) { index, tag ->
+            items(tags, key = { it.id }) { tag ->
                 TagCardItem(
                     tag = tag,
                     onEdit = { tagToEdit = tag },
                     onDelete = { tagToDelete = tag },
-                    onMoveUp = if (index > 0) {
-                        {
-                            val mutable = tags.toMutableList()
-                            val item = mutable.removeAt(index)
-                            mutable.add(index - 1, item)
-                            viewModel.onTagsReordered(mutable)
-                        }
-                    } else null,
-                    onMoveDown = if (index < tags.size - 1) {
-                        {
-                            val mutable = tags.toMutableList()
-                            val item = mutable.removeAt(index)
-                            mutable.add(index + 1, item)
-                            viewModel.onTagsReordered(mutable)
-                        }
-                    } else null,
                     onVisibilityToggle = { isChecked ->
                         viewModel.updateTag(tag.copy(isVisible = isChecked))
                     },
@@ -165,8 +147,6 @@ fun TagCardItem(
     tag: Tag,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onMoveUp: (() -> Unit)?,
-    onMoveDown: (() -> Unit)?,
     onVisibilityToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -225,27 +205,6 @@ fun TagCardItem(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (onMoveUp != null) {
-                    IconButton(onClick = onMoveUp, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            Icons.Default.ArrowUpward,
-                            contentDescription = "Move Up",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-                if (onMoveDown != null) {
-                    IconButton(onClick = onMoveDown, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            Icons.Default.ArrowDownward,
-                            contentDescription = "Move Down",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-                Spacer(Modifier.weight(1f))
                 IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
                     Icon(
                         Icons.Default.Edit,

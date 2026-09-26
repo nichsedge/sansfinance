@@ -21,6 +21,7 @@ Get the latest signed APK directly from [GitHub Releases](https://github.com/nic
 ## ✨ Features
 
 ### 📊 Wealth & Analytics Engine
+- **Multi-Asset Portfolio Explorer:** Track Indonesian equities (KSEI), EVM DeFi (DeBank), CEX crypto (Binance), and Solana (Alchemy) with real-time multi-currency FX valuation, dynamic source filters, ticker search, sort options (Value, Gainers, Yield), expandable category accordions, allocation micro-progress bars, yield pills, interactive holding detail bottom sheets, **Real-Time Streaming AI Strategist** (auto-navigating to Health tab with live SSE token rendering & stop controls), and **In-App Integration Guide with Helper Icon** (two-tier guides for beginners: CSV/JSON format schema & manual file picker; and experts: automated `portfolio-integration` ETL setup & Cloudflare R2 pipeline sync).
 - **Monte Carlo FIRE Simulation:** 1,000-run stochastic geometric Brownian motion simulator modeling market volatility, inflation, and sequence-of-returns risk with 10th/50th/90th percentile fan charts and FIRE probability scores.
 - **Emergency Fund Runway Stress Testing:** Liquid safety buffer calculator simulating 4 dynamic shock scenarios: Job Loss, 50% Pay Cut & Essential Budget, +25% Cost Shock, and -30% Portfolio Drawdown.
 - **Savings Rate & Net Worth Velocity:** Track real-time savings rate acceleration, 3/6-month velocity averages, and monthly accumulation momentum ($\Delta\text{NW}/\text{month}$) with interactive haptic gesture scrubbing.
@@ -45,13 +46,14 @@ Get the latest signed APK directly from [GitHub Releases](https://github.com/nic
 - **UI Toolkit:** [Jetpack Compose](https://developer.android.com/compose) & Material 3
 - **Widgets:** Jetpack Glance
 - **Dependency Injection:** [Hilt](https://dagger.dev/hilt/)
-- **Local Database:** [Room](https://developer.android.com/training/data-storage/room) (SQLite) — Schema Version 38
+- **Local Database:** [Room](https://developer.android.com/training/data-storage/room) (SQLite) — Schema Version 40
 - **Optional AI:** Cloud AI connector (OpenAI / OpenRouter)
 - **Data Persistence:** DataStore (Preferences) & Cloudflare R2 Backups (with Immutable Archives)
 
 ## 🚀 Project Structure
 
 - `:app` — Android Application (including Domain & Data logic)
+- `scripts/` — Database migration, ADB deployment, and Cloudflare R2 backup utilities (`pull_cloud_db.py`, `backup.sh`, `sync.sh`)
 
 ## 🚀 Getting Started
 
@@ -59,7 +61,7 @@ Get the latest signed APK directly from [GitHub Releases](https://github.com/nic
 
 - Android device/emulator with **API level 36+**.
 - [Android Studio Ladybug](https://developer.android.com/studio) or newer.
-- JDK 17.
+- JDK 21.
 
 ### Build and Install
 
@@ -72,7 +74,8 @@ Get the latest signed APK directly from [GitHub Releases](https://github.com/nic
 
 Alternatively, use the Makefile or build script:
 ```bash
-make release
+make run            # Build and deploy debug APK directly to device
+make release        # Build signed release APK
 # or
 ./scripts/build_release.sh
 ```

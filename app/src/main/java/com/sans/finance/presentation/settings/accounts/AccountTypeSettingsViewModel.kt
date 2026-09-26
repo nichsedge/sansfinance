@@ -36,7 +36,7 @@ class AccountTypeSettingsViewModel @Inject constructor(
         }
     }
 
-    fun addAccountType(name: String, icon: String, isLiability: Boolean) {
+    fun addAccountType(name: String, icon: String, isLiability: Boolean, isInvestment: Boolean = false) {
         viewModelScope.launch {
             val currentMax = accountTypes.value.maxOfOrNull { it.displayOrder } ?: 0
             repository.insertAccountType(
@@ -44,13 +44,14 @@ class AccountTypeSettingsViewModel @Inject constructor(
                     name = name,
                     icon = icon,
                     isLiability = isLiability,
+                    isInvestment = isInvestment,
                     displayOrder = currentMax + 1
                 )
             )
         }
     }
 
-    fun updateAccountType(accountType: AccountTypeEntity, newName: String, newIcon: String, newIsLiability: Boolean) {
+    fun updateAccountType(accountType: AccountTypeEntity, newName: String, newIcon: String, newIsLiability: Boolean, newIsInvestment: Boolean = false) {
         viewModelScope.launch {
             if (newName != accountType.name) {
                 accountRepository.renameTypeForAccounts(accountType.name, newName)
@@ -59,7 +60,8 @@ class AccountTypeSettingsViewModel @Inject constructor(
                 accountType.copy(
                     name = newName,
                     icon = newIcon,
-                    isLiability = newIsLiability
+                    isLiability = newIsLiability,
+                    isInvestment = newIsInvestment
                 )
             )
         }

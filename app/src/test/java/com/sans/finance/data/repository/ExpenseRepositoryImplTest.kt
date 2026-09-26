@@ -1,5 +1,6 @@
 package com.sans.finance.data.repository
 
+import androidx.room.withTransaction
 import com.sans.finance.data.local.AppDatabase
 import com.sans.finance.data.local.dao.AccountDao
 import com.sans.finance.data.local.dao.CategoryDao
@@ -9,9 +10,17 @@ import com.sans.finance.data.local.dao.TagDao
 import com.sans.finance.data.local.entity.ExpenseEntity
 import com.sans.finance.data.local.entity.ExpenseWithTags
 import com.sans.finance.data.local.entity.InstallmentItemEntity
-import com.sans.finance.domain.model.Expense
+import com.sans.finance.data.local.entity.AccountEntity
+import com.sans.finance.data.local.entity.CategoryEntity
+import com.sans.finance.data.local.entity.ExpenseTagCrossRef
+import com.sans.finance.data.local.entity.TagEntity
+import com.sans.finance.domain.model.ReSyncMode
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.slot
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -162,5 +171,72 @@ class ExpenseRepositoryImplTest {
         assertTrue(result?.isRecurringInstance == true)
         assertEquals(ruleId, result?.parentRecurringId)
         assertEquals(occurrenceIndex, result?.recurringOccurrenceIndex)
+    }
+
+    @Test
+    fun reSyncAccountBalances_withBalanceAsTruth_usesExistingAdjustmentTagId() = runTest {
+        mockkStatic("androidx.room.RoomDatabaseKt")
+        coEvery { db.withTransaction(any<suspend () -> Any>()) } coAnswers {
+            secondArg<suspend () -> Any>().invoke()
+        }
+
+        val account = AccountEntity(id = 26L, name = "CIMB Niaga", balance = 300000000L, type = "Bank")
+        coEvery { accountDao.getAllAccounts() } returns flowOf(listOf(account))
+        coEvery { dao.getAllExpenseEntities() } returns emptyList()
+        coEvery { installmentDao.getInstallmentPaymentsBetween(any(), any()) } returns flowOf(emptyList())
+
+        val category = CategoryEntity(id = 8L, name = "Misc", icon = "wrench", orderIndex = 7, type = "INCOME")
+        coEvery { categoryDao.getAllCategoriesSync() } returns listOf(category)
+
+        // Existing Adjustment tag has id 16
+        val existingTag = TagEntity(id = 16L, name = "Adjustment", orderIndex = 0, isVisible = true)
+        coEvery { tagDao.getTagByName("Adjustment") } returns existingTag
+
+        val insertedExpenseId = 999L
+        coEvery { dao.insertExpense(any()) } returns insertedExpenseId
+
+        val crossRefsSlot = slot<List<ExpenseTagCrossRef>>()
+        coEvery { dao.insertExpenseTagCrossRefs(capture(crossRefsSlot)) } returns Unit
+
+        repository.reSyncAccountBalances(ReSyncMode.BALANCE_AS_TRUTH, 0L)
+
+        coVerify { dao.insertExpense(any()) }
+        coVerify { dao.insertExpenseTagCrossRefs(any()) }
+        assertEquals(1, crossRefsSlot.captured.size)
+        assertEquals(insertedExpenseId, crossRefsSlot.captured[0].expenseId)
+        assertEquals(16L, crossRefsSlot.captured[0].tagId)
+    }
+
+    @Test
+    fun reSyncAccountBalances_withBalanceAsTruth_createsAdjustmentTagIfMissing() = runTest {
+        mockkStatic("androidx.room.RoomDatabaseKt")
+        coEvery { db.withTransaction(any<suspend () -> Any>()) } coAnswers {
+            secondArg<suspend () -> Any>().invoke()
+        }
+
+        val account = AccountEntity(id = 26L, name = "CIMB Niaga", balance = 300000000L, type = "Bank")
+        coEvery { accountDao.getAllAccounts() } returns flowOf(listOf(account))
+        coEvery { dao.getAllExpenseEntities() } returns emptyList()
+        coEvery { installmentDao.getInstallmentPaymentsBetween(any(), any()) } returns flowOf(emptyList())
+
+        val category = CategoryEntity(id = 8L, name = "Misc", icon = "wrench", orderIndex = 7, type = "INCOME")
+        coEvery { categoryDao.getAllCategoriesSync() } returns listOf(category)
+
+        // No Adjustment tag initially
+        coEvery { tagDao.getTagByName("Adjustment") } returns null
+        coEvery { tagDao.insertTag(any()) } returns 42L
+
+        val insertedExpenseId = 1001L
+        coEvery { dao.insertExpense(any()) } returns insertedExpenseId
+
+        val crossRefsSlot = slot<List<ExpenseTagCrossRef>>()
+        coEvery { dao.insertExpenseTagCrossRefs(capture(crossRefsSlot)) } returns Unit
+
+        repository.reSyncAccountBalances(ReSyncMode.BALANCE_AS_TRUTH, 0L)
+
+        coVerify { tagDao.insertTag(match { it.name == "Adjustment" }) }
+        assertEquals(1, crossRefsSlot.captured.size)
+        assertEquals(insertedExpenseId, crossRefsSlot.captured[0].expenseId)
+        assertEquals(42L, crossRefsSlot.captured[0].tagId)
     }
 }

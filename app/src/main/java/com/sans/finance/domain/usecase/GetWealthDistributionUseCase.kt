@@ -46,7 +46,8 @@ class GetWealthDistributionUseCase @Inject constructor(
         ratesMap: Map<String, Double>
     ): Map<String, Long> {
         val liabilityTypeNames = accountTypes.filter { it.isLiability }.map { it.name }.toSet()
-        val nonLiabilityAccounts = accounts.filter { it.type !in liabilityTypeNames && it.type != "Investment" }
+        val investmentTypeNames = accountTypes.filter { it.isInvestment }.map { it.name }.toSet()
+        val nonLiabilityAccounts = accounts.filter { it.type !in liabilityTypeNames }
 
         val distribution = when (tab) {
             WealthDistributionTab.CURRENCY -> {
@@ -71,13 +72,18 @@ class GetWealthDistributionUseCase @Inject constructor(
                 val hGroup = holdings.groupBy { it.assetClass }
                     .mapValues { it.value.sumOf { h -> h.valueIdr } }
 
-                val aValue = nonLiabilityAccounts.sumOf { a ->
-                    val rateToIdr = if (a.currency == "IDR") 1.0 else (ratesMap[a.currency] ?: 1.0)
-                    (a.balance / 100.0) * rateToIdr
-                }
-
                 val combined = hGroup.toMutableMap()
-                combined["Cash & Equivalents"] = (combined["Cash & Equivalents"] ?: 0.0) + aValue
+                nonLiabilityAccounts.forEach { a ->
+                    val rateToIdr = if (a.currency == "IDR") 1.0 else (ratesMap[a.currency] ?: 1.0)
+                    val valueIdr = (a.balance / 100.0) * rateToIdr
+                    val isInv = a.type in investmentTypeNames
+                    val aclass = if (isInv) {
+                        if (a.type.contains("P2P", ignoreCase = true)) "Fixed Income" else "Investment"
+                    } else {
+                        "Cash & Equivalents"
+                    }
+                    combined[aclass] = (combined[aclass] ?: 0.0) + valueIdr
+                }
 
                 combined.mapValues { entry ->
                     val idrValue = entry.value

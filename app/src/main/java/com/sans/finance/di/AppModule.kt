@@ -155,9 +155,10 @@ object AppModule {
         dao: com.sans.finance.data.local.dao.PortfolioDao,
         targetDao: com.sans.finance.data.local.dao.PortfolioTargetDao,
         expenseDao: ExpenseDao,
-        accountDao: com.sans.finance.data.local.dao.AccountDao
+        accountDao: com.sans.finance.data.local.dao.AccountDao,
+        accountTypeDao: com.sans.finance.data.local.dao.AccountTypeDao
     ): com.sans.finance.domain.repository.PortfolioRepository =
-        com.sans.finance.data.repository.PortfolioRepositoryImpl(dao, targetDao, expenseDao, accountDao)
+        com.sans.finance.data.repository.PortfolioRepositoryImpl(dao, targetDao, expenseDao, accountDao, accountTypeDao)
 
     @Provides
     @Singleton

@@ -68,6 +68,13 @@ interface ExpenseRepository {
         type: String
     ): Flow<List<DaySpent>>
 
+    fun getMonthlyBreakdownByCategoryBetween(
+        since: Long,
+        until: Long,
+        categoryId: Long,
+        type: String
+    ): Flow<List<DaySpent>>
+
     suspend fun getReSyncBalancesDryRun(): List<AccountSyncDryRunResult>
     suspend fun reSyncAccountBalances(mode: ReSyncMode, adjustmentDate: Long)
 }

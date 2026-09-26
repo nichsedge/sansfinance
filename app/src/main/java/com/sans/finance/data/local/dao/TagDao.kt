@@ -11,16 +11,16 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TagDao {
-    @Query("SELECT * FROM tags ORDER BY orderIndex ASC, id ASC")
+    @Query("SELECT * FROM tags ORDER BY name COLLATE NOCASE ASC, id ASC")
     fun getAllTags(): Flow<List<TagEntity>>
 
-    @Query("SELECT * FROM tags WHERE isVisible = 1 ORDER BY orderIndex ASC, id ASC")
+    @Query("SELECT * FROM tags WHERE isVisible = 1 ORDER BY name COLLATE NOCASE ASC, id ASC")
     fun getVisibleTags(): Flow<List<TagEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTag(tag: TagEntity): Long
 
-    @Query("SELECT * FROM tags WHERE name = :name LIMIT 1")
+    @Query("SELECT * FROM tags WHERE name = :name COLLATE NOCASE LIMIT 1")
     suspend fun getTagByName(name: String): TagEntity?
 
     @Update(onConflict = OnConflictStrategy.REPLACE)

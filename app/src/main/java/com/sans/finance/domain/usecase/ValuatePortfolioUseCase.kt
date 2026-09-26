@@ -25,7 +25,8 @@ class ValuatePortfolioUseCase @Inject constructor(
                 totalGainInBase = 0.0,
                 totalGainPercentage = 0.0,
                 valuedHoldings = emptyList(),
-                currencyBreakdowns = emptyMap()
+                currencyBreakdowns = emptyMap(),
+                hasCostBasis = false
             )
         }
 
@@ -82,24 +83,10 @@ class ValuatePortfolioUseCase @Inject constructor(
                 }
             }
 
-            // Attempt to extract cost basis or purchase price from details if present (e.g. "cost_basis: 1000", "avg_buy: 50", etc.)
-            var costBasisNominal: Double? = null
-            holding.details?.let { detailsStr ->
-                val costMatch = Regex("""(?:cost_basis|cost|modal|beli)[:=\s]+([0-9.,]+)""", RegexOption.IGNORE_CASE).find(detailsStr)
-                if (costMatch != null) {
-                    val rawNum = costMatch.groupValues[1].replace(",", "")
-                    costBasisNominal = rawNum.toDoubleOrNull()
-                } else {
-                    val avgBuyMatch = Regex("""(?:avg_buy|avg_price|harga_beli)[:=\s]+([0-9.,]+)""", RegexOption.IGNORE_CASE).find(detailsStr)
-                    if (avgBuyMatch != null && holding.quantity > 0) {
-                        val rawPrice = avgBuyMatch.groupValues[1].replace(",", "")
-                        costBasisNominal = rawPrice.toDoubleOrNull()?.let { it * holding.quantity }
-                    }
-                }
-            }
-
-            val histCostInBase = if (costBasisNominal != null && costBasisNominal > 0) {
-                costBasisNominal * histFx
+            val costBasis = holding.costBasis
+            val hasItemCostBasis = costBasis != null && costBasis > 0
+            val histCostInBase = if (hasItemCostBasis) {
+                costBasis * histFx
             } else {
                 originalNominal * histFx
             }
@@ -107,8 +94,8 @@ class ValuatePortfolioUseCase @Inject constructor(
             val currValueInBase = originalNominal * currFx
 
             // Price gain is nominal value appreciation relative to cost basis
-            val priceGainInBase = if (costBasisNominal != null && costBasisNominal > 0) {
-                (originalNominal - costBasisNominal) * histFx
+            val priceGainInBase = if (hasItemCostBasis) {
+                (originalNominal - costBasis) * histFx
             } else {
                 0.0
             }
@@ -128,7 +115,8 @@ class ValuatePortfolioUseCase @Inject constructor(
                 priceGainInBase = priceGainInBase,
                 fxGainInBase = fxGainInBase,
                 totalGainInBase = totalGainInBase,
-                totalGainPercentage = totalGainPercent
+                totalGainPercentage = totalGainPercent,
+                hasCostBasis = hasItemCostBasis
             )
         }
 
@@ -138,6 +126,7 @@ class ValuatePortfolioUseCase @Inject constructor(
         val totalFxGain = valuedHoldings.sumOf { it.fxGainInBase }
         val totalGain = totalValueInBase - totalHistCostInBase
         val totalGainPct = if (totalHistCostInBase > 0) (totalGain / totalHistCostInBase) * 100.0 else 0.0
+        val hasPortfolioCostBasis = valuedHoldings.any { it.hasCostBasis }
 
         val currencyBreakdowns = valuedHoldings.groupBy { it.holding.currency }
             .mapValues { (currency, items) ->
@@ -171,7 +160,8 @@ class ValuatePortfolioUseCase @Inject constructor(
             totalGainInBase = totalGain,
             totalGainPercentage = totalGainPct,
             valuedHoldings = valuedHoldings,
-            currencyBreakdowns = currencyBreakdowns
+            currencyBreakdowns = currencyBreakdowns,
+            hasCostBasis = hasPortfolioCostBasis
         )
     }
 

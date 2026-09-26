@@ -43,7 +43,8 @@ class ValuatePortfolioUseCaseTest {
             valueIdr = 100000.0,
             assetClass = "Equities",
             account = "Stockbit",
-            details = "Broker: Stockbit, cost_basis: 80000"
+            details = "Broker: Stockbit",
+            costBasis = 80000.0
         )
 
         val result = useCase(listOf(holding), "IDR")
@@ -55,6 +56,34 @@ class ValuatePortfolioUseCaseTest {
         assertEquals(0.0, result.totalFxGainInBase, 0.01)
         assertEquals(20000.0, result.totalGainInBase, 0.01)
         assertEquals(25.0, result.totalGainPercentage, 0.01)
+        assertTrue(result.hasCostBasis)
+        assertTrue(result.valuedHoldings.first().hasCostBasis)
+    }
+
+    @Test
+    fun `holding without cost basis in details sets hasCostBasis to false`() = runBlocking {
+        val holding = PortfolioHoldingEntity(
+            snapshotDate = 1000L,
+            source = "KSEI",
+            category = "Indo Stocks",
+            asset = "BBCA",
+            currency = "IDR",
+            quantity = 2900.0,
+            price = 6700.0,
+            valueIdr = 19430000.0,
+            assetClass = "Equities",
+            account = "Ajaib",
+            details = "Stock: BBCA - BANK CENTRAL ASIA Tbk, Broker: PT AJAIB SEKURITAS ASIA"
+        )
+
+        val result = useCase(listOf(holding), "IDR")
+
+        assertEquals(19430000.0, result.totalValueInBase, 0.01)
+        assertEquals(0.0, result.totalPriceGainInBase, 0.001)
+        assertEquals(0.0, result.totalGainInBase, 0.001)
+        assertEquals(0.0, result.totalGainPercentage, 0.001)
+        org.junit.Assert.assertFalse(result.hasCostBasis)
+        org.junit.Assert.assertFalse(result.valuedHoldings.first().hasCostBasis)
     }
 
     @Test
@@ -87,5 +116,6 @@ class ValuatePortfolioUseCaseTest {
         assertEquals(0.0, result.totalPriceGainInBase, 0.01)
         assertEquals(100000.0, result.totalGainInBase, 0.01)
         assertEquals(6.666, result.totalGainPercentage, 0.01)
+        org.junit.Assert.assertFalse(result.hasCostBasis)
     }
 }
