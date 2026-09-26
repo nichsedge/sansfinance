@@ -34,11 +34,15 @@ You can use the `Makefile` for convenience:
 - `make release` — build and package release APK
 - `make test-unit` — run JVM unit tests
 - `make test-android` — run instrumentation tests
+- `make check-deps` — check for available library updates across Google Maven & Maven Central
+- `make update-deps` — automatically update `gradle/libs.versions.toml` with newest stable versions
 
 Alternatively, use the Gradle wrapper:
 
 - `./gradlew :app:assembleDebug` — build Android debug APK
 - `./gradlew test` — run all tests
+- `./gradlew dependencyUpdates` — inspect dependency update report
+- `./gradlew versionCatalogUpdate` — update version catalog directly
 
 Min/target SDK is 36.
 

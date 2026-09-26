@@ -1,4 +1,4 @@
-.PHONY: help run logs devices build release test test-unit test-android backup restore sync push-portfolio backfill-portfolio prune-portfolio clean
+.PHONY: help run logs devices build release test test-unit test-android check-deps update-deps backup restore sync push-portfolio backfill-portfolio prune-portfolio clean
 
 DEVICE ?=
 
@@ -17,6 +17,8 @@ help:
 	@echo "  test               Run all tests"
 	@echo "  test-unit          Run JVM unit tests"
 	@echo "  test-android       Run instrumentation tests"
+	@echo "  check-deps         Check for library updates (Maven & Google)"
+	@echo "  update-deps        Update gradle/libs.versions.toml automatically"
 	@echo ""
 	@echo "Data & Sync Targets:"
 	@echo "  backup             Extract database snapshot from phone"
@@ -49,6 +51,13 @@ test-unit:
 
 test-android:
 	./gradlew connectedDebugAndroidTest
+
+check-deps:
+	./gradlew dependencyUpdates --no-configuration-cache
+
+update-deps:
+	./gradlew versionCatalogUpdate --no-configuration-cache
+
 
 backup:
 	bash scripts/backup.sh $(DEVICE)
