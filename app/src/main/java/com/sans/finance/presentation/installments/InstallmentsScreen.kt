@@ -142,7 +142,11 @@ fun InstallmentsScreen(
                             }
                         }
                     }
-                    items(currentList) { item ->
+                    items(
+                        items = currentList,
+                        key = { it.id },
+                        contentType = { "InstallmentItem" }
+                    ) { item ->
                         ExpandableInstallment(item, state.currentCurrency, viewModel)
                     }
                 }

@@ -412,7 +412,11 @@ fun AddTransactionScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                items(types) { type ->
+                items(
+                    items = types,
+                    key = { it },
+                    contentType = { "TxType" }
+                ) { type ->
                     FilterChip(
                         selected = viewModel.transactionType == type,
                         onClick = { viewModel.transactionType = type },
@@ -664,7 +668,11 @@ fun AddTransactionScreen(
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                items(categories) { category ->
+                items(
+                    items = categories,
+                    key = { it.id },
+                    contentType = { "CategoryChip" }
+                ) { category ->
                     FilterChip(
                         selected = viewModel.categoryId == category.id,
                         onClick = {

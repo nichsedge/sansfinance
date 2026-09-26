@@ -20,6 +20,7 @@ workKtx = "2.12.0"
 lifecycle = "2.11.0"
 glance = "1.2.0"
 json = "20260814"
+profileinstaller = "1.4.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -64,6 +65,7 @@ turbine = { group = "app.cash.turbine", name = "turbine", version = "1.2.1" }
 mockk = { group = "io.mockk", name = "mockk", version = "1.14.11" }
 kotlin-reflect = { group = "org.jetbrains.kotlin", name = "kotlin-reflect", version.ref = "kotlin" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workKtx" }
+androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 org-json = { group = "org.json", name = "json", version.ref = "json" }
 androidx-glance = { group = "androidx.glance", name = "glance", version.ref = "glance" }

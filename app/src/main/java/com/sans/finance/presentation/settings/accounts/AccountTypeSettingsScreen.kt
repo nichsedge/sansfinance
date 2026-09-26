@@ -118,7 +118,11 @@ fun AccountTypeSettingsScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(accountTypes) { type ->
+            items(
+                items = accountTypes,
+                key = { it.id },
+                contentType = { "AccountTypeItem" }
+            ) { type ->
                 AccountTypeItem(
                     accountType = type,
                     onEdit = { accountTypeToEdit = type },

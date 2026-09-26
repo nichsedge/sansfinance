@@ -527,8 +527,10 @@ fun AiProposalCard(
     val isIncome = proposal.type == "INCOME"
     val accentColor = if (isIncome) Color(0xFF2E7D32) else Color(0xFFC62828)
     val displayAmount = CurrencyFormatter.formatAmount(proposal.amountInCents, "IDR")
+    val idLocaleDtf = remember { java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.of("id", "ID")) }
+    val zoneId = remember { java.time.ZoneId.systemDefault() }
     val dateFormatted = remember(proposal.date) {
-        SimpleDateFormat("dd MMM yyyy", Locale.of("id", "ID")).format(Date(proposal.date))
+        idLocaleDtf.format(java.time.Instant.ofEpochMilli(proposal.date).atZone(zoneId))
     }
 
     var showAccountMenu by remember { mutableStateOf(false) }

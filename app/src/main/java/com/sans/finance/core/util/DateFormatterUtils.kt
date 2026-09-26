@@ -114,4 +114,9 @@ object DateFormatterUtils {
 
     fun formatMonthYear(dateMillis: Long): String = getMonthYearFormatter().format(Date(dateMillis))
     fun formatMonthYear(date: Date): String = getMonthYearFormatter().format(date)
+
+    fun formatFullMonthYear(dateMillis: Long): String {
+        return java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
+            .format(java.time.Instant.ofEpochMilli(dateMillis).atZone(java.time.ZoneId.systemDefault()))
+    }
 }

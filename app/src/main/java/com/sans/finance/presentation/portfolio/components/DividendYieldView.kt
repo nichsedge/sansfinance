@@ -87,7 +87,11 @@ fun DividendYieldView(
             )
         }
 
-        items(summary.holdingsWithYield) { holding ->
+        items(
+            items = summary.holdingsWithYield,
+            key = { it.code },
+            contentType = { "HoldingYield" }
+        ) { holding ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.large,

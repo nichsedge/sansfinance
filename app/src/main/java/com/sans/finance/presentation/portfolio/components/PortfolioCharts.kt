@@ -79,6 +79,12 @@ fun NetWorthTrendChart(
     )
 
     val haptic = LocalHapticFeedback.current
+    val zoneId = remember { java.time.ZoneId.systemDefault() }
+    val monthDtf = remember { java.time.format.DateTimeFormatter.ofPattern("MMM", java.util.Locale.US) }
+    val tooltipDtf = remember { java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy", java.util.Locale.US) }
+    val monthLabels = remember(history) {
+        history.map { monthDtf.format(java.time.Instant.ofEpochMilli(it.snapshot_date).atZone(zoneId)) }
+    }
 
     Box(modifier = modifier) {
         Canvas(
@@ -223,10 +229,9 @@ fun NetWorthTrendChart(
             }
 
             // Draw X-axis labels (dates)
-            val dateFormatMonth = SimpleDateFormat("MMM", Locale.US)
-            history.forEachIndexed { index, snapshot ->
+            history.forEachIndexed { index, _ ->
                 if (index == 0 || index == history.size - 1 || history.size < 5) {
-                    val dateStr = dateFormatMonth.format(Date(snapshot.snapshot_date))
+                    val dateStr = monthLabels[index]
                     val textLayoutResult = textMeasurer.measure(dateStr, labelStyle)
                     drawText(
                         textLayoutResult = textLayoutResult,
@@ -265,8 +270,7 @@ fun NetWorthTrendChart(
                 )
 
                 // Tooltip Content
-                val dateStr =
-                    SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date(snapshot.snapshot_date))
+                val dateStr = tooltipDtf.format(java.time.Instant.ofEpochMilli(snapshot.snapshot_date).atZone(zoneId))
                 val valueStr =
                     if (isPrivacyModeEnabled) "••••" else CurrencyFormatter.formatAmountCompact(
                         snapshot.totalIdr.toLong() * 100,

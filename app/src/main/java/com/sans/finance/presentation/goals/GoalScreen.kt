@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sans.finance.domain.model.Goal
+import com.sans.finance.core.util.DateFormatterUtils
 import com.sans.finance.presentation.components.AppTopBar
 import com.sans.finance.presentation.components.GlassCard
 import com.sans.finance.presentation.components.PrivacyText
@@ -153,7 +154,11 @@ fun GoalScreen(
                 }
             }
 
-            items(state.goals) { goalWithProgress ->
+            items(
+                items = state.goals,
+                key = { it.goal.id },
+                contentType = { "GoalItem" }
+            ) { goalWithProgress ->
                 GoalItem(
                     goalWithProgress = goalWithProgress,
                     isPrivacyModeEnabled = state.isPrivacyModeEnabled,
@@ -267,7 +272,7 @@ fun GoalItem(
                     )
                     goal.deadline?.let { deadline ->
                         Text(
-                            text = "By ${SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date(deadline))}",
+                            text = "By ${DateFormatterUtils.formatStandardDate(deadline)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Medium
@@ -422,7 +427,7 @@ fun AddGoalDialog(
                 )
 
                 OutlinedTextField(
-                    value = deadline?.let { SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date(it)) } ?: "",
+                    value = deadline?.let { DateFormatterUtils.formatStandardDate(it) } ?: "",
                     onValueChange = {},
                     label = { Text("Deadline (Optional)") },
                     modifier = Modifier.fillMaxWidth(),

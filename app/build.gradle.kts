@@ -93,6 +93,7 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.profileinstaller)
     implementation(libs.okhttp)
 
     // Jetpack Glance AppWidgets

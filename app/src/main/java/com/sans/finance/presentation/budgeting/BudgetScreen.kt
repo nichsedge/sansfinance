@@ -131,7 +131,11 @@ fun BudgetScreen(
                         contentPadding = PaddingValues(horizontal = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(state.suggestions) { suggestion ->
+                        items(
+                            items = state.suggestions,
+                            key = { it.categoryId },
+                            contentType = { "BudgetSuggestion" }
+                        ) { suggestion ->
                             BudgetSuggestionCard(
                                 suggestion = suggestion,
                                 currencyCode = state.currentCurrency,
@@ -178,7 +182,11 @@ fun BudgetScreen(
                 }
             }
 
-            items(state.budgetStatuses) { status ->
+            items(
+                items = state.budgetStatuses,
+                key = { it.budget.id },
+                contentType = { "BudgetStatus" }
+            ) { status ->
                 BudgetItem(
                     status = status,
                     currencyCode = state.currentCurrency,

@@ -46,12 +46,7 @@ fun MonthSelector(
 ) {
     val monthYear = remember(startDate) {
         if (startDate <= 0L) "All Time"
-        else {
-            val cal = com.sans.finance.core.util.CalendarUtils.getInstance().apply {
-                timeInMillis = startDate
-            }
-            SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(cal.time)
-        }
+        else com.sans.finance.core.util.DateFormatterUtils.formatFullMonthYear(startDate)
     }
 
     Surface(

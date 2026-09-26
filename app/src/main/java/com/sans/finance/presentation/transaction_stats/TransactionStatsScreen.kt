@@ -94,7 +94,9 @@ import com.sans.finance.core.util.DateFormatterUtils
 import com.sans.finance.domain.model.CategorySpent
 import com.sans.finance.domain.model.DaySpent
 import com.sans.finance.domain.model.Expense
-import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -414,30 +416,35 @@ fun DateNavigator(
 @Composable
 fun getPeriodText(state: TransactionStatsState): String {
     val cal = state.currentPeriodDate
+    val zone = ZoneId.systemDefault()
     return when (state.selectedPeriodType) {
         TransactionStatsPeriodType.WEEKLY -> {
             val start = cal.clone() as Calendar
             start.set(Calendar.DAY_OF_WEEK, start.firstDayOfWeek)
             val end = start.clone() as Calendar
             end.add(Calendar.DAY_OF_YEAR, 6)
-            val df = SimpleDateFormat("dd MMM", Locale.getDefault())
-            "${df.format(start.time)} - ${df.format(end.time)}"
+            val dtf = DateTimeFormatter.ofPattern("dd MMM", Locale.getDefault())
+            val startStr = dtf.format(Instant.ofEpochMilli(start.timeInMillis).atZone(zone))
+            val endStr = dtf.format(Instant.ofEpochMilli(end.timeInMillis).atZone(zone))
+            "$startStr - $endStr"
         }
 
         TransactionStatsPeriodType.MONTHLY -> {
-            val df = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
-            df.format(cal.time)
+            val dtf = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
+            dtf.format(Instant.ofEpochMilli(cal.timeInMillis).atZone(zone))
         }
 
         TransactionStatsPeriodType.ANNUALLY -> {
-            val df = SimpleDateFormat("yyyy", Locale.getDefault())
-            df.format(cal.time)
+            val dtf = DateTimeFormatter.ofPattern("yyyy", Locale.getDefault())
+            dtf.format(Instant.ofEpochMilli(cal.timeInMillis).atZone(zone))
         }
 
         TransactionStatsPeriodType.CUSTOM -> {
             if (state.customStartDate != null && state.customEndDate != null) {
-                val df = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-                "${df.format(Date(state.customStartDate))} - ${df.format(Date(state.customEndDate))}"
+                val dtf = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.getDefault())
+                val startStr = dtf.format(Instant.ofEpochMilli(state.customStartDate).atZone(zone))
+                val endStr = dtf.format(Instant.ofEpochMilli(state.customEndDate).atZone(zone))
+                "$startStr - $endStr"
             } else {
                 stringResource(R.string.select_date_range)
             }
@@ -502,7 +509,8 @@ fun CategoryBreakdown(
                     currencyCode = currencyCode
                 )
 
-                categories.sortedByDescending { it.totalAmount }.forEachIndexed { index, category ->
+                val sortedCategories = remember(categories) { categories.sortedByDescending { it.totalAmount } }
+                sortedCategories.forEachIndexed { index, category ->
                     val percent =
                         if (totalInCategories > 0) (category.totalAmount.toFloat() / totalInCategories * 100) else 0f
                     val color = pieChartColors[index % pieChartColors.size]
@@ -798,6 +806,19 @@ fun TrendChart(
         timeScope == TrendTimeScope.IN_PERIOD && period != TransactionStatsPeriodType.ANNUALLY
     }
 
+    val zoneId = remember { ZoneId.systemDefault() }
+    val tooltipDailyDtf = remember {
+        DateTimeFormatter.ofPattern("EEE, dd MMM yyyy", Locale.getDefault())
+    }
+    val tooltipMonthlyDtf = remember {
+        DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
+    }
+    val xAxisLabels = remember(sortedSpending, isDaily) {
+        val pattern = if (isDaily) "dd" else "MMM"
+        val dtf = DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
+        sortedSpending.map { dtf.format(Instant.ofEpochMilli(it.day).atZone(zoneId)) }
+    }
+
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(16.dp)
@@ -899,10 +920,13 @@ fun TrendChart(
         if (isAnomalyDetected) {
             Spacer(modifier = Modifier.height(8.dp))
             val outlier = sortedSpending.maxByOrNull { it.amount }
-            val outlierDateStr = if (outlier != null) {
-                if (isDaily) SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(outlier.day))
-                else SimpleDateFormat("MMM yyyy", Locale.getDefault()).format(Date(outlier.day))
-            } else ""
+            val outlierDateStr = remember(outlier, isDaily) {
+                if (outlier != null) {
+                    val dtf = if (isDaily) DateTimeFormatter.ofPattern("dd MMM", Locale.getDefault())
+                    else DateTimeFormatter.ofPattern("MMM yyyy", Locale.getDefault())
+                    dtf.format(Instant.ofEpochMilli(outlier.day).atZone(zoneId))
+                } else ""
+            }
 
             Row(
                 modifier = Modifier
@@ -1188,9 +1212,9 @@ fun TrendChart(
 
                             // Formatted strings
                             val dateStr = if (isDaily) {
-                                SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault()).format(Date(data.day))
+                                tooltipDailyDtf.format(Instant.ofEpochMilli(data.day).atZone(zoneId))
                             } else {
-                                SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(data.day))
+                                tooltipMonthlyDtf.format(Instant.ofEpochMilli(data.day).atZone(zoneId))
                             }
                             val amtStr = CurrencyFormatter.formatAmount(data.amount, currencyCode)
                             val badgeStr = if (isOutlier && medianAmount > 0) {
@@ -1263,12 +1287,7 @@ fun TrendChart(
 
                         for (i in sortedSpending.indices step labelStep) {
                             val pt = points[i]
-                            val data = sortedSpending[i]
-                            val labelText = if (isDaily) {
-                                SimpleDateFormat("dd", Locale.getDefault()).format(Date(data.day))
-                            } else {
-                                SimpleDateFormat("MMM", Locale.getDefault()).format(Date(data.day))
-                            }
+                            val labelText = xAxisLabels[i]
                             val textLayoutResult = textMeasurer.measure(labelText, style = labelStyle)
                             drawText(
                                 textLayoutResult = textLayoutResult,

@@ -32,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -224,6 +225,8 @@ fun CurrencyExposureCard(
 
             Spacer(Modifier.height(16.dp))
 
+            val sortedSummaries = remember(summaries) { summaries.sortedByDescending { it.totalInBaseCurrency } }
+
             // Stacked Bar using Row & Weight
             Row(
                 modifier = Modifier
@@ -232,7 +235,7 @@ fun CurrencyExposureCard(
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             ) {
-                summaries.sortedByDescending { it.totalInBaseCurrency }.forEachIndexed { index, summary ->
+                sortedSummaries.forEachIndexed { index, summary ->
                     val weight = (summary.totalInBaseCurrency / totalInBase).toFloat()
                     if (weight > 0.001f) {
                         val color = when (index % 4) {
@@ -258,7 +261,7 @@ fun CurrencyExposureCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                summaries.sortedByDescending { it.totalInBaseCurrency }.forEachIndexed { index, summary ->
+                sortedSummaries.forEachIndexed { index, summary ->
                     val pct = (summary.totalInBaseCurrency / totalInBase) * 100.0
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val color = when (index % 4) {
