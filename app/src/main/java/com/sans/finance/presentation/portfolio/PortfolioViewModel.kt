@@ -114,14 +114,17 @@ class PortfolioViewModel @Inject constructor(
     private var aiStreamingJob: kotlinx.coroutines.Job? = null
     private val _sovereignAdvisor = MutableStateFlow<com.sans.finance.data.util.SovereignAdvisorJson?>(null)
     val sovereignAdvisor: StateFlow<com.sans.finance.data.util.SovereignAdvisorJson?> = _sovereignAdvisor.asStateFlow()
+    private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
 
     init {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val file = java.io.File(context.filesDir, "latest_advisor.json")
                 if (file.exists()) {
-                    val parser = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-                    _sovereignAdvisor.value = parser.decodeFromString(com.sans.finance.data.util.SovereignAdvisorJson.serializer(), file.readText())
+                    _sovereignAdvisor.value = json.decodeFromString(
+                        com.sans.finance.data.util.SovereignAdvisorJson.serializer(),
+                        file.readText()
+                    )
                 }
             } catch (_: Exception) {}
         }
@@ -691,13 +694,13 @@ class PortfolioViewModel @Inject constructor(
     private fun parsePortfolioJsonResult(text: String): com.sans.finance.data.ai.PortfolioAnalysisResult? {
         val clean = com.sans.finance.data.ai.AiJsonParser.extractJsonString(text)
         return runCatching {
-            val obj = kotlinx.serialization.json.Json.parseToJsonElement(clean) as? kotlinx.serialization.json.JsonObject ?: return null
+            val obj = json.parseToJsonElement(clean) as? kotlinx.serialization.json.JsonObject ?: return null
             val summary = obj["summary"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content } ?: "Portfolio Analysis"
             val insightsJson = obj["insights"]
             val insights = if (insightsJson == null) {
                 emptyList()
             } else {
-                kotlinx.serialization.json.Json { ignoreUnknownKeys = true }.decodeFromString<List<com.sans.finance.data.ai.PortfolioAnalysisInsight>>(insightsJson.toString())
+                json.decodeFromString<List<com.sans.finance.data.ai.PortfolioAnalysisInsight>>(insightsJson.toString())
             }
             com.sans.finance.data.ai.PortfolioAnalysisResult(summary = summary, insights = insights, rawText = null)
         }.getOrNull()

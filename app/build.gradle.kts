@@ -67,14 +67,12 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.material3.windowsizeclass)
     implementation(libs.androidx.compose.material.icons.extended)
 
     // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
-    androidTestImplementation(libs.androidx.room.testing)
 
     // Hilt
     implementation(libs.hilt.android)
@@ -96,18 +94,14 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.okhttp)
-    implementation(libs.androidx.security.crypto)
-    implementation("javax.inject:javax.inject:1")
 
     // Jetpack Glance AppWidgets
     implementation(libs.androidx.glance)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
 
-
-
     testImplementation(libs.junit)
-    testImplementation("org.json:json:20240303")
+    testImplementation(libs.org.json)
     testImplementation(libs.kotlin.reflect)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
@@ -129,7 +123,7 @@ tasks.register("androidTestClasses") {
 }
 
 detekt {
-    baseline = file("detekt-baseline.xml")
+    baseline.set(layout.projectDirectory.file("detekt-baseline.xml"))
     buildUponDefaultConfig = true
     parallel = true
 }
