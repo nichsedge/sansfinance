@@ -31,7 +31,47 @@ data class SovereignAdvisorJson(
     @SerialName("mom_growth_idr") val momGrowthIdr: Double = 0.0,
     @SerialName("action_summary") val actionSummary: String = "",
     @SerialName("equities_verdicts") val equitiesVerdicts: List<EquityVerdictJson> = emptyList(),
-    val opportunities: List<ScreenedOpportunityJson> = emptyList()
+    @SerialName("clutter_audit") val clutterAudit: ClutterAuditJson? = null,
+    @SerialName("reinvestment_playbook") val reinvestmentPlaybook: ReinvestmentPlaybookJson? = null,
+    @SerialName("vault_summary") val vaultSummary: VaultSummaryJson? = null,
+    @SerialName("deposit_router") val depositRouter: DepositRouterJson? = null
+)
+
+@Serializable
+data class ClutterAuditJson(
+    @SerialName("clutter_score") val clutterScore: Double = 100.0,
+    @SerialName("clutter_rating") val clutterRating: String = "Clean",
+    @SerialName("fragmented_count") val fragmentedCount: Int = 0,
+    @SerialName("fragmented_total_idr") val fragmentedTotalIdr: Double = 0.0,
+    @SerialName("fragmented_weight_pct") val fragmentedWeightPct: Double = 0.0,
+    val directives: List<String> = emptyList()
+)
+
+@Serializable
+data class ReinvestmentPlaybookJson(
+    @SerialName("has_upcoming_maturity") val hasUpcomingMaturity: Boolean = false,
+    @SerialName("maturing_asset") val maturingAsset: String = "",
+    @SerialName("maturity_date") val maturityDate: String = "",
+    @SerialName("days_left") val daysLeft: Int = 0,
+    @SerialName("principal_idr") val principalIdr: Double = 0.0,
+    @SerialName("lost_monthly_idr") val lostMonthlyIdr: Double = 0.0,
+    @SerialName("action_plan") val actionPlan: List<String> = emptyList()
+)
+
+@Serializable
+data class VaultSummaryJson(
+    @SerialName("locked_vault_idr") val lockedVaultIdr: Double = 0.0,
+    @SerialName("locked_vault_pct") val lockedVaultPct: Double = 0.0,
+    @SerialName("actionable_capital_idr") val actionableCapitalIdr: Double = 0.0,
+    @SerialName("actionable_capital_pct") val actionableCapitalPct: Double = 0.0,
+    @SerialName("calmness_directive") val calmnessDirective: String = ""
+)
+
+@Serializable
+data class DepositRouterJson(
+    @SerialName("one_step_action") val oneStepAction: String = "",
+    @SerialName("priority_asset_class") val priorityAssetClass: String = "",
+    @SerialName("deposit_amount_idr") val depositAmountIdr: Double = 0.0
 )
 
 @Serializable
@@ -40,16 +80,6 @@ data class EquityVerdictJson(
     @SerialName("value_idr") val valueIdr: Double = 0.0,
     @SerialName("weight_pct") val weightPct: Double = 0.0,
     val verdict: String = "",
-    @SerialName("nff_20d") val nff20d: Double = 0.0
-)
-
-@Serializable
-data class ScreenedOpportunityJson(
-    val ticker: String,
-    val name: String = "",
-    val close: Double = 0.0,
-    val roe: Double = 0.0,
-    val per: Double = 0.0,
     @SerialName("nff_20d") val nff20d: Double = 0.0
 )
 

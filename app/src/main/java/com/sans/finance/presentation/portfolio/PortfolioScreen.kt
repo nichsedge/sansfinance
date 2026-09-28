@@ -105,6 +105,7 @@ fun PortfolioScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     var showGuideSheet by rememberSaveable { mutableStateOf(false) }
+    var showAdvisorSheet by rememberSaveable { mutableStateOf(false) }
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -495,11 +496,12 @@ fun PortfolioScreen(
                                 PortfolioHeader(state, onForecastingClick)
                             }
 
-                            if (sovereignAdvisor != null) {
+                            val activeAdvisor = state.sovereignAdvisor ?: sovereignAdvisor
+                            if (activeAdvisor != null) {
                                 item {
-                                    com.sans.finance.presentation.portfolio.components.SovereignAdvisorCard(
-                                        advisor = sovereignAdvisor,
-                                        isPrivacyModeEnabled = state.isPrivacyModeEnabled
+                                    com.sans.finance.presentation.portfolio.components.SovereignFocusStrip(
+                                        advisor = activeAdvisor,
+                                        onClick = { showAdvisorSheet = true }
                                     )
                                 }
                             }
@@ -879,6 +881,15 @@ fun PortfolioScreen(
                     importLauncher.launch(arrayOf("application/json", "text/*"))
                 },
                 snackbarHostState = snackbarHostState
+            )
+        }
+
+        val activeAdvisor = state.sovereignAdvisor ?: sovereignAdvisor
+        if (showAdvisorSheet && activeAdvisor != null) {
+            com.sans.finance.presentation.portfolio.components.SovereignAdvisorBottomSheet(
+                advisor = activeAdvisor,
+                isPrivacyModeEnabled = state.isPrivacyModeEnabled,
+                onDismiss = { showAdvisorSheet = false }
             )
         }
     }

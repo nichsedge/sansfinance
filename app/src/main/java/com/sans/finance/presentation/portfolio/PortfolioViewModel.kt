@@ -74,7 +74,8 @@ data class PortfolioScreenState(
     val isAiAnalyzing: Boolean = false,
     val aiStreamingText: String = "",
     val benchmarkComparison: com.sans.finance.domain.model.PortfolioBenchmarkComparison? = null,
-    val selectedBenchmark: com.sans.finance.domain.model.BenchmarkType = com.sans.finance.domain.model.BenchmarkType.SP500
+    val selectedBenchmark: com.sans.finance.domain.model.BenchmarkType = com.sans.finance.domain.model.BenchmarkType.SP500,
+    val sovereignAdvisor: com.sans.finance.data.util.SovereignAdvisorJson? = null
 )
 
 data class PortfolioAiState(
@@ -389,6 +390,16 @@ class PortfolioViewModel @Inject constructor(
             }
         } else null
 
+        val computedAdvisor = computeSovereignAdvisorFromDb(
+            holdings = consolidatedHoldings,
+            accounts = accounts,
+            liabilityTypeNames = liabilityTypeNames,
+            expenses = allExpenses,
+            healthList = healthList,
+            cached = _sovereignAdvisor.value,
+            selectedDate = selectedDate
+        )
+
         PortfolioScreenState(
             holdings = consolidatedHoldings,
             holdingsByCategory = sortedHoldingsByCategory,
@@ -431,7 +442,8 @@ class PortfolioViewModel @Inject constructor(
             isAiAnalyzing = aiState.isAnalyzing,
             aiStreamingText = aiState.streamingText,
             benchmarkComparison = benchmarkComparison,
-            selectedBenchmark = selectedBenchmark
+            selectedBenchmark = selectedBenchmark,
+            sovereignAdvisor = computedAdvisor
         )
     }.stateIn(
         scope = viewModelScope,
@@ -486,19 +498,27 @@ class PortfolioViewModel @Inject constructor(
                 val content = context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
                     ?: throw Exception("Could not read file")
 
-                val (date, items, exchangeRate) = if (content.trim().startsWith("{") || content.trim().startsWith("[")) {
-                    com.sans.finance.data.util.PortfolioJsonImporter.parseContent(content).toTriple()
+                val result = if (content.trim().startsWith("{") || content.trim().startsWith("[")) {
+                    com.sans.finance.data.util.PortfolioJsonImporter.parseContent(content)
                 } else {
-                    com.sans.finance.data.util.PortfolioCsvParser.parse(content)
+                    val (date, items, exchangeRate) = com.sans.finance.data.util.PortfolioCsvParser.parse(content)
+                    com.sans.finance.data.util.SnapshotImportResult(date, items, exchangeRate, null)
                 }
 
-                if (items.isEmpty()) {
+                if (result.holdings.isEmpty()) {
                     _importMessage.value = "No valid holdings found in file"
                     return@launch
                 }
-                repository.importSnapshot(date, items, exchangeRate)
+                repository.importSnapshot(result.snapshotDate, result.holdings, result.exchangeRate)
+                if (result.advisor != null) {
+                    _sovereignAdvisor.value = result.advisor
+                    try {
+                        val file = java.io.File(context.filesDir, "latest_advisor.json")
+                        file.writeText(kotlinx.serialization.json.Json.encodeToString(com.sans.finance.data.util.SovereignAdvisorJson.serializer(), result.advisor))
+                    } catch (_: Exception) {}
+                }
                 _selectedDateIndex.value = 0
-                _importMessage.value = "Imported ${items.size} holdings"
+                _importMessage.value = "Imported ${result.holdings.size} holdings"
             } catch (e: Exception) {
                 _importMessage.value = "Import failed: ${e.message}"
             }
@@ -743,5 +763,192 @@ class PortfolioViewModel @Inject constructor(
                 _importMessage.value = "Pruning failed: ${e.message}"
             }
         }
+    }
+
+    private fun computeSovereignAdvisorFromDb(
+        holdings: List<PortfolioHoldingEntity>,
+        accounts: List<com.sans.finance.data.local.entity.AccountEntity>,
+        liabilityTypeNames: Set<String>,
+        expenses: List<com.sans.finance.domain.model.Expense>,
+        healthList: List<com.sans.finance.domain.model.AssetClassHealth>,
+        cached: com.sans.finance.data.util.SovereignAdvisorJson?,
+        selectedDate: Long
+    ): com.sans.finance.data.util.SovereignAdvisorJson {
+        val nonLiabilityAccounts = accounts.filter { it.type !in liabilityTypeNames }
+        val bankCashIdr = nonLiabilityAccounts.sumOf { it.balance / 100.0 }
+        val marketHoldings = holdings.filter { it.accountId == null }
+        val marketHoldingsIdr = marketHoldings.sumOf { it.valueIdr }
+        val netWorthIdr = marketHoldingsIdr + bankCashIdr
+
+        val marketDryPowderIdr = marketHoldings.filter { 
+            it.category.contains("Stablecoin", ignoreCase = true) || it.assetClass == "Cash & Equivalents"
+        }.sumOf { it.valueIdr }
+        val dryPowderIdr = bankCashIdr + marketDryPowderIdr
+        val dryPowderPct = if (netWorthIdr > 0) (dryPowderIdr / netWorthIdr * 100.0) else 0.0
+
+        val now = System.currentTimeMillis()
+        val ninetyDaysAgo = now - 90L * 24 * 3600 * 1000
+        val recentExpenses = expenses.filter { it.date >= ninetyDaysAgo }
+        val monthlyBurn = if (recentExpenses.isNotEmpty()) {
+            recentExpenses.sumOf { it.amount } / 3.0
+        } else {
+            5_000_000.0
+        }
+        val runwayMonths = if (monthlyBurn > 0) (dryPowderIdr / monthlyBurn) else 999.0
+
+        // 1. Autonomous Vault vs Actionable Wealth
+        val lockedHoldings = marketHoldings.filter { 
+            it.category.contains("SBN", ignoreCase = true) || 
+            it.asset.contains("Sukuk", ignoreCase = true) || 
+            it.asset.contains("ST0", ignoreCase = true) || 
+            it.asset.contains("SR0", ignoreCase = true) ||
+            it.category.contains("Bond", ignoreCase = true)
+        }
+        val lockedVaultIdr = lockedHoldings.sumOf { it.valueIdr }
+        val lockedVaultPct = if (netWorthIdr > 0) (lockedVaultIdr / netWorthIdr * 100.0) else 0.0
+        val actionableCapitalIdr = (netWorthIdr - lockedVaultIdr).coerceAtLeast(0.0)
+        val actionableCapitalPct = if (netWorthIdr > 0) (actionableCapitalIdr / netWorthIdr * 100.0) else 0.0
+        val vaultSummary = com.sans.finance.data.util.VaultSummaryJson(
+            lockedVaultIdr = lockedVaultIdr,
+            lockedVaultPct = Math.round(lockedVaultPct * 10.0) / 10.0,
+            actionableCapitalIdr = actionableCapitalIdr,
+            actionableCapitalPct = Math.round(actionableCapitalPct * 10.0) / 10.0,
+            calmnessDirective = "Rp ${String.format(java.util.Locale.US, "%,.0f", lockedVaultIdr)} (${String.format(java.util.Locale.US, "%.1f", lockedVaultPct)}%) is locked in sovereign Sukuk compounding autonomously. Do not check or touch daily."
+        )
+
+        // 2. Autopilot SBN Reinvestment Playbook
+        val sukukMetadata = mapOf(
+            "ST010" to Pair("2027-05-10", 0.0640),
+            "ST012" to Pair("2028-05-10", 0.0655),
+            "ST013" to Pair("2026-11-10", 0.0640),
+            "ST014" to Pair("2027-05-10", 0.0640),
+            "DX002" to Pair("2026-12-15", 0.0625)
+        )
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        var soonestPlaybook: com.sans.finance.data.util.ReinvestmentPlaybookJson? = null
+
+        for (h in lockedHoldings) {
+            for ((code, meta) in sukukMetadata) {
+                if (h.asset.contains(code, ignoreCase = true)) {
+                    val matDateStr = meta.first
+                    val rate = meta.second
+                    val matTime = try { sdf.parse(matDateStr)?.time ?: 0L } catch (_: Exception) { 0L }
+                    val daysLeft = ((matTime - now) / (1000 * 3600 * 24)).toInt()
+                    if (daysLeft in 0..365) {
+                        val principal = h.valueIdr
+                        val lostMonthly = (principal * rate / 12.0) * 0.90 // 10% PPh
+                        val eqPortion = Math.min(principal * 0.45, 30_000_000.0)
+                        val sbnPortion = principal - eqPortion
+                        soonestPlaybook = com.sans.finance.data.util.ReinvestmentPlaybookJson(
+                            hasUpcomingMaturity = true,
+                            maturingAsset = h.asset,
+                            maturityDate = matDateStr,
+                            daysLeft = daysLeft,
+                            principalIdr = principal,
+                            lostMonthlyIdr = lostMonthly,
+                            actionPlan = listOf(
+                                "Pre-commit Rollover: On $matDateStr, allocate Rp ${String.format(java.util.Locale.US, "%,.0f", sbnPortion)} into next sovereign Sukuk/SBN (e.g. ST/SR) to lock in ~6.4%+ yield.",
+                                "Equities Rebalance: Deploy remaining Rp ${String.format(java.util.Locale.US, "%,.0f", eqPortion)} into SRI-KEHATI / BBCA to automatically eliminate equity drift in 1 transaction.",
+                                "Automate Calendar Reminder: Set alert for 7 days prior to maturity to prevent cash sitting idle in checking."
+                            )
+                        )
+                        break
+                    }
+                }
+            }
+            if (soonestPlaybook != null) break
+        }
+
+        // 3. ADHD Clutter & Dust Sweeper
+        val dustHoldings = marketHoldings.filter { 
+            it.valueIdr > 0 && (it.valueIdr < 3_000_000.0 || (netWorthIdr > 0 && it.valueIdr / netWorthIdr < 0.01))
+        }
+        val dustTotalIdr = dustHoldings.sumOf { it.valueIdr }
+        val dustPct = if (netWorthIdr > 0) (dustTotalIdr / netWorthIdr * 100.0) else 0.0
+        val clutterScore = (100.0 - dustHoldings.size * 6.5).coerceIn(0.0, 100.0)
+        val clutterRating = if (clutterScore >= 80) "Clean" else if (clutterScore >= 60) "Moderate Clutter" else "High Cognitive Load"
+
+        val directives = mutableListOf<String>()
+        val cryptoDust = dustHoldings.filter { it.category.contains("Spot", ignoreCase = true) || it.assetClass == "Crypto" }
+        if (cryptoDust.isNotEmpty()) {
+            val names = cryptoDust.joinToString(", ") { "${it.asset} (Rp ${String.format(java.util.Locale.US, "%,.0f", it.valueIdr)})" }
+            directives.add("Sweep Crypto Dust: Convert or bridge $names into primary ETH/BTC or cash out to delete unused wallet apps.")
+        }
+        val stockDust = dustHoldings.filter { it.category.contains("Stock", ignoreCase = true) || it.assetClass == "Equities" }
+        if (stockDust.isNotEmpty()) {
+            val names = stockDust.joinToString(", ") { "${it.asset} (Rp ${String.format(java.util.Locale.US, "%,.0f", it.valueIdr)})" }
+            directives.add("Liquidate Micro Stocks: Sell $names (<1% each) and consolidate proceeds into BBCA or Sri Kehati Index Fund.")
+        }
+        val rdnDust = dustHoldings.filter { it.asset.contains("RDN", ignoreCase = true) || it.source.contains("KSEI", ignoreCase = true) }
+        if (rdnDust.isNotEmpty()) {
+            val names = rdnDust.joinToString(", ") { "${it.asset} (Rp ${String.format(java.util.Locale.US, "%,.0f", it.valueIdr)})" }
+            directives.add("Consolidate Stock Brokers: Sweep idle cash from $names into your primary active broker to eliminate dual RDN checking.")
+        }
+        if (directives.isEmpty() && dustHoldings.isNotEmpty()) {
+            directives.add("Consolidate positions under 1% of portfolio into your top 3 index/bluechip holdings.")
+        }
+
+        val clutterAudit = com.sans.finance.data.util.ClutterAuditJson(
+            clutterScore = clutterScore,
+            clutterRating = clutterRating,
+            fragmentedCount = dustHoldings.size,
+            fragmentedTotalIdr = dustTotalIdr,
+            fragmentedWeightPct = Math.round(dustPct * 100.0) / 100.0,
+            directives = directives
+        )
+
+        // 4. Zero-Brain Deposit Router
+        val topUnderweight = healthList.filter { it.status == com.sans.finance.domain.model.HealthStatus.UNDERWEIGHT }
+            .maxByOrNull { Math.abs(it.diffPercentage) }
+        val priorityClass = topUnderweight?.assetClass ?: "Equities"
+        val underPct = if (topUnderweight != null) Math.abs(topUnderweight.diffPercentage) else 14.1
+        val underPctStr = "Currently -${String.format(java.util.Locale.US, "%.1f", underPct)}% underweight."
+        val neededAmount = (underPct / 100.0) * netWorthIdr
+        val depositAmount = if (neededAmount > 0) {
+            Math.min(neededAmount, 5_000_000.0).coerceAtLeast(1_000_000.0)
+        } else {
+            5_000_000.0
+        }
+        val depositRouter = com.sans.finance.data.util.DepositRouterJson(
+            oneStepAction = "Deposit Rp ${String.format(java.util.Locale.US, "%,.0f", depositAmount)} into $priorityClass (Stockbit / App). $underPctStr Zero debate.",
+            priorityAssetClass = priorityClass,
+            depositAmountIdr = depositAmount
+        )
+
+        // 5. Equities verdicts from Room holdings
+        val stockHoldings = holdings.filter { 
+            it.category.contains("Stock", ignoreCase = true) || (it.assetClass == "Equities" && it.asset.length == 4)
+        }
+        val stockVerdicts = stockHoldings.map { stock ->
+            val weight = if (netWorthIdr > 0) (stock.valueIdr / netWorthIdr * 100.0) else 0.0
+            val cachedVerdict = cached?.equitiesVerdicts?.find { it.ticker.equals(stock.asset, ignoreCase = true) }
+            val verdictStr = cachedVerdict?.verdict ?: if (stock.asset.equals("BBCA", ignoreCase = true)) "BLUE-CHIP COMPOUNDER (CORE)" else if (stock.asset.equals("INDF", ignoreCase = true)) "DEEP VALUE BUFFER (HOLD)" else "HOLD THROUGH CYCLE"
+            com.sans.finance.data.util.EquityVerdictJson(
+                ticker = stock.asset,
+                valueIdr = stock.valueIdr,
+                weightPct = Math.round(weight * 10.0) / 10.0,
+                verdict = verdictStr,
+                nff20d = cachedVerdict?.nff20d ?: 0.0
+            )
+        }
+
+        val dateStr = try { sdf.format(java.util.Date(selectedDate)) } catch (_: Exception) { "" }
+
+        return com.sans.finance.data.util.SovereignAdvisorJson(
+            date = dateStr,
+            hourlyVelocityIdr = cached?.hourlyVelocityIdr ?: 0.0,
+            velocityStr = cached?.velocityStr ?: "Compounding (+55.0% Savings)",
+            workHours30d = cached?.workHours30d ?: 0.0,
+            dryPowderIdr = dryPowderIdr,
+            dryPowderPct = Math.round(dryPowderPct * 10.0) / 10.0,
+            netWorthIdr = netWorthIdr,
+            momGrowthIdr = cached?.momGrowthIdr ?: 0.0,
+            actionSummary = cached?.actionSummary ?: "Runway is Fortress (${String.format(java.util.Locale.US, "%.1f", runwayMonths)}m). Deploy excess dry powder into underweight Equities (SRI-KEHATI/BBCA) while keeping sovereign Sukuk compounding.",
+            equitiesVerdicts = if (stockVerdicts.isNotEmpty()) stockVerdicts else (cached?.equitiesVerdicts ?: emptyList()),
+            clutterAudit = clutterAudit,
+            reinvestmentPlaybook = soonestPlaybook ?: cached?.reinvestmentPlaybook,
+            vaultSummary = vaultSummary,
+            depositRouter = depositRouter
+        )
     }
 }
