@@ -462,6 +462,32 @@ fun SettingsContent(
             )
         }
 
+        // Home Screen & Shortcuts Section
+        item {
+            SettingsSectionTitle("Home Screen & Shortcuts")
+            SettingsClickableCard(
+                onClick = {
+                    val pinned = com.sans.finance.presentation.util.DynamicShortcutManager.requestPinAddExpenseShortcut(context)
+                    if (!pinned) {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Long-press Sans Finance icon on home screen to drag 'Add Expense'",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    } else {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Shortcut pinned to home screen",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                },
+                icon = Icons.Default.ChevronRight,
+                title = "Add Expense Shortcut",
+                subtitle = "Pin 1-tap shortcut to your home screen"
+            )
+        }
+
         // Security Section
         item {
             SettingsSectionTitle("Security")

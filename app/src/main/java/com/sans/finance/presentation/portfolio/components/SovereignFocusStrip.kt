@@ -39,7 +39,7 @@ fun SovereignFocusStrip(
     modifier: Modifier = Modifier
 ) {
     val playbook = advisor.reinvestmentPlaybook
-    val hasMaturity = playbook?.hasUpcomingMaturity == true
+    val hasMaturity = playbook != null && playbook.hasUpcomingMaturity
     val containerColor = if (hasMaturity) {
         Color(0xFFFFF8E1)
     } else {
@@ -102,7 +102,7 @@ fun SovereignFocusStrip(
                             color = accentColor,
                             letterSpacing = 0.6.sp
                         )
-                        if (hasMaturity && playbook != null) {
+                        if (playbook != null && playbook.hasUpcomingMaturity) {
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = "• ${playbook.daysLeft} hari lagi",
@@ -114,7 +114,7 @@ fun SovereignFocusStrip(
                     }
 
                     val subtitleText = when {
-                        hasMaturity && playbook != null -> "${playbook.maturingAsset} jatuh tempo. Tap untuk Playbook & Rebalance."
+                        playbook != null && playbook.hasUpcomingMaturity -> "${playbook.maturingAsset} jatuh tempo. Tap untuk Playbook & Rebalance."
                         advisor.depositRouter != null -> "Prioritas DCA: ${advisor.depositRouter.priorityAssetClass}. Tap untuk arahan 1-langkah."
                         else -> "Tap untuk membuka ADHD Focus Suite & Sovereign Playbook"
                     }

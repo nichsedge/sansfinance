@@ -34,7 +34,8 @@ data class SovereignAdvisorJson(
     @SerialName("clutter_audit") val clutterAudit: ClutterAuditJson? = null,
     @SerialName("reinvestment_playbook") val reinvestmentPlaybook: ReinvestmentPlaybookJson? = null,
     @SerialName("vault_summary") val vaultSummary: VaultSummaryJson? = null,
-    @SerialName("deposit_router") val depositRouter: DepositRouterJson? = null
+    @SerialName("deposit_router") val depositRouter: DepositRouterJson? = null,
+    @SerialName("adhd_directives") val adhdDirectives: List<String> = emptyList()
 )
 
 @Serializable

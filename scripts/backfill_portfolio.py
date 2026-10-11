@@ -48,10 +48,10 @@ def download_snapshots_from_r2(bucket_name, temp_dir, existing_dates=None):
         wrangler_cmd = ["bunx", "wrangler"] if not shutil.which("wrangler") else ["wrangler"]
         os.makedirs(temp_dir, exist_ok=True)
         dest_path = os.path.join(temp_dir, "latest_snapshot.json")
-        cmd = wrangler_cmd + ["r2", "object", "get", f"{bucket}/snapshots/latest.json", f"--file={dest_path}", "--remote"]
+        cmd = wrangler_cmd + ["r2", "object", "get", f"{bucket}/portfolio/latest_snapshot.json", f"--file={dest_path}", "--remote"]
         res = subprocess.run(cmd, capture_output=True, text=True)
         if res.returncode == 0 and os.path.exists(dest_path) and os.path.getsize(dest_path) > 0:
-            print(f"✅ Downloaded snapshots/latest.json from Cloudflare R2.")
+            print(f"✅ Downloaded portfolio/latest_snapshot.json from Cloudflare R2.")
             return True
         else:
             print("💡 Note: To download all historical snapshots from Cloudflare R2, set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY in environment.")
@@ -108,8 +108,8 @@ def download_snapshots_from_r2(bucket_name, temp_dir, existing_dates=None):
             return resp.read()
 
     try:
-        print(f"☁️ Listing snapshots from Cloudflare R2 bucket: {bucket} (prefix: snapshots/)...")
-        list_xml = execute_s3_request("GET", f"/{bucket}", "list-type=2&prefix=snapshots%2F")
+        print(f"☁️ Listing snapshots from Cloudflare R2 bucket: {bucket} (prefix: portfolio/)...")
+        list_xml = execute_s3_request("GET", f"/{bucket}", "list-type=2&prefix=portfolio%2F")
         root = ET.fromstring(list_xml)
         
         # S3 namespace

@@ -94,8 +94,9 @@ enum class PortfolioSortOption(val label: String) {
 }
 
 enum class PortfolioViewMode(val label: String) {
-    GROUPED("By Category"),
-    FLAT("All Assets")
+    FLAT("All Assets"),
+    BY_CATEGORY("By Category"),
+    BY_ASSET_CLASS("By Asset Class")
 }
 
 data class ParsedAssetDisplay(
@@ -144,11 +145,12 @@ fun getSourceAccentColor(source: String): Color {
 fun getCategoryIconAndColor(category: String): Pair<ImageVector, Color> {
     val c = category.lowercase()
     return when {
-        c.contains("equity") || c.contains("stock") -> Icons.AutoMirrored.Filled.ShowChart to Color(0xFF3B82F6)
+        c.contains("equity") || c.contains("stock") || c.contains("saham") -> Icons.AutoMirrored.Filled.ShowChart to Color(0xFF3B82F6)
         c.contains("crypto") -> Icons.Default.Bolt to Color(0xFFF59E0B)
         c.contains("defi") -> Icons.Default.AutoAwesome to Color(0xFF8B5CF6)
         c.contains("cash") || c.contains("bank") || c.contains("wallet") -> Icons.Default.AccountBalanceWallet to Color(0xFF10B981)
         c.contains("fixed") || c.contains("p2p") || c.contains("bond") || c.contains("sbn") -> Icons.Default.Shield to Color(0xFF06B6D4)
+        c.contains("commodity") || c.contains("gold") || c.contains("emas") -> Icons.Default.PieChart to Color(0xFFEAB308)
         else -> Icons.Default.PieChart to Color(0xFF6366F1)
     }
 }
@@ -164,7 +166,7 @@ fun PortfolioFilterBar(
     sortOption: PortfolioSortOption,
     onSortOptionSelect: (PortfolioSortOption) -> Unit,
     viewMode: PortfolioViewMode,
-    onToggleViewMode: () -> Unit,
+    onViewModeSelect: (PortfolioViewMode) -> Unit,
     isAllExpanded: Boolean,
     onToggleExpandAll: () -> Unit,
     modifier: Modifier = Modifier
@@ -228,23 +230,29 @@ fun PortfolioFilterBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // View Mode Toggle (Grouped vs Flat)
-            FilterChip(
-                selected = viewMode == PortfolioViewMode.FLAT,
-                onClick = onToggleViewMode,
-                label = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            if (viewMode == PortfolioViewMode.FLAT) Icons.AutoMirrored.Filled.List else Icons.Default.Category,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(viewMode.label, style = MaterialTheme.typography.labelSmall)
-                    }
-                },
-                shape = CircleShape
-            )
+            // View Mode Chips: "All Assets", "By Category", "By Asset Class"
+            PortfolioViewMode.entries.forEach { mode ->
+                FilterChip(
+                    selected = viewMode == mode,
+                    onClick = { onViewModeSelect(mode) },
+                    label = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                when (mode) {
+                                    PortfolioViewMode.FLAT -> Icons.AutoMirrored.Filled.List
+                                    PortfolioViewMode.BY_CATEGORY -> Icons.Default.Category
+                                    PortfolioViewMode.BY_ASSET_CLASS -> Icons.Default.PieChart
+                                },
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(mode.label, style = MaterialTheme.typography.labelSmall)
+                        }
+                    },
+                    shape = CircleShape
+                )
+            }
 
             // Sort Menu Chip
             Box {
@@ -346,8 +354,8 @@ fun PortfolioFilterBar(
                 )
             }
 
-            // Expand / Collapse All Toggle Chip (Only in Grouped mode)
-            if (viewMode == PortfolioViewMode.GROUPED) {
+            // Expand / Collapse All Toggle Chip (Only in Grouped modes: By Category or By Asset Class)
+            if (viewMode != PortfolioViewMode.FLAT) {
                 FilterChip(
                     selected = false,
                     onClick = onToggleExpandAll,

@@ -29,11 +29,16 @@ Sans Finance is an Android project consisting of the following module:
 
 You can use the `Makefile` for convenience:
 
-- `make run` — build and run on device
+- `make run` — build, install, and run on device
+- `make install` — build and install APK on device (skip launch)
+- `make compile` — rapid Kotlin compilation check
 - `make build` — build debug APK
 - `make release` — build and package release APK
 - `make test-unit` — run JVM unit tests
 - `make test-android` — run instrumentation tests
+- `make r2-list` — list SQLite database backups in Cloudflare R2
+- `make r2-pull` — download latest SQLite snapshot from Cloudflare R2
+- `make r2-restore` — download from R2, verify validity, and restore to device via ADB
 - `make check-deps` — check for available library updates across Google Maven & Maven Central
 - `make update-deps` — automatically update `gradle/libs.versions.toml` with newest stable versions
 
@@ -92,9 +97,9 @@ The project follows **Clean Architecture** with a Kotlin Multiplatform core.
 
 **Presentation** (`app/presentation/`) — Compose + ViewModel + Jetpack Glance.
 - ViewModels use `StateFlow` to expose UI state.
-- Screen list: `Dashboard`, `ExpenseList`, `AddTransaction`, `SansAI` (Financial Copilot & Universal Transaction Ingestion with HITL Confirmation), `Wealth`, `Portfolio` (Overview with Interactive Search/Filter/Sort, Expandable Category Groups, Yield/Allocation Micro-Bars, Minimalist Sovereign Focus Strip with Modal Bottom Sheet for ADHD Focus Suite [Autopilot SBN Reinvestment Playbook, Dust Sweeper, Autonomous Vault vs Liquid Capital, Zero-Brain DCA Router], Holding Detail Bottom Sheet, Helper Icon & Guide Bottom Sheet for Beginners/Experts with CSV & JSON ingestion, Real-Time Streaming AI Strategist with Auto-Navigation to Health & SSE Token Rendering, Health, Yield), `Goals`, `Budgets` (Safe-to-Spend runway), `Installments` (Horizon timeline), `MonthlyReview`, `DataManagement` (Database Optimization & Audit), `WealthForecasting` (Monte Carlo Simulation), etc.
+- Screen list: `Dashboard`, `ExpenseList`, `AddTransaction`, `SansAI` (Financial Copilot & Universal Transaction Ingestion with HITL Confirmation), `Wealth`, `Portfolio` (Overview with Interactive Search/Filter/Sort, Tri-Mode View Filtering [All Assets, By Category, By Asset Class], Expandable Category/Asset Class Groups, Yield/Allocation Micro-Bars, Minimalist Sovereign Focus Strip with Modal Bottom Sheet for ADHD Focus Suite [Autopilot SBN Reinvestment Playbook, Dust Sweeper, Autonomous Vault vs Liquid Capital, Zero-Brain DCA Router], Holding Detail Bottom Sheet, Helper Icon & Guide Bottom Sheet for Beginners/Experts with CSV & JSON ingestion, Real-Time Streaming AI Strategist with Auto-Navigation to Health & SSE Token Rendering, Health with Revamped Stepped Asset Class Target Sliders & Strict 100% Allocation Budget Meter with Proportional Auto-Balancing, Yield), `Goals`, `Budgets` (Safe-to-Spend runway), `Installments` (Horizon timeline), `MonthlyReview`, `DataManagement` (Database Optimization & Audit), `WealthForecasting` (Monte Carlo Simulation), etc.
 - Navigation: Type-safe routes using Kotlinx Serialization in `Screen.kt` with fluid Material 3 enter/exit motion transitions.
-- AppWidgets: Jetpack Glance-powered home screen widgets (`FinancialSummaryGlanceWidget`, `QuickAddGlanceWidget`) alongside legacy RemoteViews.
+- AppWidgets & Shortcuts: Jetpack Glance & RemoteViews widgets with rich preview layouts (`FinancialSummaryGlanceWidget`, `QuickAddGlanceWidget`), native 1-tap pinned shortcuts via `DynamicShortcutManager.requestPinAddExpenseShortcut()`, and adaptive launcher shortcuts.
 
 ## Database
 

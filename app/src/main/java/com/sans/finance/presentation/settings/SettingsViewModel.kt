@@ -180,11 +180,7 @@ class SettingsViewModel @Inject constructor(
 
                 val snapshotName = "sans_finance_db_snapshot.sqlite"
                 val resolver = context.contentResolver
-                val collectionUri = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                    android.provider.MediaStore.Downloads.getContentUri(android.provider.MediaStore.VOLUME_EXTERNAL_PRIMARY)
-                } else {
-                    android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI
-                }
+                val collectionUri = android.provider.MediaStore.Downloads.getContentUri(android.provider.MediaStore.VOLUME_EXTERNAL_PRIMARY)
 
                 // Delete any existing snapshot files (including old duplicate numbered files)
                 try {
@@ -207,10 +203,8 @@ class SettingsViewModel @Inject constructor(
                 val contentValues = android.content.ContentValues().apply {
                     put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, snapshotName)
                     put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/x-sqlite3")
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                        put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, "${android.os.Environment.DIRECTORY_DOWNLOADS}/")
-                        put(android.provider.MediaStore.MediaColumns.IS_PENDING, 1)
-                    }
+                    put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, "${android.os.Environment.DIRECTORY_DOWNLOADS}/")
+                    put(android.provider.MediaStore.MediaColumns.IS_PENDING, 1)
                 }
 
                 val targetUri = resolver.insert(collectionUri, contentValues)
@@ -221,12 +215,10 @@ class SettingsViewModel @Inject constructor(
                             inputStream.copyTo(outputStream)
                         }
                     }
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                        val done = android.content.ContentValues().apply {
-                            put(android.provider.MediaStore.MediaColumns.IS_PENDING, 0)
-                        }
-                        resolver.update(uri, done, null, null)
+                    val done = android.content.ContentValues().apply {
+                        put(android.provider.MediaStore.MediaColumns.IS_PENDING, 0)
                     }
+                    resolver.update(uri, done, null, null)
                     _syncMessage.value = "Snapshot Saved: $snapshotName"
                 } ?: run {
                     _error.value = "Failed to create snapshot"

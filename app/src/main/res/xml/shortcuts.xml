@@ -3,18 +3,20 @@
     <shortcut
         android:shortcutId="add_transaction"
         android:enabled="true"
-        android:icon="@drawable/ic_widget_add"
+        android:icon="@drawable/ic_shortcut_add_expense"
         android:shortcutShortLabel="@string/shortcut_add_transaction_short"
         android:shortcutLongLabel="@string/shortcut_add_transaction_long">
         <intent
             android:action="com.sans.finance.action.ADD_TRANSACTION"
             android:targetPackage="com.sans.finance"
-            android:targetClass="com.sans.finance.MainActivity" />
+            android:targetClass="com.sans.finance.MainActivity">
+            <extra android:name="extra_transaction_type" android:value="EXPENSE" />
+        </intent>
     </shortcut>
     <shortcut
         android:shortcutId="transactions"
         android:enabled="true"
-        android:icon="@drawable/ic_widget_receipt"
+        android:icon="@drawable/ic_shortcut_transactions"
         android:shortcutShortLabel="@string/shortcut_transactions_short"
         android:shortcutLongLabel="@string/shortcut_transactions_long">
         <intent

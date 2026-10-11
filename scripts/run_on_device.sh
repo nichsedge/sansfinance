@@ -69,6 +69,11 @@ else
     echo "⚡ No APK changes detected; skipping installation."
 fi
 
+if [ "${INSTALL_ONLY:-0}" = "1" ] || [ "${NO_LAUNCH:-0}" = "1" ]; then
+    echo "✨ Installation complete."
+    exit 0
+fi
+
 echo "🏁 Starting $PACKAGE on $DEVICE_MODEL..."
 $ADB_CMD shell am start -S -n "$PACKAGE/.MainActivity" -a android.intent.action.MAIN -c android.intent.category.LAUNCHER >/dev/null
 

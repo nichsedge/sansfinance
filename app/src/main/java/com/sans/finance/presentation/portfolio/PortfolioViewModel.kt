@@ -641,17 +641,41 @@ class PortfolioViewModel @Inject constructor(
 
     fun updateTarget(assetClass: String, targetPercentage: Double) {
         viewModelScope.launch {
+            val clampedPercentage = targetPercentage.coerceIn(0.0, 100.0)
             repository.getPortfolioTargets().first().let { targets ->
-                val existing = targets.find { it.assetClass == assetClass }
+                val existing = targets.find { it.assetClass.equals(assetClass, ignoreCase = true) }
                 repository.updatePortfolioTarget(
                     com.sans.finance.data.local.entity.PortfolioTargetEntity(
-                        assetClass = assetClass,
-                        targetPercentage = targetPercentage,
+                        assetClass = existing?.assetClass ?: assetClass,
+                        targetPercentage = clampedPercentage,
                         description = existing?.description ?: "",
                         riskLevel = existing?.riskLevel ?: "MEDIUM"
                     )
                 )
             }
+        }
+    }
+
+    fun updateAllTargets(targets: List<com.sans.finance.data.local.entity.PortfolioTargetEntity>) {
+        viewModelScope.launch {
+            val sanitized = targets.map { target ->
+                target.copy(targetPercentage = target.targetPercentage.coerceIn(0.0, 100.0))
+            }
+            repository.updatePortfolioTargets(sanitized)
+        }
+    }
+
+    fun resetTargetsToDefaults() {
+        viewModelScope.launch {
+            val defaultEntities = com.sans.finance.domain.model.PortfolioHealthDefaults.targets.map { t ->
+                com.sans.finance.data.local.entity.PortfolioTargetEntity(
+                    assetClass = t.assetClass,
+                    targetPercentage = t.targetPercentage,
+                    description = t.description,
+                    riskLevel = t.riskLevel.name
+                )
+            }
+            repository.updatePortfolioTargets(defaultEntities)
         }
     }
 

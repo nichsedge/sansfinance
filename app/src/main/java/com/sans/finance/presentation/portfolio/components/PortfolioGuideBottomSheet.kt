@@ -334,7 +334,7 @@ private fun BeginnerGuideSection(
         UploadMethodItem(
             stepNumber = "3",
             title = "Cloud Storage Sync (R2 / GCS)",
-            description = "Unggah file snapshot ke Cloudflare R2 atau GCS Anda sebagai 'snapshots/latest.json'. Konfigurasi di Settings > Cloud Storage, lalu tekan tombol 'Sync from Cloud'.",
+            description = "Unggah file snapshot ke Cloudflare R2 atau GCS Anda sebagai 'portfolio/latest_snapshot.json'. Konfigurasi di Settings > Cloud Storage, lalu tekan tombol 'Sync from Cloud'.",
             icon = Icons.Default.CloudDownload
         )
     }
@@ -502,7 +502,7 @@ R2_BUCKET_NAME=your_r2_bucket_name"""
                 )
             }
             Text(
-                text = "portfolio-integration adalah Python monorepo (uv) yang berfungsi sebagai Canonical ETL Engine. Engine ini menarik data secara paralel dari KSEI, DeBank, Binance, Alchemy, dan Sans Finance, menyelaraskan yield, membuat SQLite SSOT, dan mengunggah snapshots/latest.json ke Cloudflare R2.",
+                text = "portfolio-integration adalah Go engine yang berfungsi sebagai Canonical ETL Engine. Engine ini menarik data secara paralel dari KSEI, DeBank, Binance, Alchemy, dan Sans Finance, menyelaraskan yield, membuat SQLite SSOT, dan mengunggah portfolio/latest_snapshot.json ke Cloudflare R2.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 18.sp

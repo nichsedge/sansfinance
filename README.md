@@ -73,8 +73,12 @@ Get the latest signed APK directly from [GitHub Releases](https://github.com/nic
 3. Build and run the `app` module.
 
 Alternatively, use the Makefile or build script:
-make run            # Build and deploy debug APK directly to device
-make test-unit      # Run JVM unit tests
+```bash
+make run            # Build, deploy, and launch debug APK on device
+make install        # Build and install debug APK on device (skip launch)
+make compile        # Rapid Kotlin compilation check
+make test-unit      # Run JVM unit tests (cached)
+make r2-list        # List database backups in Cloudflare R2
 make check-deps     # Check for library updates (Google Maven & Maven Central)
 make release        # Build signed release APK
 # or

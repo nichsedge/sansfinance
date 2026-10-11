@@ -65,13 +65,14 @@ object DynamicShortcutManager {
                     val intent = Intent(context, MainActivity::class.java).apply {
                         action = MainActivity.ACTION_ADD_TRANSACTION
                         putExtra(MainActivity.EXTRA_CATEGORY_ID, category.id)
+                        putExtra(MainActivity.EXTRA_TRANSACTION_TYPE, "EXPENSE")
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                     }
 
                     ShortcutInfo.Builder(context, "shortcut_cat_${category.id}")
                         .setShortLabel(category.name)
                         .setLongLabel("Log ${category.name}")
-                        .setIcon(Icon.createWithResource(context, R.drawable.ic_widget_add))
+                        .setIcon(Icon.createWithResource(context, R.drawable.ic_shortcut_add_expense))
                         .setIntent(intent)
                         .build()
                 }
@@ -83,5 +84,30 @@ object DynamicShortcutManager {
                 e.printStackTrace()
             }
         }
+    }
+
+    fun isPinShortcutSupported(context: Context): Boolean {
+        val shortcutManager = context.getSystemService(ShortcutManager::class.java) ?: return false
+        return shortcutManager.isRequestPinShortcutSupported
+    }
+
+    fun requestPinAddExpenseShortcut(context: Context): Boolean {
+        val shortcutManager = context.getSystemService(ShortcutManager::class.java) ?: return false
+        if (!shortcutManager.isRequestPinShortcutSupported) return false
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = MainActivity.ACTION_ADD_TRANSACTION
+            putExtra(MainActivity.EXTRA_TRANSACTION_TYPE, "EXPENSE")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+
+        val pinShortcutInfo = ShortcutInfo.Builder(context, "shortcut_pinned_add_expense")
+            .setShortLabel(context.getString(R.string.shortcut_add_transaction_short))
+            .setLongLabel(context.getString(R.string.shortcut_add_transaction_long))
+            .setIcon(Icon.createWithResource(context, R.drawable.ic_shortcut_add_expense))
+            .setIntent(intent)
+            .build()
+
+        return shortcutManager.requestPinShortcut(pinShortcutInfo, null)
     }
 }

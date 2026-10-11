@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -57,7 +58,8 @@ fun PortfolioHealthView(
     comparison: com.sans.finance.domain.model.PortfolioBenchmarkComparison? = null,
     selectedBenchmark: com.sans.finance.domain.model.BenchmarkType = com.sans.finance.domain.model.BenchmarkType.SP500,
     onSelectBenchmark: (com.sans.finance.domain.model.BenchmarkType) -> Unit = {},
-    onTargetClick: (AssetClassHealth) -> Unit = {}
+    onTargetClick: (AssetClassHealth) -> Unit = {},
+    onAdjustTargetsClick: (() -> Unit)? = null
 ) {
     if (healthList.isEmpty()) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -80,7 +82,7 @@ fun PortfolioHealthView(
 
         CurrencyExposureCard(currencyBreakdowns, currentCurrency)
 
-        AllocationDriftChart(healthList)
+        AllocationDriftChart(healthList, onAdjustTargetsClick = onAdjustTargetsClick)
 
         DcaDepositRebalanceCard(
             healthList = healthList,
@@ -291,7 +293,10 @@ fun CurrencyExposureCard(
 }
 
 @Composable
-fun AllocationDriftChart(healthList: List<AssetClassHealth>) {
+fun AllocationDriftChart(
+    healthList: List<AssetClassHealth>,
+    onAdjustTargetsClick: (() -> Unit)? = null
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
@@ -302,14 +307,57 @@ fun AllocationDriftChart(healthList: List<AssetClassHealth>) {
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                "ALLOCATION DRIFT (TARGET VS ACTUAL)",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = 1.sp
-            )
-            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Text(
+                        "ALLOCATION DRIFT",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 1.sp
+                    )
+                    Text(
+                        "Target vs actual allocation",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        fontSize = 10.sp
+                    )
+                }
+
+                if (onAdjustTargetsClick != null) {
+                    Surface(
+                        onClick = onAdjustTargetsClick,
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = "Adjust Targets",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(Modifier.width(5.dp))
+                            Text(
+                                "Adjust",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
 
             healthList.forEach { health ->
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
@@ -410,7 +458,16 @@ fun AssetHealthCard(health: AssetClassHealth, isPrivacyModeEnabled: Boolean, onC
                     )
                 }
 
-                RiskBadge(health.riskLevel)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RiskBadge(health.riskLevel)
+                    Spacer(Modifier.width(6.dp))
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = "Adjust target threshold",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
 
             Spacer(Modifier.height(16.dp))

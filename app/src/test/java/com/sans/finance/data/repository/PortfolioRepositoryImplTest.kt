@@ -15,14 +15,16 @@ import org.junit.Test
 class PortfolioRepositoryImplTest {
 
     private lateinit var dao: PortfolioDao
+    private lateinit var targetDao: com.sans.finance.data.local.dao.PortfolioTargetDao
     private lateinit var repository: PortfolioRepositoryImpl
 
     @Before
     fun setUp() {
         dao = mockk(relaxed = true)
+        targetDao = mockk(relaxed = true)
         repository = PortfolioRepositoryImpl(
             dao = dao,
-            targetDao = mockk(relaxed = true),
+            targetDao = targetDao,
             expenseDao = mockk(relaxed = true),
             accountDao = mockk(relaxed = true),
             accountTypeDao = mockk(relaxed = true)
@@ -77,5 +79,15 @@ class PortfolioRepositoryImplTest {
 
         val sourceBAsset = finalItems.first { it.source == "SourceB" }.asset
         assertEquals("Asset2-New", sourceBAsset)
+    }
+
+    @Test
+    fun `updatePortfolioTargets delegates batch insert to targetDao`() = runBlocking {
+        val targets = listOf(
+            com.sans.finance.data.local.entity.PortfolioTargetEntity("Equities", 50.0, "", "HIGH"),
+            com.sans.finance.data.local.entity.PortfolioTargetEntity("Crypto", 10.0, "", "VERY_HIGH")
+        )
+        repository.updatePortfolioTargets(targets)
+        coVerify { targetDao.insertTargets(targets) }
     }
 }

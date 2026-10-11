@@ -160,6 +160,10 @@ class PortfolioRepositoryImpl(
         targetDao.insertTarget(target)
     }
 
+    override suspend fun updatePortfolioTargets(targets: List<com.sans.finance.data.local.entity.PortfolioTargetEntity>) {
+        targetDao.insertTargets(targets)
+    }
+
     override suspend fun calculateXirr(endDate: Long): Double {
         val accounts = accountDao.getAllAccounts().first()
         val accountTypes = accountTypeDao.getAllAccountTypes().first()

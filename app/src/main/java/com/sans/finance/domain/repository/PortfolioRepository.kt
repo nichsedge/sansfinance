@@ -29,5 +29,6 @@ interface PortfolioRepository {
     // Targets and Performance
     fun getPortfolioTargets(): Flow<List<com.sans.finance.data.local.entity.PortfolioTargetEntity>>
     suspend fun updatePortfolioTarget(target: com.sans.finance.data.local.entity.PortfolioTargetEntity)
+    suspend fun updatePortfolioTargets(targets: List<com.sans.finance.data.local.entity.PortfolioTargetEntity>)
     suspend fun calculateXirr(endDate: Long): Double
 }

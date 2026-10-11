@@ -117,7 +117,7 @@ fun PortfolioScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedSource by rememberSaveable { mutableStateOf<String?>(null) }
     var sortOption by rememberSaveable { mutableStateOf(PortfolioSortOption.VALUE_DESC) }
-    var viewMode by rememberSaveable { mutableStateOf(PortfolioViewMode.GROUPED) }
+    var viewMode by rememberSaveable { mutableStateOf(PortfolioViewMode.BY_CATEGORY) }
     var collapsedCategories by rememberSaveable { mutableStateOf(setOf<String>()) }
     var selectedHoldingForDetail by remember {
         mutableStateOf<Pair<PortfolioHoldingEntity, com.sans.finance.domain.model.ValuedHolding?>?>(null)
@@ -201,9 +201,14 @@ fun PortfolioScreen(
         filteredHoldings.sumOf { getValued(it)?.currentValueInBase ?: it.valueIdr }
     }
 
-    // Grouping by category with categories sorted dynamically by sort criteria
-    val filteredHoldingsByCategory = remember(filteredHoldings, sortOption, valuedMap) {
-        val grouped = filteredHoldings.groupBy { it.category }
+    // Grouping by category or asset class with groups sorted dynamically by sort criteria
+    val filteredHoldingsGrouped = remember(filteredHoldings, viewMode, sortOption, valuedMap) {
+        if (viewMode == PortfolioViewMode.FLAT) return@remember emptyMap<String, List<PortfolioHoldingEntity>>()
+        val grouped = when (viewMode) {
+            PortfolioViewMode.BY_ASSET_CLASS -> filteredHoldings.groupBy { it.assetClass.ifBlank { "Other" } }
+            PortfolioViewMode.BY_CATEGORY -> filteredHoldings.groupBy { it.category.ifBlank { "Uncategorized" } }
+            PortfolioViewMode.FLAT -> emptyMap()
+        }
         when (sortOption) {
             PortfolioSortOption.VALUE_DESC -> grouped.entries.sortedByDescending { (_, list) ->
                 list.sumOf { getValued(it)?.currentValueInBase ?: it.valueIdr }
@@ -646,13 +651,14 @@ fun PortfolioScreen(
                                     sortOption = sortOption,
                                     onSortOptionSelect = { sortOption = it },
                                     viewMode = viewMode,
-                                    onToggleViewMode = {
-                                        viewMode = if (viewMode == PortfolioViewMode.GROUPED) PortfolioViewMode.FLAT else PortfolioViewMode.GROUPED
+                                    onViewModeSelect = { selectedMode ->
+                                        viewMode = selectedMode
+                                        collapsedCategories = emptySet()
                                     },
                                     isAllExpanded = collapsedCategories.isEmpty(),
                                     onToggleExpandAll = {
                                         collapsedCategories = if (collapsedCategories.isEmpty()) {
-                                            filteredHoldingsByCategory.keys.toSet()
+                                            filteredHoldingsGrouped.keys.toSet()
                                         } else {
                                             emptySet()
                                         }
@@ -728,28 +734,28 @@ fun PortfolioScreen(
                                     }
                                 }
                             } else {
-                                filteredHoldingsByCategory.forEach { (category, holdings) ->
-                                    item(key = category) {
-                                        val categoryTotal = holdings.sumOf { getValued(it)?.currentValueInBase ?: it.valueIdr }
-                                        val categoryWeightPct = if (totalFilteredValue > 0.0) {
-                                            (categoryTotal / totalFilteredValue) * 100.0
+                                filteredHoldingsGrouped.forEach { (groupName, holdings) ->
+                                    item(key = groupName) {
+                                        val groupTotal = holdings.sumOf { getValued(it)?.currentValueInBase ?: it.valueIdr }
+                                        val groupWeightPct = if (totalFilteredValue > 0.0) {
+                                            (groupTotal / totalFilteredValue) * 100.0
                                         } else 0.0
 
                                         ExpandableCategoryGroup(
-                                            category = category,
-                                            total = categoryTotal,
-                                            categoryWeightPct = categoryWeightPct,
+                                            category = groupName,
+                                            total = groupTotal,
+                                            categoryWeightPct = groupWeightPct,
                                             holdings = holdings,
                                             valuedHoldings = state.valuedHoldings,
                                             currentCurrency = state.currentCurrency,
                                             isPrivacyModeEnabled = state.isPrivacyModeEnabled,
                                             accountAliases = state.accountAliases,
-                                            isExpanded = category !in collapsedCategories,
+                                            isExpanded = groupName !in collapsedCategories,
                                             onToggleExpand = {
-                                                collapsedCategories = if (category in collapsedCategories) {
-                                                    collapsedCategories - category
+                                                collapsedCategories = if (groupName in collapsedCategories) {
+                                                    collapsedCategories - groupName
                                                 } else {
-                                                    collapsedCategories + category
+                                                    collapsedCategories + groupName
                                                 }
                                             },
                                             onHoldingClick = { h, v ->
@@ -831,7 +837,8 @@ fun PortfolioScreen(
                                     comparison = state.benchmarkComparison,
                                     selectedBenchmark = state.selectedBenchmark,
                                     onSelectBenchmark = viewModel::selectBenchmark,
-                                    onTargetClick = { editingTarget = it }
+                                    onTargetClick = { editingTarget = it },
+                                    onAdjustTargetsClick = { editingTarget = state.healthList.firstOrNull() }
                                 )
                             }
                         }
@@ -852,11 +859,21 @@ fun PortfolioScreen(
         }
 
         editingTarget?.let { target ->
-            TargetEditDialog(
+            com.sans.finance.presentation.portfolio.components.AssetClassTargetBottomSheet(
                 target = target,
+                allTargets = state.healthList,
+                currentCurrency = state.currentCurrency,
                 onDismiss = { editingTarget = null },
-                onConfirm = { newPercentage ->
-                    viewModel.updateTarget(target.assetClass, newPercentage)
+                onConfirmTarget = { assetClass, newPercentage ->
+                    viewModel.updateTarget(assetClass, newPercentage)
+                    editingTarget = null
+                },
+                onConfirmAllTargets = { targets ->
+                    viewModel.updateAllTargets(targets)
+                    editingTarget = null
+                },
+                onResetToDefaults = {
+                    viewModel.resetTargetsToDefaults()
                     editingTarget = null
                 }
             )
@@ -1001,47 +1018,6 @@ fun MultiCurrencyBreakdownCard(
             }
         }
     }
-}
-
-@Composable
-fun TargetEditDialog(
-    target: com.sans.finance.domain.model.AssetClassHealth,
-    onDismiss: () -> Unit,
-    onConfirm: (Double) -> Unit
-) {
-    var percentageText by remember { mutableStateOf(target.targetPercentage.toString()) }
-
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Edit Target for ${target.assetClass}", fontWeight = FontWeight.Black) },
-        text = {
-            Column {
-                androidx.compose.material3.OutlinedTextField(
-                    value = percentageText,
-                    onValueChange = { percentageText = it },
-                    label = { Text("Target Percentage (%)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
-                    )
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                percentageText.toDoubleOrNull()?.let { onConfirm(it) }
-            }, shape = MaterialTheme.shapes.large) {
-                Text("Save", fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
-        shape = MaterialTheme.shapes.extraLarge
-    )
 }
 
 

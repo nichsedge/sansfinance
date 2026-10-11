@@ -287,7 +287,7 @@ object CloudStorageSyncer {
         prefs: UserPreferences
     ): SnapshotImportResult = withContext(Dispatchers.IO) {
         val r2Config = loadR2Config(prefs)
-        val objectKey = "snapshots/latest.json"
+        val objectKey = "portfolio/latest_snapshot.json"
         val host = "${r2Config.accountId}.r2.cloudflarestorage.com"
         val canonicalUri = "/${r2Config.bucketName}/$objectKey"
         val endpointUrl = "https://$host$canonicalUri"
@@ -434,7 +434,7 @@ object CloudStorageSyncer {
         val bucketName = prefs.gcsBucketName.ifBlank { "ichsanul-portfolio-snapshots" }
         val token = getGcsAccessToken(context)
         retryWithExponentialBackoff {
-            val conn = (URL("https://storage.googleapis.com/storage/v1/b/$bucketName/o/snapshots%2Flatest.json?alt=media").openConnection() as HttpURLConnection).apply { setRequestProperty("Authorization", "Bearer $token") }
+            val conn = (URL("https://storage.googleapis.com/storage/v1/b/$bucketName/o/portfolio%2Flatest_snapshot.json?alt=media").openConnection() as HttpURLConnection).apply { setRequestProperty("Authorization", "Bearer $token") }
             if (conn.responseCode != 200) throw Exception("GCS Download Failed")
             PortfolioJsonImporter.parseContent(conn.inputStream.bufferedReader().use { it.readText() })
         }
