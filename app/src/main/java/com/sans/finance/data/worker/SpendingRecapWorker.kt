@@ -104,7 +104,13 @@ class SpendingRecapWorker @AssistedInject constructor(
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .build()
 
-            notificationManager.notify(NOTIFICATION_ID, notification)
+            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationManager.notify(NOTIFICATION_ID, notification)
+            }
             Result.success()
         } catch (e: Exception) {
             e.printStackTrace()

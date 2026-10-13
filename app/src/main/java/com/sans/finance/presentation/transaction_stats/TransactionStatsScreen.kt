@@ -417,31 +417,32 @@ fun DateNavigator(
 fun getPeriodText(state: TransactionStatsState): String {
     val cal = state.currentPeriodDate
     val zone = ZoneId.systemDefault()
+    val currentLocale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     return when (state.selectedPeriodType) {
         TransactionStatsPeriodType.WEEKLY -> {
             val start = cal.clone() as Calendar
             start.set(Calendar.DAY_OF_WEEK, start.firstDayOfWeek)
             val end = start.clone() as Calendar
             end.add(Calendar.DAY_OF_YEAR, 6)
-            val dtf = DateTimeFormatter.ofPattern("dd MMM", Locale.getDefault())
+            val dtf = DateTimeFormatter.ofPattern("dd MMM", currentLocale)
             val startStr = dtf.format(Instant.ofEpochMilli(start.timeInMillis).atZone(zone))
             val endStr = dtf.format(Instant.ofEpochMilli(end.timeInMillis).atZone(zone))
             "$startStr - $endStr"
         }
 
         TransactionStatsPeriodType.MONTHLY -> {
-            val dtf = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
+            val dtf = DateTimeFormatter.ofPattern("MMMM yyyy", currentLocale)
             dtf.format(Instant.ofEpochMilli(cal.timeInMillis).atZone(zone))
         }
 
         TransactionStatsPeriodType.ANNUALLY -> {
-            val dtf = DateTimeFormatter.ofPattern("yyyy", Locale.getDefault())
+            val dtf = DateTimeFormatter.ofPattern("yyyy", currentLocale)
             dtf.format(Instant.ofEpochMilli(cal.timeInMillis).atZone(zone))
         }
 
         TransactionStatsPeriodType.CUSTOM -> {
             if (state.customStartDate != null && state.customEndDate != null) {
-                val dtf = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.getDefault())
+                val dtf = DateTimeFormatter.ofPattern("dd MMM yyyy", currentLocale)
                 val startStr = dtf.format(Instant.ofEpochMilli(state.customStartDate).atZone(zone))
                 val endStr = dtf.format(Instant.ofEpochMilli(state.customEndDate).atZone(zone))
                 "$startStr - $endStr"

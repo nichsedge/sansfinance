@@ -1137,8 +1137,9 @@ private fun WhatsAppBackupSettingsCard(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                    val currentLocale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
                     val timeStr = if (lastBackupTime > 0L) {
-                        val sdf = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
+                        val sdf = SimpleDateFormat("dd MMM yyyy, HH:mm", currentLocale)
                         sdf.format(Date(lastBackupTime))
                     } else "Never"
                     val sizeStr = if (lastBackupSizeBytes > 0L) "${lastBackupSizeBytes / 1024} KB" else "0 KB"

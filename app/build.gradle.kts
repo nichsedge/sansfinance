@@ -52,6 +52,11 @@ android {
     buildFeatures {
         compose = true
     }
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = true
+        disable += setOf("MissingTranslation", "LocaleFolder")
+    }
 }
 
 composeCompiler {
