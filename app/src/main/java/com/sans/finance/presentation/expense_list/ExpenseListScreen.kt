@@ -504,7 +504,7 @@ private fun TimelineHeader(
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold
                             ),
-                            color = Color(0xFF43A047)
+                            color = com.sans.finance.ui.theme.IncomeGreen
                         )
                     }
                     if (dayExpense > 0) {
@@ -515,7 +515,7 @@ private fun TimelineHeader(
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold
                             ),
-                            color = Color(0xFFE53935)
+                            color = com.sans.finance.ui.theme.ExpenseRed
                         )
                     }
                 }

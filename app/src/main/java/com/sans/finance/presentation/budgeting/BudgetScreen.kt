@@ -634,7 +634,7 @@ fun DailySafeToSpendCard(
                 Box(
                     modifier = Modifier
                         .background(
-                            if (pacing.pacingPcnt <= 1.0f) Color(0xFF4CAF50).copy(alpha = 0.15f) else Color(0xFFF44336).copy(alpha = 0.15f),
+                            if (pacing.pacingPcnt <= 1.0f) com.sans.finance.ui.theme.IncomeGreen.copy(alpha = 0.15f) else com.sans.finance.ui.theme.ExpenseRed.copy(alpha = 0.15f),
                             CircleShape
                         )
                         .padding(horizontal = 8.dp, vertical = 2.dp)
@@ -643,7 +643,7 @@ fun DailySafeToSpendCard(
                         if (pacing.pacingPcnt <= 1.0f) "On Track (${(pacing.pacingPcnt * 100).toInt()}%)" else "Fast Pace (${(pacing.pacingPcnt * 100).toInt()}%)",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = if (pacing.pacingPcnt <= 1.0f) Color(0xFF4CAF50) else Color(0xFFF44336)
+                        color = if (pacing.pacingPcnt <= 1.0f) com.sans.finance.ui.theme.IncomeGreen else com.sans.finance.ui.theme.ExpenseRed
                     )
                 }
             }

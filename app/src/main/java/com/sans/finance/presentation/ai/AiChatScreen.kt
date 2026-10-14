@@ -467,7 +467,7 @@ fun ChatMessageItem(
                                 Text(
                                     text = "Semua transaksi telah diproses",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF2E7D32),
+                                    color = com.sans.finance.ui.theme.IncomeGreen,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
@@ -478,7 +478,7 @@ fun ChatMessageItem(
                                 onClick = onConfirmAll,
                                 shape = RoundedCornerShape(8.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF2E7D32)
+                                    containerColor = com.sans.finance.ui.theme.IncomeGreen
                                 )
                             ) {
                                 Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -525,7 +525,7 @@ fun AiProposalCard(
     onEditInForm: () -> Unit
 ) {
     val isIncome = proposal.type == "INCOME"
-    val accentColor = if (isIncome) Color(0xFF2E7D32) else Color(0xFFC62828)
+    val accentColor = if (isIncome) com.sans.finance.ui.theme.IncomeGreen else com.sans.finance.ui.theme.ExpenseRed
     val displayAmount = CurrencyFormatter.formatAmount(proposal.amountInCents, "IDR")
     val idLocaleDtf = remember { java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.of("id", "ID")) }
     val zoneId = remember { java.time.ZoneId.systemDefault() }
@@ -541,7 +541,7 @@ fun AiProposalCard(
             .fillMaxWidth()
             .border(
                 width = 1.dp,
-                color = if (isConfirmed) Color(0xFF4CAF50) else accentColor.copy(alpha = 0.3f),
+                color = if (isConfirmed) com.sans.finance.ui.theme.IncomeGreen else accentColor.copy(alpha = 0.3f),
                 shape = RoundedCornerShape(16.dp)
             ),
         shape = RoundedCornerShape(16.dp),
@@ -575,14 +575,14 @@ fun AiProposalCard(
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Confirmed",
-                            tint = Color(0xFF2E7D32),
+                            tint = com.sans.finance.ui.theme.IncomeGreen,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
                             "Tersimpan di DB",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF2E7D32),
+                            color = com.sans.finance.ui.theme.IncomeGreen,
                             fontWeight = FontWeight.Bold
                         )
                     }

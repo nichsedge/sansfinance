@@ -453,7 +453,7 @@ fun PortfolioScreen(
                                     ) {
                                         IconButton(
                                             onClick = viewModel::onPreviousSnapshot,
-                                            modifier = Modifier.size(36.dp),
+                                            modifier = Modifier.size(48.dp),
                                             enabled = state.selectedDateIndex < state.snapshotDates.size - 1
                                         ) {
                                             Icon(
@@ -484,7 +484,7 @@ fun PortfolioScreen(
 
                                         IconButton(
                                             onClick = viewModel::onNextSnapshot,
-                                            modifier = Modifier.size(36.dp),
+                                            modifier = Modifier.size(48.dp),
                                             enabled = state.selectedDateIndex > 0
                                         ) {
                                             Icon(
@@ -997,7 +997,7 @@ fun MultiCurrencyBreakdownCard(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         if (summary.currency != baseCurrency && summary.fxGainInBase != 0.0) {
-                            val fxColor = if (summary.fxGainInBase >= 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+                            val fxColor = if (summary.fxGainInBase >= 0) com.sans.finance.ui.theme.IncomeGreen else MaterialTheme.colorScheme.error
                             val fxSign = if (summary.fxGainInBase >= 0) "+" else ""
                             Text(
                                 text = "FX: $fxSign${com.sans.finance.core.util.CurrencyFormatter.formatAmountCompact((summary.fxGainInBase * 100).toLong(), baseCurrency)}",
@@ -1101,7 +1101,7 @@ fun PortfolioHeader(state: PortfolioScreenState, onForecastingClick: () -> Unit)
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.padding(top = 6.dp)
                     ) {
-                        val fxColor = if (state.totalFxGainInBase >= 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+                        val fxColor = if (state.totalFxGainInBase >= 0) com.sans.finance.ui.theme.IncomeGreen else MaterialTheme.colorScheme.error
                         val fxSign = if (state.totalFxGainInBase >= 0) "+" else ""
                         Text(
                             text = "FX Movement: $fxSign${com.sans.finance.core.util.CurrencyFormatter.formatAmountCompact((state.totalFxGainInBase * 100).toLong(), state.currentCurrency)}",

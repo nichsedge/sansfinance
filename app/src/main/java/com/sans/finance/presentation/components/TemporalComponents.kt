@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
@@ -116,7 +118,9 @@ fun MonthYearPickerDialog(
             modifier = Modifier.width(320.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -134,7 +138,7 @@ fun MonthYearPickerDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { selectedYear-- }) {
-                        Icon(Icons.Default.ChevronLeft, contentDescription = null)
+                        Icon(Icons.Default.ChevronLeft, contentDescription = "Previous Year")
                     }
                     Text(
                         text = selectedYear.toString(),
@@ -142,7 +146,7 @@ fun MonthYearPickerDialog(
                         fontWeight = FontWeight.Black
                     )
                     IconButton(onClick = { selectedYear++ }) {
-                        Icon(Icons.Default.ChevronRight, contentDescription = null)
+                        Icon(Icons.Default.ChevronRight, contentDescription = "Next Year")
                     }
                 }
 

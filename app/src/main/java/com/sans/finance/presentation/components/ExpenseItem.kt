@@ -187,10 +187,10 @@ fun ExpenseItem(
                 val displayAmount = overrideAmount
                     ?: if (expense.isInstallment && expense.monthlyPayment > 0) expense.monthlyPayment else expense.amount
                 val amountColor = when (expense.type) {
-                    "INCOME" -> Color(0xFF4CAF50)
-                    "EXPENSE" -> Color(0xFFE53935)
-                    "TRANSFER" -> Color(0xFF2196F3)
-                    else -> Color(0xFFE53935)
+                    "INCOME" -> com.sans.finance.ui.theme.IncomeGreen
+                    "EXPENSE" -> com.sans.finance.ui.theme.ExpenseRed
+                    "TRANSFER" -> com.sans.finance.ui.theme.TransferBlue
+                    else -> com.sans.finance.ui.theme.ExpenseRed
                 }
                 val prefix = when (expense.type) {
                     "INCOME" -> "+"

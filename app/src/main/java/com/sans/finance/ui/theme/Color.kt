@@ -21,3 +21,10 @@ val Emerald500 = Color(0xFF10B981) // Tertiary / Success
 // Semantic Colors
 val Rose500 = Color(0xFFF43F5E) // Error
 val Amber500 = Color(0xFFF59E0B) // Warning
+val Blue500 = Color(0xFF3B82F6)  // Info / Transfer
+
+// Central Financial Domain Tokens
+val IncomeGreen = Emerald500
+val ExpenseRed = Rose500
+val TransferBlue = Blue500
+val WarningAmber = Amber500
