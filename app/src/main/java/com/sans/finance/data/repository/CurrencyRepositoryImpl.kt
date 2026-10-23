@@ -87,18 +87,18 @@ class CurrencyRepositoryImpl @Inject constructor(
             return@withContext nearestRate
         }
 
-        // 3. Fallback to latest exchange rates table in local DB (<1ms)
-        val latestRate = fallbackToLatestExchangeRate(from, to)
-        if (latestRate != null) {
-            fastMemoryCache[cacheKey] = latestRate
-            return@withContext latestRate
-        }
-
-        // 4. Fallback to fast online fetch if missing from DB entirely
+        // 3. Fallback to fast online fetch for historical date if missing from local DB
         val fetchedRate = fetchAndCacheHistoricalRates(from, to, date)
         if (fetchedRate != null) {
             fastMemoryCache[cacheKey] = fetchedRate
             return@withContext fetchedRate
+        }
+
+        // 4. Fallback to latest exchange rates table in local DB (<1ms) if offline or fetch fails
+        val latestRate = fallbackToLatestExchangeRate(from, to)
+        if (latestRate != null) {
+            fastMemoryCache[cacheKey] = latestRate
+            return@withContext latestRate
         }
 
         null

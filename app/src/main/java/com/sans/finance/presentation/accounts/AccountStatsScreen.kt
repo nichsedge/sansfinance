@@ -255,8 +255,8 @@ fun TotalStatsLineChart(history: List<Pair<String, Long>>, currencyCode: String)
 
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(
-        fontSize = 10.sp,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+        fontSize = 11.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontWeight = FontWeight.Bold
     )
     val lineColor = MaterialTheme.colorScheme.primary
@@ -488,8 +488,8 @@ fun TotalStatsBarChart(history: List<Triple<String, Long, Long>>, currencyCode: 
 
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(
-        fontSize = 10.sp,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+        fontSize = 11.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontWeight = FontWeight.Bold
     )
     val incomeColor = MaterialTheme.colorScheme.tertiary

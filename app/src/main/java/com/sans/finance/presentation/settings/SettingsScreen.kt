@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -708,12 +709,12 @@ fun SettingsItem(
     icon: String,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
     onMoveUp: (() -> Unit)? = null,
     onMoveDown: (() -> Unit)? = null,
     subtitle: String? = null,
     checked: Boolean? = null,
-    onCheckedChange: ((Boolean) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onCheckedChange: ((Boolean) -> Unit)? = null
 ) {
     Card(
         modifier = modifier
@@ -966,8 +967,10 @@ fun CurrencySelectionDialog(
         title = { Text("Select Currency", color = MaterialTheme.colorScheme.onSurface) },
         text = {
             LazyColumn(modifier = Modifier.height(300.dp)) {
-                items(enabledCurrencies.size) { index ->
-                    val currency = enabledCurrencies[index]
+                items(
+                    items = enabledCurrencies,
+                    key = { it }
+                ) { currency ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1046,8 +1049,10 @@ fun AllCurrenciesDialog(
                 )
 
                 LazyColumn(modifier = Modifier.height(300.dp)) {
-                    items(filteredCurrencies.size) { index ->
-                        val currency = filteredCurrencies[index]
+                    items(
+                        items = filteredCurrencies,
+                        key = { it }
+                    ) { currency ->
                         val isEnabled = enabledCurrencies.contains(currency)
                         Row(
                             modifier = Modifier

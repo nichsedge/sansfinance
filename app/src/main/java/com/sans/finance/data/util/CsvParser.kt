@@ -5,7 +5,8 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 object CsvParser {
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    private val dateFormat: SimpleDateFormat
+        get() = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
     fun parse(csvContent: String): List<Expense> {
         val lines = csvContent.lines()

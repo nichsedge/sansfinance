@@ -205,18 +205,18 @@ fun TagCardItem(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                IconButton(onClick = onEdit) {
                     Icon(
                         Icons.Default.Edit,
-                        contentDescription = "Edit",
-                        modifier = Modifier.size(16.dp)
+                        contentDescription = "Edit tag",
+                        modifier = Modifier.size(18.dp)
                     )
                 }
-                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        modifier = Modifier.size(16.dp),
+                        contentDescription = "Delete tag",
+                        modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }

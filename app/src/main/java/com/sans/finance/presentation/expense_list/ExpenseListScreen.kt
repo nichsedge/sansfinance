@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -175,16 +176,21 @@ fun ExpenseListScreen(
             )
         }
     ) { paddingValues ->
-        val layoutDirection = LocalLayoutDirection.current
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    start = paddingValues.calculateStartPadding(layoutDirection),
-                    top = paddingValues.calculateTopPadding(),
-                    end = paddingValues.calculateEndPadding(layoutDirection)
-                )
+        val layoutDirection = androidx.compose.ui.platform.LocalLayoutDirection.current
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 840.dp)
+                    .padding(
+                        start = paddingValues.calculateStartPadding(layoutDirection),
+                        top = paddingValues.calculateTopPadding(),
+                        end = paddingValues.calculateEndPadding(layoutDirection)
+                    )
+            ) {
             if (isSummaryExpanded) {
                 Box(modifier = Modifier.combinedClickable(
                     onClick = { },
@@ -225,7 +231,6 @@ fun ExpenseListScreen(
                 FilterChip(
                     selected = state.activeCommitmentFilter == TimelineCommitmentFilter.ALL,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         viewModel.setCommitmentFilter(TimelineCommitmentFilter.ALL)
                     },
                     label = { Text("All", style = MaterialTheme.typography.labelMedium) },
@@ -234,7 +239,6 @@ fun ExpenseListScreen(
                 FilterChip(
                     selected = state.activeCommitmentFilter == TimelineCommitmentFilter.INSTALLMENTS,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         val next = if (state.activeCommitmentFilter == TimelineCommitmentFilter.INSTALLMENTS) {
                             TimelineCommitmentFilter.ALL
                         } else {
@@ -258,7 +262,6 @@ fun ExpenseListScreen(
                 FilterChip(
                     selected = state.activeCommitmentFilter == TimelineCommitmentFilter.RECURRING,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         val next = if (state.activeCommitmentFilter == TimelineCommitmentFilter.RECURRING) {
                             TimelineCommitmentFilter.ALL
                         } else {
@@ -361,6 +364,7 @@ fun ExpenseListScreen(
             }
         }
     }
+}
 
     if (state.selectedInstallment != null) {
         InstallmentDetailBottomSheet(

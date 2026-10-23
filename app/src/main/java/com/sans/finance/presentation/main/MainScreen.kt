@@ -27,7 +27,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -51,8 +52,10 @@ fun MainScreen(
     rootNavController: NavHostController
 ) {
     val navController = rememberNavController()
-    val configuration = LocalConfiguration.current
-    val useNavRail = configuration.screenWidthDp >= 600
+    val windowInfo = LocalWindowInfo.current
+    val density = LocalDensity.current
+    val screenWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
+    val useNavRail = screenWidthDp >= 600.dp
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -76,7 +79,7 @@ fun MainScreen(
                     },
                     containerColor = MaterialTheme.colorScheme.tertiary,
                     contentColor = MaterialTheme.colorScheme.onTertiary,
-                    shape = CircleShape
+                    shape = MaterialTheme.shapes.large
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,

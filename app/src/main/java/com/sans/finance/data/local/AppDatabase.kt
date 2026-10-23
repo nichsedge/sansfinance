@@ -16,7 +16,6 @@ import com.sans.finance.data.local.entity.FxRateEntity
 import com.sans.finance.data.local.entity.GoalEntity
 import com.sans.finance.data.local.entity.InstallmentEntity
 import com.sans.finance.data.local.entity.InstallmentItemEntity
-import com.sans.finance.data.local.entity.NetWorthSnapshotEntity
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import com.sans.finance.data.local.entity.PortfolioSnapshotHeaderEntity
 import com.sans.finance.data.local.entity.TagEntity
@@ -31,7 +30,6 @@ import com.sans.finance.data.local.entity.TagEntity
         ExpenseTagCrossRef::class,
         AccountEntity::class,
         AccountAliasEntity::class,
-        NetWorthSnapshotEntity::class,
         PortfolioSnapshotHeaderEntity::class,
         PortfolioHoldingEntity::class,
         com.sans.finance.data.local.entity.ExpenseFtsEntity::class,
@@ -40,10 +38,9 @@ import com.sans.finance.data.local.entity.TagEntity
         BudgetEntity::class,
         com.sans.finance.data.local.entity.PortfolioTargetEntity::class,
         com.sans.finance.data.local.entity.AccountTypeEntity::class,
-        com.sans.finance.data.local.entity.InvestmentMetadataEntity::class,
         FxRateEntity::class
     ],
-    version = 40,
+    version = 41,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -59,7 +56,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val portfolioTargetDao: com.sans.finance.data.local.dao.PortfolioTargetDao
     abstract val accountTypeDao: com.sans.finance.data.local.dao.AccountTypeDao
     abstract val accountAliasDao: com.sans.finance.data.local.dao.AccountAliasDao
-    abstract val investmentMetadataDao: com.sans.finance.data.local.dao.InvestmentMetadataDao
 
     fun checkpoint() {
         val cursor =

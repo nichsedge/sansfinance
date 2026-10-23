@@ -22,6 +22,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -103,8 +104,8 @@ fun MonthYearPickerDialog(
     initialMonth: Int,
     initialYear: Int
 ) {
-    var selectedMonth by remember { mutableStateOf(initialMonth) }
-    var selectedYear by remember { mutableStateOf(initialYear) }
+    var selectedMonth by remember { mutableIntStateOf(initialMonth) }
+    var selectedYear by remember { mutableIntStateOf(initialYear) }
 
     val months = remember {
         listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")

@@ -1,6 +1,8 @@
 package com.sans.finance.presentation.settings.resync
 
+import androidx.compose.runtime.LongState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -46,8 +48,8 @@ class ReSyncDryRunViewModel @Inject constructor(
     private val _selectedDateOption = mutableStateOf("TODAY") // "TODAY", "EPOCH", "CUSTOM"
     val selectedDateOption: State<String> = _selectedDateOption
 
-    private val _customDate = mutableStateOf(System.currentTimeMillis())
-    val customDate: State<Long> = _customDate
+    private val _customDate = mutableLongStateOf(System.currentTimeMillis())
+    val customDate: LongState = _customDate
 
     fun setSyncMode(mode: ReSyncMode) {
         _selectedMode.value = mode

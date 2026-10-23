@@ -671,7 +671,7 @@ fun DcaDepositRebalanceCard(
     val totalDeficit = underweightList.sumOf { Math.abs(it.diffPercentage) }
     if (totalDeficit <= 0) return
 
-    var depositAmountIdr by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(5_000_000L) }
+    var depositAmountIdr by androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(5_000_000L) }
     val presets = listOf(2_500_000L, 5_000_000L, 10_000_000L, 15_000_000L)
 
     Card(

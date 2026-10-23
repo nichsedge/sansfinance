@@ -112,7 +112,6 @@ class AiSettingsViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        super.onCleared()
         saveJob?.cancel()
     }
 }

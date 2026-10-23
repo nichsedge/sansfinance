@@ -16,7 +16,7 @@ data class DatabaseHealthReport(
     val analyzedTablesCount: Int,
     val totalTransactionsChecked: Int,
     val executionTimeMs: Long,
-    val dbVersion: Int = 38
+    val dbVersion: Int = 41
 )
 
 class MaintainDatabaseUseCase @Inject constructor(
@@ -58,6 +58,29 @@ class MaintainDatabaseUseCase @Inject constructor(
                     )
                 }
 
+                // 2. Heal orphaned transactions pointing to deleted accounts by repointing to primary Cash account
+                db.execSQL(
+                    """
+                    UPDATE expenses 
+                    SET account_id = COALESCE(
+                        (SELECT id FROM accounts WHERE type = 'Cash' ORDER BY id ASC LIMIT 1),
+                        (SELECT id FROM accounts ORDER BY id ASC LIMIT 1),
+                        1
+                    )
+                    WHERE account_id NOT IN (SELECT id FROM accounts)
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    UPDATE expenses 
+                    SET to_account_id = COALESCE(
+                        (SELECT id FROM accounts WHERE type = 'Cash' ORDER BY id ASC LIMIT 1),
+                        (SELECT id FROM accounts ORDER BY id ASC LIMIT 1),
+                        1
+                    )
+                    WHERE to_account_id IS NOT NULL AND to_account_id NOT IN (SELECT id FROM accounts)
+                    """.trimIndent()
+                )
 
                 // 3. Align any legacy USD currency tags if parent account has local currency (e.g. IDR)
                 db.execSQL(

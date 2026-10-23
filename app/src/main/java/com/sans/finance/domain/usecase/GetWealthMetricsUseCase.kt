@@ -4,14 +4,12 @@ import com.sans.finance.core.util.CalendarUtils
 import com.sans.finance.data.local.dao.CurrencyDao
 import com.sans.finance.data.local.entity.AccountEntity
 import com.sans.finance.data.local.entity.AccountTypeEntity
-import com.sans.finance.data.local.entity.InvestmentMetadataEntity
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import com.sans.finance.data.util.LocaleManager
 import com.sans.finance.domain.model.WealthMetrics
 import com.sans.finance.domain.repository.AccountRepository
 import com.sans.finance.domain.repository.AccountTypeRepository
 import com.sans.finance.domain.repository.ExpenseRepository
-import com.sans.finance.domain.repository.InvestmentMetadataRepository
 import com.sans.finance.domain.repository.PortfolioRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -23,7 +21,6 @@ class GetWealthMetricsUseCase @Inject constructor(
     private val accountTypeRepository: AccountTypeRepository,
     private val portfolioRepository: PortfolioRepository,
     private val expenseRepository: ExpenseRepository,
-    private val investmentMetadataRepository: InvestmentMetadataRepository,
     private val localeManager: LocaleManager,
     private val currencyDao: CurrencyDao
 ) {
@@ -54,10 +51,9 @@ class GetWealthMetricsUseCase @Inject constructor(
         val statsFlow = combine(
             expenseRepository.getTotalAmountByTypeBetween(ninetyDaysAgo, now + 86400000L, "EXPENSE"),
             expenseRepository.getTotalAmountByTypeBetween(monthStart, nextMonthStart, "INCOME"),
-            expenseRepository.getTotalAmountByTypeBetween(monthStart, nextMonthStart, "EXPENSE"),
-            investmentMetadataRepository.getAllMetadata()
-        ) { total90dExpenseIdr, incomeIdr, expenseIdr, metadata ->
-            StatsData(total90dExpenseIdr, incomeIdr, expenseIdr, metadata)
+            expenseRepository.getTotalAmountByTypeBetween(monthStart, nextMonthStart, "EXPENSE")
+        ) { total90dExpenseIdr, incomeIdr, expenseIdr ->
+            StatsData(total90dExpenseIdr, incomeIdr, expenseIdr)
         }
 
         return combine(financeFlow, statsFlow) { finance, stats ->
@@ -104,9 +100,7 @@ class GetWealthMetricsUseCase @Inject constructor(
                 val asset = holding.asset
                 val cat = holding.category
 
-                val meta = stats.metadata.find { asset.contains(it.code, ignoreCase = true) }
                 val rate = holding.yieldRate?.takeIf { it > 0 }
-                    ?: meta?.rate
                     ?: if (cat.contains("SBN", ignoreCase = true) || cat.contains("Bond", ignoreCase = true) || asset.contains("Sukuk", ignoreCase = true)) 0.0625 else 0.0
 
                 if (rate > 0) {
@@ -176,7 +170,6 @@ class GetWealthMetricsUseCase @Inject constructor(
     private data class StatsData(
         val total90dExpenseIdr: Long?,
         val incomeIdr: Long?,
-        val expenseIdr: Long?,
-        val metadata: List<InvestmentMetadataEntity>
+        val expenseIdr: Long?
     )
 }

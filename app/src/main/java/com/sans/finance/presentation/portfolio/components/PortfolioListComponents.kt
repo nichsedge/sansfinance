@@ -35,12 +35,14 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -60,6 +62,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -794,9 +797,15 @@ fun HoldingDetailBottomSheet(
     currentCurrency: String,
     isPrivacyModeEnabled: Boolean,
     accountAliases: Map<String, String>,
+    onSaveAlias: ((String, String) -> Unit)? = null,
     onDismiss: () -> Unit,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
+    var isEditingAlias by remember { mutableStateOf(false) }
+    var aliasText by remember(holding.accountKey, accountAliases) {
+        mutableStateOf(accountAliases[holding.accountKey] ?: "")
+    }
+
     val displayAccountName = accountAliases[holding.accountKey]
         ?: holding.accountName?.takeIf { it.isNotBlank() }
         ?: holding.account
@@ -1129,10 +1138,31 @@ fun HoldingDetailBottomSheet(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Account / Custodian", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                        Text(displayAccountName, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(displayAccountName, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                            val key = holding.accountKey
+                            if (onSaveAlias != null && !key.isNullOrBlank()) {
+                                Spacer(Modifier.width(4.dp))
+                                IconButton(
+                                    onClick = {
+                                        aliasText = accountAliases[key] ?: ""
+                                        isEditingAlias = true
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Edit,
+                                        contentDescription = "Edit Account Alias",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     if (holding.quantity > 0) {
@@ -1205,5 +1235,43 @@ fun HoldingDetailBottomSheet(
                 )
             }
         }
+    }
+
+    if (isEditingAlias && onSaveAlias != null) {
+        AlertDialog(
+            onDismissRequest = { isEditingAlias = false },
+            title = { Text("Account Alias", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Set a custom display alias for '${holding.accountName?.takeIf { it.isNotBlank() } ?: holding.account}'. Leave empty to reset.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = aliasText,
+                        onValueChange = { aliasText = it },
+                        singleLine = true,
+                        placeholder = { Text(holding.accountName?.takeIf { it.isNotBlank() } ?: holding.account) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        holding.accountKey?.let { onSaveAlias(it, aliasText) }
+                        isEditingAlias = false
+                    }
+                ) {
+                    Text("Save", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { isEditingAlias = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

@@ -251,6 +251,35 @@ object DatabaseMigrations {
         }
     }
 
+    val MIGRATION_40_41 = object : Migration(40, 41) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("DROP TABLE IF EXISTS `net_worth_snapshots`")
+            db.execSQL("DROP TABLE IF EXISTS `investment_metadata`")
+            db.execSQL(
+                """
+                UPDATE `expenses` 
+                SET `account_id` = COALESCE(
+                    (SELECT `id` FROM `accounts` WHERE `type` = 'Cash' ORDER BY `id` ASC LIMIT 1),
+                    (SELECT `id` FROM `accounts` ORDER BY `id` ASC LIMIT 1),
+                    1
+                )
+                WHERE `account_id` NOT IN (SELECT `id` FROM `accounts`)
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                UPDATE `expenses` 
+                SET `to_account_id` = COALESCE(
+                    (SELECT `id` FROM `accounts` WHERE `type` = 'Cash' ORDER BY `id` ASC LIMIT 1),
+                    (SELECT `id` FROM `accounts` ORDER BY `id` ASC LIMIT 1),
+                    1
+                )
+                WHERE `to_account_id` IS NOT NULL AND `to_account_id` NOT IN (SELECT `id` FROM `accounts`)
+                """.trimIndent()
+            )
+        }
+    }
+
     val ALL = arrayOf(
         MIGRATION_25_27,
         MIGRATION_27_28,
@@ -265,6 +294,7 @@ object DatabaseMigrations {
         MIGRATION_36_37,
         MIGRATION_37_38,
         MIGRATION_38_39,
-        MIGRATION_39_40
+        MIGRATION_39_40,
+        MIGRATION_40_41
     )
 }

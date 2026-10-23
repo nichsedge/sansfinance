@@ -8,7 +8,6 @@ import com.sans.finance.data.util.LocaleManager
 import com.sans.finance.domain.repository.AccountRepository
 import com.sans.finance.domain.repository.AccountTypeRepository
 import com.sans.finance.domain.repository.ExpenseRepository
-import com.sans.finance.domain.repository.InvestmentMetadataRepository
 import com.sans.finance.domain.repository.PortfolioRepository
 import app.cash.turbine.test
 import io.mockk.every
@@ -25,7 +24,6 @@ class GetWealthMetricsUseCaseTest {
     private val accountTypeRepository: AccountTypeRepository = mockk()
     private val portfolioRepository: PortfolioRepository = mockk()
     private val expenseRepository: ExpenseRepository = mockk()
-    private val investmentMetadataRepository: InvestmentMetadataRepository = mockk()
     private val localeManager: LocaleManager = mockk()
     private val currencyDao: com.sans.finance.data.local.dao.CurrencyDao = mockk()
 
@@ -38,7 +36,6 @@ class GetWealthMetricsUseCaseTest {
             accountTypeRepository,
             portfolioRepository,
             expenseRepository,
-            investmentMetadataRepository,
             localeManager,
             currencyDao
         )
@@ -79,8 +76,6 @@ class GetWealthMetricsUseCaseTest {
 
         // Current month income: 1000 USD -> 100,000 cents -> 1,600,000,000 cents-IDR
         every { expenseRepository.getTotalAmountByTypeBetween(any(), any(), "INCOME") } returns flowOf(1600000000L)
-
-        every { investmentMetadataRepository.getAllMetadata() } returns flowOf(emptyList())
 
         // When
         useCase().test {

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Refresh
@@ -317,8 +318,10 @@ fun MonthlyReviewScreen(
                 )
             }
 
-            items(state.insights.size) { idx ->
-                val insight = state.insights[idx]
+            items(
+                items = state.insights,
+                key = { it.title }
+            ) { insight ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.extraLarge,

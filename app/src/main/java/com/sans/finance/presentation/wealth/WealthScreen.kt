@@ -23,6 +23,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.semantics.Role
+import com.sans.finance.ui.theme.ExpenseRed
+import com.sans.finance.ui.theme.IncomeGreen
+import com.sans.finance.ui.theme.TransferBlue
+import com.sans.finance.ui.theme.WarningAmber
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.ShowChart
@@ -464,8 +469,11 @@ fun WealthAllocationCard(
                                 if (isSelected) MaterialTheme.colorScheme.primary
                                 else Color.Transparent
                             )
-                            .clickable { onTabSelected(tab) }
-                            .padding(vertical = 6.dp),
+                            .clickable(
+                                role = Role.Tab,
+                                onClickLabel = "Select distribution tab"
+                            ) { onTabSelected(tab) }
+                            .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -474,7 +482,7 @@ fun WealthAllocationCard(
                                 WealthDistributionTab.ASSET_CLASS -> "Asset Class"
                                 WealthDistributionTab.CATEGORY -> "Category"
                             },
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.5.sp),
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             color = if (isSelected) MaterialTheme.colorScheme.onPrimary
                             else MaterialTheme.colorScheme.onSurfaceVariant
@@ -557,11 +565,11 @@ fun WealthAllocationCard(
 
 private fun getDistributionColor(index: Int): Color {
     return when (index % 5) {
-        0 -> Color(0xFF2196F3) // Blue
-        1 -> Color(0xFF4CAF50) // Green
-        2 -> Color(0xFFFF9800) // Orange
-        3 -> Color(0xFF9C27B0) // Purple
-        else -> Color(0xFF00BCD4) // Cyan
+        0 -> TransferBlue
+        1 -> IncomeGreen
+        2 -> WarningAmber
+        3 -> Color(0xFF8B5CF6) // Violet
+        else -> Color(0xFF06B6D4) // Cyan
     }
 }
 
@@ -587,10 +595,10 @@ fun FinancialIndependenceSuiteCard(
     val displayedRunway = activeScenario?.runwayMonths ?: runwayMonths
 
     val statusColor = when {
-        displayedRunway >= 12.0 -> Color(0xFF10B981)
-        displayedRunway >= 6.0 -> Color(0xFF4CAF50)
-        displayedRunway >= 3.0 -> Color(0xFFFF9800)
-        else -> Color(0xFFF44336)
+        displayedRunway >= 12.0 -> IncomeGreen
+        displayedRunway >= 6.0 -> IncomeGreen
+        displayedRunway >= 3.0 -> WarningAmber
+        else -> ExpenseRed
     }
     val statusLabel = activeScenario?.tier?.label ?: when {
         runwayMonths >= 12.0 -> "Antifragile (>12 Mo)"
@@ -670,7 +678,7 @@ fun FinancialIndependenceSuiteCard(
                         .fillMaxWidth()
                         .height(6.dp)
                         .clip(CircleShape),
-                    color = if (fiCoveragePct >= 100.0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
+                    color = if (fiCoveragePct >= 100.0) IncomeGreen else MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     strokeCap = StrokeCap.Round
                 )
@@ -774,7 +782,7 @@ fun FinancialIndependenceSuiteCard(
                             isVisible = !isPrivacyModeEnabled,
                             style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp),
                             fontWeight = FontWeight.Black,
-                            color = Color(0xFF4CAF50),
+                            color = IncomeGreen,
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
@@ -931,7 +939,7 @@ private fun MilestoneRowItem(
             Icon(
                 imageVector = if (isComplete) Icons.Default.CheckCircle else Icons.Outlined.Circle,
                 contentDescription = null,
-                tint = if (isComplete) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                tint = if (isComplete) IncomeGreen else MaterialTheme.colorScheme.outlineVariant,
                 modifier = Modifier.size(16.dp)
             )
             Text(
@@ -949,7 +957,7 @@ private fun MilestoneRowItem(
             text = status,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
-            color = if (isComplete) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
+            color = if (isComplete) IncomeGreen else MaterialTheme.colorScheme.primary,
             maxLines = 1,
             softWrap = false
         )
@@ -996,7 +1004,7 @@ fun FinancialHubBentoGrid(
                 amount = portfolioValue,
                 currencyCode = currencyCode,
                 icon = Icons.Default.PieChart,
-                iconTint = Color(0xFF4CAF50),
+                iconTint = IncomeGreen,
                 isPrivacyModeEnabled = isPrivacyModeEnabled,
                 onClick = onOpenPortfolio
             )
@@ -1012,7 +1020,7 @@ fun FinancialHubBentoGrid(
                 amount = liabilities,
                 currencyCode = currencyCode,
                 icon = Icons.Default.Payments,
-                iconTint = if (liabilities > 0) MaterialTheme.colorScheme.error else Color(0xFF4CAF50),
+                iconTint = if (liabilities > 0) MaterialTheme.colorScheme.error else IncomeGreen,
                 isPrivacyModeEnabled = isPrivacyModeEnabled,
                 onClick = onOpenDebts
             )
@@ -1176,7 +1184,7 @@ fun StrategyPlanningCard(
                 title = "Monthly Review",
                 subtitle = "Monthly insights & closure",
                 leadingIcon = Icons.Default.CalendarMonth,
-                iconTint = Color(0xFF4CAF50),
+                iconTint = IncomeGreen,
                 onClick = onOpenMonthlyReview
             )
         }
@@ -1194,7 +1202,10 @@ private fun StrategyNavRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable(
+                role = Role.Button,
+                onClickLabel = title
+            ) { onClick() }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically

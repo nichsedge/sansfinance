@@ -30,7 +30,7 @@ fun SummaryCard(
     expense: Long,
     total: Long,
     currencyCode: String,
-    modifier: Modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+    modifier: Modifier = Modifier,
     avgMonthlyExpense: Long = 0L,
     isPrivacyModeEnabled: Boolean = false,
     onTogglePrivacyMode: (() -> Unit)? = null
@@ -38,6 +38,8 @@ fun SummaryCard(
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     Card(
         modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp)
             .then(
                 if (onTogglePrivacyMode != null) {
                     Modifier.clickable {

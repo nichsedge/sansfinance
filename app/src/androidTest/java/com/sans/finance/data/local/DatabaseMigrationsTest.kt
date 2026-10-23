@@ -214,6 +214,40 @@ class DatabaseMigrationsTest {
         assertIndexExists(db, "index_expenses_is_recurring_date")
     }
 
+    @Test
+    fun migration40To41_dropsDeadTablesAndHealsOrphanedExpenses() {
+        val db = openDatabase("migration_40_41_test.db")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `accounts` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL DEFAULT 'Cash')")
+        db.execSQL("INSERT INTO `accounts` (`id`, `name`, `type`) VALUES (1, 'Cash', 'Cash')")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `net_worth_snapshots` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `investment_metadata` (`code` TEXT PRIMARY KEY NOT NULL)")
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `expenses` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `account_id` INTEGER NOT NULL,
+                `to_account_id` INTEGER
+            )
+            """.trimIndent()
+        )
+        db.execSQL("INSERT INTO `expenses` (`id`, `account_id`, `to_account_id`) VALUES (1, 999, 888)")
+
+        DatabaseMigrations.MIGRATION_40_41.migrate(db)
+
+        val cursorTable1 = db.query("SELECT name FROM sqlite_master WHERE type='table' AND name='net_worth_snapshots'")
+        cursorTable1.use { org.junit.Assert.assertFalse("net_worth_snapshots should be dropped", it.moveToFirst()) }
+
+        val cursorTable2 = db.query("SELECT name FROM sqlite_master WHERE type='table' AND name='investment_metadata'")
+        cursorTable2.use { org.junit.Assert.assertFalse("investment_metadata should be dropped", it.moveToFirst()) }
+
+        val cursorExp = db.query("SELECT account_id, to_account_id FROM expenses WHERE id=1")
+        cursorExp.use {
+            assertTrue(it.moveToFirst())
+            org.junit.Assert.assertEquals(1L, it.getLong(0))
+            org.junit.Assert.assertEquals(1L, it.getLong(1))
+        }
+    }
+
     private fun openDatabase(name: String): SupportSQLiteDatabase {
         openedNames += name
         val configuration = androidx.sqlite.db.SupportSQLiteOpenHelper.Configuration.builder(context)

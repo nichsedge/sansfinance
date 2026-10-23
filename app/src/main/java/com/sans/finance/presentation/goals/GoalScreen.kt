@@ -279,17 +279,23 @@ fun GoalItem(
                         )
                     }
                 }
-                Row {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f), CircleShape)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f), CircleShape)
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Goal", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
                     }
                     Spacer(Modifier.width(8.dp))
-                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.error.copy(alpha = 0.05f), CircleShape)) {
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.background(MaterialTheme.colorScheme.error.copy(alpha = 0.08f), CircleShape)
+                    ) {
                         Icon(
                             Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
-                            modifier = Modifier.size(16.dp)
+                            contentDescription = "Delete Goal",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }

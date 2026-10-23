@@ -34,6 +34,9 @@ __pycache__/
 
 # Project specific
 sans_finance_db*
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
 app/src/main/assets/seed_transactions.csv
 SA_cred_general.json
 r2_cred.json

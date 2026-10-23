@@ -14,4 +14,7 @@ interface AccountAliasDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAlias(alias: AccountAliasEntity)
+
+    @Query("DELETE FROM account_aliases WHERE accountKey = :accountKey")
+    suspend fun deleteAlias(accountKey: String)
 }

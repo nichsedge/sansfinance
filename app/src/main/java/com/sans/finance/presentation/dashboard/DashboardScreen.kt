@@ -2,6 +2,7 @@ package com.sans.finance.presentation.dashboard
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +10,8 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
@@ -66,7 +69,7 @@ fun DashboardScreen(
                     }
                     IconButton(
                         onClick = {
-                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                             viewModel.togglePrivacyMode()
                         }
                     ) {
@@ -92,18 +95,24 @@ fun DashboardScreen(
             )
         }
 
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(backgroundBrush),
-            contentPadding = PaddingValues(
-                start = paddingValues.calculateStartPadding(layoutDirection) + 16.dp,
-                top = paddingValues.calculateTopPadding() + 8.dp,
-                end = paddingValues.calculateEndPadding(layoutDirection) + 16.dp,
-                bottom = paddingValues.calculateBottomPadding() + 16.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentAlignment = Alignment.TopCenter
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 840.dp),
+                contentPadding = PaddingValues(
+                    start = paddingValues.calculateStartPadding(layoutDirection) + 16.dp,
+                    top = paddingValues.calculateTopPadding() + 8.dp,
+                    end = paddingValues.calculateEndPadding(layoutDirection) + 16.dp,
+                    bottom = paddingValues.calculateBottomPadding() + 16.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
             // 1. Hero: Net Worth Overview
             item(key = "net_worth") {
                 NetWorthCard(
@@ -222,5 +231,6 @@ fun DashboardScreen(
             item(key = "bottom_spacer") { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
+}
 }
 

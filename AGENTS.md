@@ -91,19 +91,21 @@ The project follows **Clean Architecture** with a Kotlin Multiplatform core.
   - `MaintainDatabaseUseCase` — SQLite `VACUUM` defragmentation, `PRAGMA optimize`, `ANALYZE`, and orphaned tag cleanup.
 
 **Data** (`app/src/main/java/com/sans/finance/data/`)
-- `local/entity/` — Room entities (database version 40).
+- `local/entity/` — Room entities (database version 41).
 - `local/dao/` — Room DAOs with complex queries for analytics.
 - `repository/` — Implementations mapping entities to domain models.
 
 **Presentation** (`app/presentation/`) — Compose + ViewModel + Jetpack Glance.
 - ViewModels use `StateFlow` to expose UI state.
-- Screen list: `Dashboard`, `ExpenseList`, `AddTransaction`, `SansAI` (Financial Copilot & Universal Transaction Ingestion with HITL Confirmation), `Wealth`, `Portfolio` (Overview with Interactive Search/Filter/Sort, Tri-Mode View Filtering [All Assets, By Category, By Asset Class], Expandable Category/Asset Class Groups, Yield/Allocation Micro-Bars, Minimalist Sovereign Focus Strip with Modal Bottom Sheet for ADHD Focus Suite [Autopilot SBN Reinvestment Playbook, Dust Sweeper, Autonomous Vault vs Liquid Capital, Zero-Brain DCA Router], Holding Detail Bottom Sheet, Helper Icon & Guide Bottom Sheet for Beginners/Experts with CSV & JSON ingestion, Real-Time Streaming AI Strategist with Auto-Navigation to Health & SSE Token Rendering, Health with Revamped Stepped Asset Class Target Sliders & Strict 100% Allocation Budget Meter with Proportional Auto-Balancing, Yield), `Goals`, `Budgets` (Safe-to-Spend runway), `Installments` (Horizon timeline), `MonthlyReview`, `DataManagement` (Database Optimization & Audit), `WealthForecasting` (Monte Carlo Simulation), etc.
+- Screen list: `Dashboard`, `ExpenseList`, `AddTransaction`, `SansAI` (Financial Copilot & Universal Transaction Ingestion with HITL Confirmation), `Wealth`, `Portfolio` (Overview with Interactive Search/Filter/Sort, Tri-Mode View Filtering [All Assets, By Category, By Asset Class], Expandable Category/Asset Class Groups, Yield/Allocation Micro-Bars, Minimalist Sovereign Focus Strip with Modal Bottom Sheet for ADHD Focus Suite [Autopilot SBN Reinvestment Playbook, Dust Sweeper, Autonomous Vault vs Liquid Capital, Zero-Brain DCA Router], Holding Detail Bottom Sheet with Account Alias Customization, Helper Icon & Guide Bottom Sheet for Beginners/Experts with CSV & JSON ingestion, Real-Time Streaming AI Strategist with Auto-Navigation to Health & SSE Token Rendering, Health with Revamped Stepped Asset Class Target Sliders & Strict 100% Allocation Budget Meter with Proportional Auto-Balancing, Yield), `Goals`, `Budgets` (Safe-to-Spend runway), `Installments` (Horizon timeline), `MonthlyReview`, `DataManagement` (Database Optimization & Audit), `WealthForecasting` (Monte Carlo Simulation), etc.
 - Navigation: Type-safe routes using Kotlinx Serialization in `Screen.kt` with fluid Material 3 enter/exit motion transitions.
 - AppWidgets & Shortcuts: Jetpack Glance & RemoteViews widgets with rich preview layouts (`FinancialSummaryGlanceWidget`, `QuickAddGlanceWidget`), native 1-tap pinned shortcuts via `DynamicShortcutManager.requestPinAddExpenseShortcut()`, and adaptive launcher shortcuts.
 
 ## Database
 
-Room database is at **version 40**. It includes:
+Room database is at **version 41**. It includes:
+- Pruned vestigial legacy tables (`net_worth_snapshots`, `investment_metadata`) with forward yield now sourced exclusively via typed `yield_rate` on `portfolio_holdings`.
+- Automatic healing and orphan prevention for expenses when deleting accounts (re-mapped to primary Cash account).
 - Typed `yield_rate` column on `portfolio_holdings` for real-world forward yield (APY / Dividend Yield) ingestion from upstream R2 snapshots without hardcoded fallbacks.
 - Typed `cost_basis` column on `portfolio_holdings` for deterministic unrealized capital gain tracking without string parsing.
 - Typed `is_investment` classification on `account_types` for first-class XIRR cashflow attribution without hardcoded broker names.

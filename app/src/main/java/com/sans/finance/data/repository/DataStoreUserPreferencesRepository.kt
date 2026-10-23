@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.SharedPreferencesMigration
+import com.sans.finance.core.util.CryptoManager
 import com.sans.finance.domain.model.UserPreferences
 import com.sans.finance.domain.repository.UserPreferencesRepository
 import kotlinx.coroutines.flow.Flow
@@ -57,7 +58,7 @@ class DataStoreUserPreferencesRepository @Inject constructor(
             cloudBackupProvider = preferences[PreferencesKeys.CLOUD_BACKUP_PROVIDER] ?: "CLOUDFLARE_R2",
             r2AccountId = preferences[PreferencesKeys.R2_ACCOUNT_ID] ?: "",
             r2AccessKeyId = preferences[PreferencesKeys.R2_ACCESS_KEY_ID] ?: "",
-            r2SecretAccessKey = preferences[PreferencesKeys.R2_SECRET_ACCESS_KEY] ?: "",
+            r2SecretAccessKey = CryptoManager.decrypt(preferences[PreferencesKeys.R2_SECRET_ACCESS_KEY] ?: ""),
             r2BucketName = preferences[PreferencesKeys.R2_BUCKET_NAME] ?: "ichsanul-dev",
             gcsBucketName = preferences[PreferencesKeys.GCS_BUCKET_NAME] ?: "ichsanul-portfolio-snapshots"
         )
@@ -121,7 +122,7 @@ class DataStoreUserPreferencesRepository @Inject constructor(
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.R2_ACCOUNT_ID] = accountId
             preferences[PreferencesKeys.R2_ACCESS_KEY_ID] = accessKeyId
-            preferences[PreferencesKeys.R2_SECRET_ACCESS_KEY] = secretAccessKey
+            preferences[PreferencesKeys.R2_SECRET_ACCESS_KEY] = CryptoManager.encrypt(secretAccessKey)
             preferences[PreferencesKeys.R2_BUCKET_NAME] = bucketName
         }
     }
@@ -157,7 +158,7 @@ class DataStoreUserPreferencesRepository @Inject constructor(
             preferences[PreferencesKeys.CLOUD_BACKUP_PROVIDER] = prefs.cloudBackupProvider
             preferences[PreferencesKeys.R2_ACCOUNT_ID] = prefs.r2AccountId
             preferences[PreferencesKeys.R2_ACCESS_KEY_ID] = prefs.r2AccessKeyId
-            preferences[PreferencesKeys.R2_SECRET_ACCESS_KEY] = prefs.r2SecretAccessKey
+            preferences[PreferencesKeys.R2_SECRET_ACCESS_KEY] = CryptoManager.encrypt(prefs.r2SecretAccessKey)
             preferences[PreferencesKeys.R2_BUCKET_NAME] = prefs.r2BucketName
             preferences[PreferencesKeys.GCS_BUCKET_NAME] = prefs.gcsBucketName
         }

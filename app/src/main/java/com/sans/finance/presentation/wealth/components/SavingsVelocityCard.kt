@@ -61,8 +61,8 @@ import com.sans.finance.presentation.components.PrivacyText
 @Composable
 fun SavingsVelocityCard(
     summary: SavingsRateVelocitySummary,
-    isPrivacyMode: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isPrivacyMode: Boolean = false
 ) {
     val haptic = LocalHapticFeedback.current
     var selectedIndex by remember { mutableStateOf<Int?>(null) }

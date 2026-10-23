@@ -136,6 +136,12 @@ interface ExpenseDao {
     @Query("DELETE FROM expense_tag_ref WHERE expenseId = :expenseId")
     suspend fun deleteExpenseTagRefs(expenseId: Long)
 
+    @Query("UPDATE expenses SET account_id = :toAccountId WHERE account_id = :fromAccountId")
+    suspend fun reassignAccountId(fromAccountId: Long, toAccountId: Long)
+
+    @Query("UPDATE expenses SET to_account_id = :toAccountId WHERE to_account_id = :fromAccountId")
+    suspend fun reassignToAccountId(fromAccountId: Long, toAccountId: Long)
+
     @Transaction
     @Query("SELECT * FROM expenses WHERE title = :title AND amount = :amount AND date BETWEEN :startTime AND :endTime AND account_id = :accountId LIMIT 1")
     suspend fun findDuplicateExpense(
@@ -168,13 +174,13 @@ interface ExpenseDao {
     @Query(
         """
         SELECT title FROM expenses
-        WHERE strftime('%w', date / 1000, 'unixepoch') = :dayOfWeek
+        WHERE date >= :since AND strftime('%w', date / 1000, 'unixepoch') = :dayOfWeek
         GROUP BY title
         ORDER BY COUNT(*) DESC
         LIMIT :limit
     """
     )
-    suspend fun getTopFrequentTitlesByDay(dayOfWeek: String, limit: Int): List<String>
+    suspend fun getTopFrequentTitlesByDay(dayOfWeek: String, limit: Int, since: Long): List<String>
 
     @Query("SELECT SUM(amount * COALESCE((SELECT rateToIdr FROM exchange_rates WHERE code = expenses.currency), 1.0)) FROM expenses WHERE type = 'EXPENSE' AND date >= :since AND is_installment = 0")
     fun getTotalSpentSince(since: Long): Flow<Long?>

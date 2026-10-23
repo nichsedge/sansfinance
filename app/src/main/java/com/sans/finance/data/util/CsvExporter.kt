@@ -6,7 +6,8 @@ import java.util.Date
 import java.util.Locale
 
 object CsvExporter {
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    private val dateFormat: SimpleDateFormat
+        get() = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
     fun toCsv(expenses: List<Expense>): String {
         val header = "date,source,store,item_name,qty,item_price,order_total,status,is_installment"

@@ -272,7 +272,8 @@ class ExpenseRepositoryImpl(
     }
 
     override suspend fun getTopFrequentTitlesByDay(dayOfWeek: Int, limit: Int): List<String> {
-        return dao.getTopFrequentTitlesByDay(dayOfWeek.toString(), limit)
+        val since = System.currentTimeMillis() - 180L * 24 * 60 * 60 * 1000 // 180-day index-accelerated lookback
+        return dao.getTopFrequentTitlesByDay(dayOfWeek.toString(), limit, since)
     }
 
     override suspend fun getDetailsSuggestions(query: String): List<String> {

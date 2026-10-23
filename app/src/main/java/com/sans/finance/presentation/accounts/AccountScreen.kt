@@ -615,7 +615,10 @@ fun AccountRowItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable(
+                role = androidx.compose.ui.semantics.Role.Button,
+                onClickLabel = "View account details"
+            ) { onClick() }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -636,11 +639,11 @@ fun AccountRowItem(
 
         if (isReorderMode) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onMoveUp, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move Up", modifier = Modifier.size(18.dp))
+                IconButton(onClick = onMoveUp) {
+                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move Up", modifier = Modifier.size(20.dp))
                 }
-                IconButton(onClick = onMoveDown, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move Down", modifier = Modifier.size(18.dp))
+                IconButton(onClick = onMoveDown) {
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move Down", modifier = Modifier.size(20.dp))
                 }
             }
         }

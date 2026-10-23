@@ -1,7 +1,6 @@
 package com.sans.finance.domain.usecase
 
 import com.sans.finance.data.local.dao.CurrencyDao
-import com.sans.finance.data.local.dao.InvestmentMetadataDao
 import com.sans.finance.data.util.LocaleManager
 import com.sans.finance.domain.model.DividendYieldSummary
 import com.sans.finance.domain.model.HoldingYield
@@ -13,7 +12,6 @@ import javax.inject.Inject
 
 class GetDividendYieldSummaryUseCase @Inject constructor(
     private val portfolioRepository: PortfolioRepository,
-    private val investmentMetadataDao: InvestmentMetadataDao,
     private val expenseRepository: ExpenseRepository,
     private val currencyDao: CurrencyDao,
     private val localeManager: LocaleManager
@@ -25,11 +23,9 @@ class GetDividendYieldSummaryUseCase @Inject constructor(
 
         return combine(
             portfolioRepository.getLatestSnapshot(),
-            investmentMetadataDao.getAllMetadata(),
             expenseRepository.getTotalAmountByTypeBetween(yearAgo, now, "EXPENSE"),
             currencyDao.getAllRates()
-        ) { holdings, metadataList, annualExpenseIdr, rates ->
-            val metadataMap = metadataList.associateBy { it.code.uppercase() }
+        ) { holdings, annualExpenseIdr, rates ->
             val ratesMap = rates.associate { it.code to it.rateToIdr }
             val baseRate = if (baseCurrency == "IDR") 1.0 else ratesMap[baseCurrency] ?: 1.0
 
@@ -38,15 +34,10 @@ class GetDividendYieldSummaryUseCase @Inject constructor(
             var totalPortfolioValueInBase = 0.0
 
             holdings.forEach { holding ->
-                val code = holding.asset.uppercase()
-                val meta = metadataMap[code]
-
                 // Real yield hierarchy:
                 // 1. Holding's own yieldRate (enriched from upstream R2 snapshot)
-                // 2. Metadata rate from investment_metadata table
-                // 3. Fallback rule based on asset class
+                // 2. Fallback rule based on asset class
                 val yieldRate = holding.yieldRate?.takeIf { it > 0 }
-                    ?: meta?.rate
                     ?: when {
                         holding.assetClass.contains("Bond", ignoreCase = true) ||
                         holding.assetClass.contains("Fixed Income", ignoreCase = true) -> 0.0625

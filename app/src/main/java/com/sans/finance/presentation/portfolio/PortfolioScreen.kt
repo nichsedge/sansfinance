@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.semantics.Role
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
@@ -558,8 +560,11 @@ fun PortfolioScreen(
                                                             .background(
                                                                 if (state.chartMode == 0) MaterialTheme.colorScheme.primary else Color.Transparent
                                                             )
-                                                            .clickable { viewModel.setChartMode(0) }
-                                                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                                                            .clickable(
+                                                                role = Role.RadioButton,
+                                                                onClickLabel = "Show Total Net Worth"
+                                                            ) { viewModel.setChartMode(0) }
+                                                            .padding(horizontal = 12.dp, vertical = 6.dp)
                                                     ) {
                                                         Text(
                                                             "Total",
@@ -574,8 +579,11 @@ fun PortfolioScreen(
                                                             .background(
                                                                 if (state.chartMode == 1) MaterialTheme.colorScheme.primary else Color.Transparent
                                                             )
-                                                            .clickable { viewModel.setChartMode(1) }
-                                                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                                                            .clickable(
+                                                                role = Role.RadioButton,
+                                                                onClickLabel = "Show Investments Only"
+                                                            ) { viewModel.setChartMode(1) }
+                                                            .padding(horizontal = 12.dp, vertical = 6.dp)
                                                     ) {
                                                         Text(
                                                             "Investments",
@@ -701,36 +709,36 @@ fun PortfolioScreen(
                                     }
                                 }
                             } else if (viewMode == PortfolioViewMode.FLAT) {
-                                item {
+                                itemsIndexed(
+                                    items = filteredHoldings,
+                                    key = { _, holding -> "${holding.accountId}_${holding.asset}_${holding.id}" },
+                                    contentType = { _, _ -> "HoldingItem" }
+                                ) { index, holding ->
+                                    val valued = getValued(holding)
+                                    val shape = when {
+                                        filteredHoldings.size == 1 -> MaterialTheme.shapes.extraLarge
+                                        index == 0 -> androidx.compose.foundation.shape.RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 4.dp, bottomEnd = 4.dp)
+                                        index == filteredHoldings.size - 1 -> androidx.compose.foundation.shape.RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
+                                        else -> androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
+                                    }
                                     Card(
                                         modifier = Modifier.fillMaxWidth(),
-                                        shape = MaterialTheme.shapes.extraLarge,
+                                        shape = shape,
                                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                                         border = androidx.compose.foundation.BorderStroke(
                                             1.dp,
                                             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                                         )
                                     ) {
-                                        Column {
-                                            filteredHoldings.forEachIndexed { index, holding ->
-                                                val valued = getValued(holding)
-                                                EnhancedHoldingItem(
-                                                    holding = holding,
-                                                    valuedHolding = valued,
-                                                    categoryTotal = totalFilteredValue,
-                                                    currentCurrency = state.currentCurrency,
-                                                    isPrivacyModeEnabled = state.isPrivacyModeEnabled,
-                                                    accountAliases = state.accountAliases,
-                                                    onClick = { selectedHoldingForDetail = holding to valued }
-                                                )
-                                                if (index < filteredHoldings.size - 1) {
-                                                    HorizontalDivider(
-                                                        modifier = Modifier.padding(horizontal = 16.dp),
-                                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
-                                                    )
-                                                }
-                                            }
-                                        }
+                                        EnhancedHoldingItem(
+                                            holding = holding,
+                                            valuedHolding = valued,
+                                            categoryTotal = totalFilteredValue,
+                                            currentCurrency = state.currentCurrency,
+                                            isPrivacyModeEnabled = state.isPrivacyModeEnabled,
+                                            accountAliases = state.accountAliases,
+                                            onClick = { selectedHoldingForDetail = holding to valued }
+                                        )
                                     }
                                 }
                             } else {
@@ -886,6 +894,7 @@ fun PortfolioScreen(
                 currentCurrency = state.currentCurrency,
                 isPrivacyModeEnabled = state.isPrivacyModeEnabled,
                 accountAliases = state.accountAliases,
+                onSaveAlias = { key, alias -> viewModel.setAccountAlias(key, alias) },
                 onDismiss = { selectedHoldingForDetail = null }
             )
         }
@@ -1254,20 +1263,20 @@ fun PortfolioAiInsightCard(
                     )
                 }
                 if (isAnalyzing) {
-                    IconButton(onClick = onStop, modifier = Modifier.size(24.dp)) {
+                    IconButton(onClick = onStop) {
                         Icon(
                             Icons.Default.Stop,
                             contentDescription = "Stop Analysis",
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.error
                         )
                     }
                 } else {
-                    IconButton(onClick = onClear, modifier = Modifier.size(24.dp)) {
+                    IconButton(onClick = onClear) {
                         Icon(
                             Icons.Default.Close,
                             contentDescription = "Dismiss",
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

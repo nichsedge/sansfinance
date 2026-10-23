@@ -46,7 +46,7 @@ Get the latest signed APK directly from [GitHub Releases](https://github.com/nic
 - **UI Toolkit:** [Jetpack Compose](https://developer.android.com/compose) & Material 3
 - **Widgets:** Jetpack Glance
 - **Dependency Injection:** [Hilt](https://dagger.dev/hilt/)
-- **Local Database:** [Room](https://developer.android.com/training/data-storage/room) (SQLite) — Schema Version 40
+- **Local Database:** [Room](https://developer.android.com/training/data-storage/room) (SQLite) — Schema Version 41
 - **Optional AI:** Cloud AI connector (OpenAI / OpenRouter)
 - **Data Persistence:** DataStore (Preferences) & Cloudflare R2 Backups (with Immutable Archives)
 

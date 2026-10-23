@@ -633,6 +633,22 @@ class PortfolioViewModel @Inject constructor(
         return (targetedHealth + untargetedHealth).sortedByDescending { it.currentPercentage }
     }
 
+    fun setAccountAlias(accountKey: String, aliasName: String) {
+        viewModelScope.launch {
+            if (aliasName.isBlank()) {
+                accountAliasDao.deleteAlias(accountKey)
+            } else {
+                accountAliasDao.upsertAlias(
+                    com.sans.finance.data.local.entity.AccountAliasEntity(
+                        accountKey = accountKey,
+                        aliasName = aliasName.trim(),
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
+            }
+        }
+    }
+
     fun togglePrivacyMode() {
         viewModelScope.launch {
             userPreferencesRepository.setPrivacyModeEnabled(!state.value.isPrivacyModeEnabled)

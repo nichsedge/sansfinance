@@ -134,14 +134,12 @@ fun SearchScreen(
                             if (state.searchQuery.isNotEmpty()) {
                                 IconButton(
                                     onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         viewModel.updateSearchQuery("")
-                                    },
-                                    modifier = Modifier.size(24.dp)
+                                    }
                                 ) {
                                     Icon(
                                         Icons.Default.Clear,
-                                        contentDescription = "Clear",
+                                        contentDescription = "Clear search",
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }

@@ -23,14 +23,7 @@
     android:supportsRtl="true"
     android:theme="@style/Theme.SansFinance">
 
-    <!-- Required for LiteRT-LM GPU backend (OpenCL acceleration) -->
-    <!-- required=false ensures the app still installs on devices without these libs -->
-    <uses-native-library
-      android:name="libvndksupport.so"
-      android:required="false" />
-    <uses-native-library
-      android:name="libOpenCL.so"
-      android:required="false" />
+
 
     <!-- FileProvider for sharing camera output URIs with the camera app -->
     <provider

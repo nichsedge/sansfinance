@@ -19,6 +19,7 @@ private val DarkColorScheme = darkColorScheme(
     secondaryContainer = Slate800,
     onSecondaryContainer = Slate100,
     tertiary = Emerald500,
+    onTertiary = Slate900,
     tertiaryContainer = Slate900,
     onTertiaryContainer = Slate300,
     error = Rose500,
@@ -27,7 +28,9 @@ private val DarkColorScheme = darkColorScheme(
     onBackground = Slate50,
     onSurface = Slate50,
     surfaceVariant = Slate700,
-    onSurfaceVariant = Slate400
+    onSurfaceVariant = Slate400,
+    outline = Slate600,
+    outlineVariant = Slate700
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -39,6 +42,7 @@ private val LightColorScheme = lightColorScheme(
     secondaryContainer = Slate200,
     onSecondaryContainer = Slate800,
     tertiary = Emerald500,
+    onTertiary = Slate900,
     tertiaryContainer = Slate50,
     onTertiaryContainer = Slate700,
     error = Rose500,
@@ -47,7 +51,9 @@ private val LightColorScheme = lightColorScheme(
     onBackground = Slate900,
     onSurface = Slate900,
     surfaceVariant = Slate100,
-    onSurfaceVariant = Slate500
+    onSurfaceVariant = Slate500,
+    outline = Slate400,
+    outlineVariant = Slate200
 )
 
 @Composable
