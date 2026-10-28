@@ -24,7 +24,10 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
+import com.sans.finance.domain.model.AiToolCall
 import com.sans.finance.domain.model.FinancialContextSnapshot
+import kotlinx.serialization.json.intOrNull
+import java.util.UUID
 import com.sans.finance.domain.model.StreamEvent
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -42,18 +45,22 @@ class OpenRouterChatProvider(
     private val apiKey = rawApiKey.filter { it > ' ' && it.code < 127 }
     private val model = rawModel.filter { it > ' ' && it.code < 127 }
 
-    // Dedicated client with extended timeouts for AI reasoning/routers (90s for free queues)
+    // Dedicated client with extended timeouts for AI reasoning/routers (180s for free queues)
     private val client = rawClient.newBuilder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(90, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(45, TimeUnit.SECONDS)
+        .readTimeout(180, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
         .build()
 
-    // SSE streaming client: readTimeout(0) prevents SocketTimeoutException during long token pauses
+    // SSE streaming client: HTTP/1.1 and pingInterval prevent connection resets from intermediate edge proxies during long vision inference
     private val streamingClient = rawClient.newBuilder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(0, TimeUnit.MILLISECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .protocols(listOf(okhttp3.Protocol.HTTP_1_1))
+        .connectTimeout(45, TimeUnit.SECONDS)
+        .readTimeout(180, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .pingInterval(10, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
         .build()
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -341,7 +348,8 @@ class OpenRouterChatProvider(
         categories: List<CategorySummary>,
         currency: String,
         conversationHistory: List<ChatMessage>,
-        financialContext: FinancialContextSnapshot?
+        financialContext: FinancialContextSnapshot?,
+        base64Image: String?
     ): AiAssistantResponse {
         val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
             .format(java.util.Date())
@@ -354,111 +362,48 @@ class OpenRouterChatProvider(
         }
 
         val financialContextFormatted = buildFinancialContextString(financialContext, currency)
+        val systemPrompt = buildChatSystemPrompt(todayStr, currency, accountsFormatted, categoriesFormatted)
 
-        val systemPrompt = """
-            You are Sans Finance Copilot, an elite personal finance assistant and universal transaction harness for an Indonesia-based personal wealth and cashflow management app.
-            Current Date: $todayStr
-            Base Currency: $currency
-
-            User's Registered Accounts:
-            $accountsFormatted
-
-            User's Registered Categories:
-            $categoriesFormatted
-
-            ${financialContextFormatted.ifBlank { "" }}
-
-            Capabilities & Modes:
-            1. CONVERSATIONAL & FINANCIAL ADVICE MODE:
-               - When the user asks financial questions, inquires about their net worth, portfolio, investments, current expenses, income, savings, cash balances, budgeting strategies (50/30/20, zero-based), emergency fund sizing, cash runway, FIRE targets, or debt payoff horizons:
-               - Use the real figures provided in the Financial Snapshot above to answer accurately and concretely.
-               - Net Worth & Asset Invariant: When asked about net worth or total wealth, ALWAYS cite the exact Total Net Worth from [Balance Sheet & Net Worth Overview]. Net Worth = Total Assets (Liquid Cash + Investment Portfolio) - Liabilities. NEVER report net worth based solely on cash/bank accounts when an investment portfolio exists. Always clearly break down the composition (Net Worth, Liquid Cash & Bank, Investment Portfolio with allocation and top holdings, and any Liabilities/Debts).
-               - Provide a clear, insightful, motivating, and mathematically sound answer in Indonesian (or English if prompted in English).
-               - Set "proposals": [] (empty array). Do NOT invent fictional transactions.
-
-            2. UNIVERSAL TRANSACTION INGESTION MODE:
-               - When the user pastes ANY receipt, bank mutation, invoice, purchase confirmation, QRIS payment, bill, or income notification:
-                 * Daily Spends & Shopping: Supermarket, groceries (Indomaret, Alfamart, Superindo), food & dining (GoFood, Grab, restaurants), coffee, e-commerce (Tokopedia, Shopee, Blibli), transport, fuel.
-                 * Bills & Utilities: PLN electricity, PDAM, internet/WiFi, cellular, subscriptions (Netflix, Spotify, Google, iCloud).
-                 * Incomes & Payouts: Salary/gaji, freelance fees, bonus, THR, reimbursement, cashbacks, gifts.
-                 * Passive Income & Investments: SBN coupon payouts (ORI, SR, PBS, ST, FR), stock dividends, P2P lending interest, crypto staking yields, bank deposit interest. Kupon/dividends are ALWAYS type 'INCOME'. Use the net credited nominal (after tax if stated).
-                 * Account Transfers: Transfer between user accounts (e.g. BCA to GoPay, Mandiri to Bibit, Bank to RDN) with type 'TRANSFER'.
-               - Extract EVERY discrete transaction found in the message into the "proposals" array. If multiple transactions or bulk notifications are present, create a separate proposal item for each one.
-               - Nominal Amount: Standard numeric value in major currency units (e.g. 150000 for Rp 150.000, 2500000 for Rp 2.500.000).
-               - Title: Clean, descriptive merchant/transaction title (e.g. 'Kopi Kenangan', 'Superindo Kelapa Gading', 'PLN Token Listrik', 'Kupon SBN ORI026', 'Gaji Bulanan', 'Top Up GoPay').
-               - Type: Exactly 'EXPENSE', 'INCOME', or 'TRANSFER'.
-               - Date: Epoch timestamp in milliseconds. Extract transaction timestamp from receipt if available, otherwise use current timestamp (${System.currentTimeMillis()}).
-               - Account: Match with the best Account ID from the user's registered accounts list. If no specific bank/account is mentioned or identifiable in the receipt/message, set accountName to 'Cash' (it will automatically default to the user's primary cash account).
-               - Category: Match with the best Category ID matching the transaction type and purpose.
-               - Notes: Concise additional context (e.g. reference number, tax deducted, items purchased).
-               - Tags: Relevant lowercase tags (e.g. ["makan", "coffee"], ["belanja", "groceries"], ["investasi", "sbn", "kupon"], ["utilities"]).
-
-            Always output a valid, well-formed JSON object matching this schema:
-            {
-              "reply": "Conversational explanation or friendly answer. If transactions were detected, summarize count and total nominal.",
-              "proposals": [
-                {
-                  "title": "string",
-                  "amount": 150000,
-                  "type": "EXPENSE",
-                  "date": ${System.currentTimeMillis()},
-                  "accountId": 1,
-                  "accountName": "Cash",
-                  "categoryId": 2,
-                  "categoryName": "string",
-                  "notes": "string",
-                  "tags": ["tag1", "tag2"]
-                }
-              ]
-            }
-
-            CRITICAL DIRECTIVE:
-            Do NOT include chain-of-thought, thinking traces, or <think> tags.
-            Output ONLY valid JSON starting immediately with '{' and ending with '}'.
-        """.trimIndent()
-
-        val bodyJson = buildJsonObject {
-            put("model", JsonPrimitive(model))
-            put(
-                "messages",
-                buildJsonArray {
-                    add(
-                        buildJsonObject {
-                            put("role", JsonPrimitive("system"))
-                            put("content", JsonPrimitive(systemPrompt))
-                        }
-                    )
-                    conversationHistory.takeLast(4).forEach { msg ->
-                        add(
-                            buildJsonObject {
-                                put("role", JsonPrimitive(if (msg.sender == ChatSender.USER) "user" else "assistant"))
-                                put("content", JsonPrimitive(msg.text))
-                            }
-                        )
-                    }
-                    add(
-                        buildJsonObject {
-                            put("role", JsonPrimitive("user"))
-                            put("content", JsonPrimitive(userMessage))
-                        }
-                    )
-                }
-            )
-            // Suppress reasoning for models that support the standard reasoning parameter
-            put(
-                "reasoning",
+        val messagesArray = buildJsonArray {
+            add(
                 buildJsonObject {
-                    put("effort", JsonPrimitive("none"))
+                    put("role", JsonPrimitive("system"))
+                    put("content", JsonPrimitive(systemPrompt))
                 }
             )
-            if (!model.contains("free", ignoreCase = true)) {
-                put(
-                    "response_format",
+            val dynamicContextContent = buildString {
+                append("Context: current_timestamp=${System.currentTimeMillis()}, date=$todayStr")
+                if (financialContextFormatted.isNotBlank()) {
+                    append("\n\n").append(financialContextFormatted)
+                }
+            }
+            add(
+                buildJsonObject {
+                    put("role", JsonPrimitive("user"))
+                    put("content", JsonPrimitive(dynamicContextContent))
+                }
+            )
+            add(
+                buildJsonObject {
+                    put("role", JsonPrimitive("assistant"))
+                    put("content", JsonPrimitive("Understood. I have your up-to-date financial context and accounts."))
+                }
+            )
+            conversationHistory.takeLast(4).forEach { msg ->
+                add(
                     buildJsonObject {
-                        put("type", JsonPrimitive("json_object"))
+                        put("role", JsonPrimitive(if (msg.sender == ChatSender.USER) "user" else "assistant"))
+                        put("content", JsonPrimitive(msg.text))
                     }
                 )
             }
+            add(buildUserMessageObject(userMessage, base64Image))
+        }
+
+        val bodyJson = buildJsonObject {
+            put("model", JsonPrimitive(model))
+            put("messages", messagesArray)
+            put("tools", buildToolsJson())
             put("temperature", JsonPrimitive(0.2))
             put("max_tokens", JsonPrimitive(4096))
         }
@@ -473,7 +418,9 @@ class OpenRouterChatProvider(
         categories: List<CategorySummary>,
         currency: String,
         conversationHistory: List<ChatMessage>,
-        financialContext: FinancialContextSnapshot?
+        financialContext: FinancialContextSnapshot?,
+        base64Image: String?,
+        toolExecutor: (suspend (name: String, argumentsJson: String) -> String)?
     ): Flow<StreamEvent> = callbackFlow {
         val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
             .format(java.util.Date())
@@ -486,157 +433,417 @@ class OpenRouterChatProvider(
         }
 
         val financialContextFormatted = buildFinancialContextString(financialContext, currency)
-
-        // Static system prompt (no dynamic timestamps) for prompt caching
         val systemPrompt = buildChatSystemPrompt(todayStr, currency, accountsFormatted, categoriesFormatted)
 
-        val bodyJson = buildJsonObject {
-            put("model", JsonPrimitive(model))
-            put("stream", JsonPrimitive(true))
-            put(
-                "messages",
-                buildJsonArray {
-                    add(
-                        buildJsonObject {
-                            put("role", JsonPrimitive("system"))
-                            put("content", JsonPrimitive(systemPrompt))
-                        }
-                    )
-                    // Dynamic context as a separate user turn for prompt caching
-                    val dynamicContextContent = buildString {
-                        append("Context: current_timestamp=${System.currentTimeMillis()}, date=$todayStr")
-                        if (financialContextFormatted.isNotBlank()) {
-                            append("\n\n").append(financialContextFormatted)
-                        }
-                    }
-                    add(
-                        buildJsonObject {
-                            put("role", JsonPrimitive("user"))
-                            put("content", JsonPrimitive(dynamicContextContent))
-                        }
-                    )
-                    add(
-                        buildJsonObject {
-                            put("role", JsonPrimitive("assistant"))
-                            put("content", JsonPrimitive("Understood. I have your up-to-date financial context and accounts."))
-                        }
-                    )
-                    conversationHistory.takeLast(4).forEach { msg ->
-                        add(
-                            buildJsonObject {
-                                put("role", JsonPrimitive(if (msg.sender == ChatSender.USER) "user" else "assistant"))
-                                put("content", JsonPrimitive(msg.text))
-                            }
-                        )
-                    }
-                    add(
-                        buildJsonObject {
-                            put("role", JsonPrimitive("user"))
-                            put("content", JsonPrimitive(userMessage))
-                        }
-                    )
+        val messagesList = mutableListOf<JsonObject>()
+        messagesList.add(
+            buildJsonObject {
+                put("role", JsonPrimitive("system"))
+                put("content", JsonPrimitive(systemPrompt))
+            }
+        )
+        val dynamicContextContent = buildString {
+            append("Context: current_timestamp=${System.currentTimeMillis()}, date=$todayStr")
+            if (financialContextFormatted.isNotBlank()) {
+                append("\n\n").append(financialContextFormatted)
+            }
+        }
+        messagesList.add(
+            buildJsonObject {
+                put("role", JsonPrimitive("user"))
+                put("content", JsonPrimitive(dynamicContextContent))
+            }
+        )
+        messagesList.add(
+            buildJsonObject {
+                put("role", JsonPrimitive("assistant"))
+                put("content", JsonPrimitive("Understood. I have your up-to-date financial context and accounts."))
+            }
+        )
+        conversationHistory.takeLast(4).forEach { msg ->
+            messagesList.add(
+                buildJsonObject {
+                    put("role", JsonPrimitive(if (msg.sender == ChatSender.USER) "user" else "assistant"))
+                    put("content", JsonPrimitive(msg.text))
                 }
             )
-            // Do not force reasoning effort = none; models like DeepSeek R1 / openrouter/free require reasoning
-            put("temperature", JsonPrimitive(0.2))
-            put("max_tokens", JsonPrimitive(4096))
         }
+        messagesList.add(buildUserMessageObject(userMessage, base64Image))
 
-        val request = Request.Builder()
-            .url("https://openrouter.ai/api/v1/chat/completions")
-            .header("Authorization", "Bearer $apiKey")
-            .header("Content-Type", "application/json")
-            .header("HTTP-Referer", appUrl)
-            .header("X-Title", appName)
-            .header("X-OpenRouter-Title", appName)
-            .post(bodyJson.toString().toRequestBody("application/json".toMediaType()))
-            .build()
+        var activeCall: okhttp3.Call? = null
+        val accumulatedProse = StringBuilder()
+        var turnCount = 0
+        val maxTurns = 3
 
-        Log.d("OpenRouter", "Starting SSE stream (model=$model)")
+        while (turnCount < maxTurns) {
+            turnCount++
+            val bodyJson = buildJsonObject {
+                put("model", JsonPrimitive(model))
+                put("stream", JsonPrimitive(true))
+                put("messages", buildJsonArray { messagesList.forEach { add(it) } })
+                put("tools", buildToolsJson())
+                put("temperature", JsonPrimitive(0.2))
+                put("max_tokens", JsonPrimitive(4096))
+            }
 
-        var activeCall = streamingClient.newCall(request)
-        try {
-            var response = activeCall.execute()
+            val request = Request.Builder()
+                .url("https://openrouter.ai/api/v1/chat/completions")
+                .header("Authorization", "Bearer $apiKey")
+                .header("Content-Type", "application/json")
+                .header("HTTP-Referer", appUrl)
+                .header("X-Title", appName)
+                .header("X-OpenRouter-Title", appName)
+                .post(bodyJson.toString().toRequestBody("application/json".toMediaType()))
+                .build()
 
-            // If 400 occurs due to unrecognized parameters, retry cleanly
+            activeCall = streamingClient.newCall(request)
+            var response = try {
+                activeCall.execute()
+            } catch (e: Exception) {
+                trySend(StreamEvent.Error(e.localizedMessage ?: e.message ?: "Network error"))
+                close()
+                return@callbackFlow
+            }
+
+            // Retry on HTTP 400 if model rejects tools or reasoning
             if (!response.isSuccessful && response.code == 400) {
                 val errorBody = response.body.string()
                 Log.w("OpenRouter", "Stream HTTP 400: $errorBody")
-                if (errorBody.contains("reasoning", ignoreCase = true) || errorBody.contains("unrecognized", ignoreCase = true)) {
+                val stripTools = errorBody.contains("tools", ignoreCase = true)
+                val stripReasoning = errorBody.contains("reasoning", ignoreCase = true) || errorBody.contains("unrecognized", ignoreCase = true)
+
+                if (stripTools || stripReasoning) {
                     val fallbackBody = buildJsonObject {
                         bodyJson.forEach { (k, v) ->
-                            if (k != "reasoning") put(k, v)
+                            if (stripTools && k == "tools") return@forEach
+                            if (stripReasoning && k == "reasoning") return@forEach
+                            put(k, v)
                         }
                     }
                     val retryReq = request.newBuilder()
                         .post(fallbackBody.toString().toRequestBody("application/json".toMediaType()))
                         .build()
                     activeCall = streamingClient.newCall(retryReq)
-                    response = activeCall.execute()
-                } else {
-                    trySend(StreamEvent.Error(parseOpenRouterError(response.code, errorBody)))
-                    close()
-                    return@callbackFlow
+                    response = try {
+                        activeCall.execute()
+                    } catch (e: Exception) {
+                        trySend(StreamEvent.Error(e.localizedMessage ?: e.message ?: "Retry network error"))
+                        close()
+                        return@callbackFlow
+                    }
                 }
             }
 
             if (!response.isSuccessful) {
                 val errorBody = response.body.string()
-                Log.e("OpenRouter", "Stream error HTTP ${response.code}: $errorBody")
                 trySend(StreamEvent.Error(parseOpenRouterError(response.code, errorBody)))
                 close()
                 return@callbackFlow
             }
 
-            val fullText = StringBuilder()
-            val source = response.body.source()
+            val turnText = StringBuilder()
+            class ToolAcc(var id: String = "", var name: String = "", val args: StringBuilder = StringBuilder())
+            val toolAccMap = mutableMapOf<Int, ToolAcc>()
 
-            while (!source.exhausted()) {
-                val line = source.readUtf8Line() ?: continue
-                if (line.isBlank() || !line.startsWith("data: ")) continue
+            try {
+                val source = response.body.source()
+                while (!source.exhausted()) {
+                    val line = source.readUtf8Line() ?: continue
+                    if (line.isBlank() || line.startsWith(":")) continue
+                    if (!line.startsWith("data: ")) continue
 
-                val data = line.removePrefix("data: ").trim()
-                if (data == "[DONE]") break
+                    val data = line.removePrefix("data: ").trim()
+                    if (data == "[DONE]") break
 
-                try {
-                    val chunk = json.parseToJsonElement(data).jsonObject
-                    val deltaObj = chunk["choices"]?.jsonArray?.firstOrNull()?.jsonObject
-                        ?.get("delta")?.jsonObject
-                    val contentDelta = deltaObj?.get("content")?.jsonPrimitive?.contentOrNull
-                    val reasoningDelta = deltaObj?.get("reasoning")?.jsonPrimitive?.contentOrNull
+                    try {
+                        val chunk = json.parseToJsonElement(data).jsonObject
+                        val deltaObj = chunk["choices"]?.jsonArray?.firstOrNull()?.jsonObject
+                            ?.get("delta")?.jsonObject ?: continue
 
-                    val textToEmit = when {
-                        !contentDelta.isNullOrEmpty() -> contentDelta
-                        // If model only emits reasoning tokens (thinking phase), we can skip emitting or let it stream
-                        else -> null
+                        // 1. Thinking / reasoning tokens
+                        val reasoning = deltaObj["reasoning"]?.jsonPrimitive?.contentOrNull
+                        if (!reasoning.isNullOrEmpty()) {
+                            trySend(StreamEvent.ThinkingDelta(reasoning))
+                        }
+
+                        // 2. Prose content tokens
+                        val content = deltaObj["content"]?.jsonPrimitive?.contentOrNull
+                        if (!content.isNullOrEmpty()) {
+                            turnText.append(content)
+                            accumulatedProse.append(content)
+                            trySend(StreamEvent.TextDelta(content))
+                        }
+
+                        // 3. Tool call deltas
+                        val toolCallsArr = deltaObj["tool_calls"]?.jsonArray
+                        if (toolCallsArr != null) {
+                            for (tcElem in toolCallsArr) {
+                                val tc = tcElem.jsonObject
+                                val index = tc["index"]?.jsonPrimitive?.intOrNull ?: 0
+                                val acc = toolAccMap.getOrPut(index) { ToolAcc() }
+                                tc["id"]?.jsonPrimitive?.contentOrNull?.let { if (it.isNotBlank()) acc.id = it }
+                                val fn = tc["function"]?.jsonObject
+                                if (fn != null) {
+                                    fn["name"]?.jsonPrimitive?.contentOrNull?.let { if (it.isNotBlank()) acc.name = it }
+                                    fn["arguments"]?.jsonPrimitive?.contentOrNull?.let { acc.args.append(it) }
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w("OpenRouter", "Error parsing SSE chunk: $data", e)
                     }
-
-                    if (!textToEmit.isNullOrEmpty()) {
-                        fullText.append(textToEmit)
-                        trySend(StreamEvent.TextDelta(textToEmit))
-                    }
-                } catch (e: Exception) {
-                    Log.w("OpenRouter", "Failed to parse SSE chunk: $data", e)
+                }
+            } catch (e: Exception) {
+                Log.w("OpenRouter", "SSE stream reading interrupted: ${e.message}", e)
+                if (accumulatedProse.isNotBlank()) {
+                    val fallbackProposals = AiJsonParser.parseAssistantResponse(accumulatedProse.toString(), accounts, categories)
+                    trySend(StreamEvent.Done(fullText = accumulatedProse.toString(), toolCalls = emptyList(), proposals = fallbackProposals.proposals))
+                    close()
+                    return@callbackFlow
+                } else {
+                    trySend(StreamEvent.Error("Koneksi ke AI terputus (${e.localizedMessage ?: e.message}). Antrean model gratis mungkin sedang padat. Silakan coba kirim ulang."))
+                    close()
+                    return@callbackFlow
                 }
             }
 
-            trySend(StreamEvent.Done(fullText.toString()))
+            val completedToolCalls = toolAccMap.values.map {
+                AiToolCall(
+                    id = it.id.ifBlank { UUID.randomUUID().toString() },
+                    name = it.name,
+                    argumentsJson = it.args.toString()
+                )
+            }
+
+            // Case A: Model called propose_transactions (terminal action tool)
+            val proposeCall = completedToolCalls.firstOrNull { it.name == "propose_transactions" }
+            if (proposeCall != null) {
+                val proposals = AiJsonParser.parseProposalArguments(proposeCall.argumentsJson, accounts, categories)
+                trySend(StreamEvent.Done(fullText = accumulatedProse.toString(), toolCalls = completedToolCalls, proposals = proposals))
+                close()
+                return@callbackFlow
+            }
+
+            // Case B: Model called query tools
+            val queryCalls = completedToolCalls.filter { it.name != "propose_transactions" && it.name.isNotBlank() }
+            if (queryCalls.isNotEmpty() && toolExecutor != null) {
+                // Add assistant message with tool calls to history
+                messagesList.add(
+                    buildJsonObject {
+                        put("role", JsonPrimitive("assistant"))
+                        if (turnText.isNotEmpty()) put("content", JsonPrimitive(turnText.toString()))
+                        put("tool_calls", buildJsonArray {
+                            for (call in completedToolCalls) {
+                                add(buildJsonObject {
+                                    put("id", JsonPrimitive(call.id))
+                                    put("type", JsonPrimitive("function"))
+                                    put("function", buildJsonObject {
+                                        put("name", JsonPrimitive(call.name))
+                                        put("arguments", JsonPrimitive(call.argumentsJson))
+                                    })
+                                })
+                            }
+                        })
+                    }
+                )
+
+                for (q in queryCalls) {
+                    val statusMessage = when (q.name) {
+                        "get_safe_to_spend" -> "🔍 Mengecek Safe-to-Spend hari ini..."
+                        "get_installment_horizon" -> "📊 Memeriksa horizon cicilan & komitmen..."
+                        "query_expenses" -> "🔎 Mencari riwayat transaksi di database..."
+                        "get_passive_income_summary" -> "📈 Menghitung proyeksi imbal hasil & kupon SBN..."
+                        else -> "🔍 Mengambil data keuangan..."
+                    }
+                    trySend(StreamEvent.StatusUpdate(statusMessage))
+                    val toolResultJson = toolExecutor(q.name, q.argumentsJson)
+                    messagesList.add(
+                        buildJsonObject {
+                            put("role", JsonPrimitive("tool"))
+                            put("tool_call_id", JsonPrimitive(q.id))
+                            put("name", JsonPrimitive(q.name))
+                            put("content", JsonPrimitive(toolResultJson))
+                        }
+                    )
+                }
+                // Loop to let the model generate the final explanation based on tool results
+                continue
+            }
+
+            // Case C: No tool calls. Check fallback if raw JSON in text
+            val fallbackProposals = AiJsonParser.parseAssistantResponse(accumulatedProse.toString(), accounts, categories)
+            if (fallbackProposals.proposals.isNotEmpty()) {
+                trySend(StreamEvent.Done(fullText = fallbackProposals.reply, proposals = fallbackProposals.proposals))
+            } else {
+                trySend(StreamEvent.Done(fullText = accumulatedProse.toString()))
+            }
             close()
-        } catch (e: java.net.SocketTimeoutException) {
-            Log.e("OpenRouter", "Stream socket timeout for model: $model", e)
-            trySend(StreamEvent.Error(
-                "Waktu tunggu habis (timeout). Model '$model' terlalu lama merespons. " +
-                "Disarankan gunakan model cepat seperti 'google/gemini-2.0-flash-001' atau 'openai/gpt-4.1-mini'."
-            ))
-            close()
-        } catch (e: Exception) {
-            Log.e("OpenRouter", "Stream exception: ${e.message}", e)
-            trySend(StreamEvent.Error(e.localizedMessage ?: e.message ?: "Unknown streaming error"))
-            close()
+            return@callbackFlow
         }
 
-        awaitClose { activeCall.cancel() }
+        trySend(StreamEvent.Done(fullText = accumulatedProse.toString()))
+        close()
+        awaitClose { activeCall?.cancel() }
     }.flowOn(Dispatchers.IO)
+
+    private fun buildUserMessageObject(userMessage: String, base64Image: String?): JsonObject {
+        return if (!base64Image.isNullOrBlank()) {
+            buildJsonObject {
+                put("role", JsonPrimitive("user"))
+                put("content", buildJsonArray {
+                    add(buildJsonObject {
+                        put("type", JsonPrimitive("text"))
+                        put("text", JsonPrimitive(userMessage.ifBlank { "Analisis struk atau transaksi ini:" }))
+                    })
+                    add(buildJsonObject {
+                        put("type", JsonPrimitive("image_url"))
+                        put("image_url", buildJsonObject {
+                            put("url", JsonPrimitive("data:image/jpeg;base64,$base64Image"))
+                        })
+                    })
+                })
+            }
+        } else {
+            buildJsonObject {
+                put("role", JsonPrimitive("user"))
+                put("content", JsonPrimitive(userMessage))
+            }
+        }
+    }
+
+    private fun buildToolsJson(): kotlinx.serialization.json.JsonArray = buildJsonArray {
+        // 1. propose_transactions
+        add(buildJsonObject {
+            put("type", JsonPrimitive("function"))
+            put("function", buildJsonObject {
+                put("name", JsonPrimitive("propose_transactions"))
+                put("description", JsonPrimitive("Propose one or more structured transactions (expense, income, transfer) detected in receipts, QRIS, transfers, bills, or messages for user confirmation before persisting."))
+                put("parameters", buildJsonObject {
+                    put("type", JsonPrimitive("object"))
+                    put("properties", buildJsonObject {
+                        put("transactions", buildJsonObject {
+                            put("type", JsonPrimitive("array"))
+                            put("items", buildJsonObject {
+                                put("type", JsonPrimitive("object"))
+                                put("properties", buildJsonObject {
+                                    put("title", buildJsonObject {
+                                        put("type", JsonPrimitive("string"))
+                                        put("description", JsonPrimitive("Merchant or transaction title"))
+                                    })
+                                    put("amount", buildJsonObject {
+                                        put("type", JsonPrimitive("number"))
+                                        put("description", JsonPrimitive("Nominal amount in standard currency units (e.g. 50000 for Rp 50.000)"))
+                                    })
+                                    put("type", buildJsonObject {
+                                        put("type", JsonPrimitive("string"))
+                                        put("enum", buildJsonArray {
+                                            add(JsonPrimitive("EXPENSE"))
+                                            add(JsonPrimitive("INCOME"))
+                                            add(JsonPrimitive("TRANSFER"))
+                                        })
+                                    })
+                                    put("date", buildJsonObject {
+                                        put("type", JsonPrimitive("integer"))
+                                        put("description", JsonPrimitive("Epoch timestamp in milliseconds"))
+                                    })
+                                    put("accountName", buildJsonObject {
+                                        put("type", JsonPrimitive("string"))
+                                        put("description", JsonPrimitive("Matched account name or 'Cash'"))
+                                    })
+                                    put("categoryName", buildJsonObject {
+                                        put("type", JsonPrimitive("string"))
+                                        put("description", JsonPrimitive("Matched category name"))
+                                    })
+                                    put("notes", buildJsonObject {
+                                        put("type", JsonPrimitive("string"))
+                                    })
+                                    put("tags", buildJsonObject {
+                                        put("type", JsonPrimitive("array"))
+                                        put("items", buildJsonObject { put("type", JsonPrimitive("string")) })
+                                    })
+                                })
+                                put("required", buildJsonArray {
+                                    add(JsonPrimitive("title"))
+                                    add(JsonPrimitive("amount"))
+                                    add(JsonPrimitive("type"))
+                                })
+                            })
+                        })
+                    })
+                    put("required", buildJsonArray { add(JsonPrimitive("transactions")) })
+                })
+            })
+        })
+
+        // 2. get_safe_to_spend
+        add(buildJsonObject {
+            put("type", JsonPrimitive("function"))
+            put("function", buildJsonObject {
+                put("name", JsonPrimitive("get_safe_to_spend"))
+                put("description", JsonPrimitive("Get real-time safe-to-spend allowance, daily discretionary budget pacing, and cycle days remaining."))
+                put("parameters", buildJsonObject {
+                    put("type", JsonPrimitive("object"))
+                    put("properties", buildJsonObject {})
+                })
+            })
+        })
+
+        // 3. get_installment_horizon
+        add(buildJsonObject {
+            put("type", JsonPrimitive("function"))
+            put("function", buildJsonObject {
+                put("name", JsonPrimitive("get_installment_horizon"))
+                put("description", JsonPrimitive("Get active installments, debt commitments, monthly obligations, and debt liberation schedule."))
+                put("parameters", buildJsonObject {
+                    put("type", JsonPrimitive("object"))
+                    put("properties", buildJsonObject {})
+                })
+            })
+        })
+
+        // 4. query_expenses
+        add(buildJsonObject {
+            put("type", JsonPrimitive("function"))
+            put("function", buildJsonObject {
+                put("name", JsonPrimitive("query_expenses"))
+                put("description", JsonPrimitive("Query user's historical expense records from SQLite database by merchant keyword, category, or time range."))
+                put("parameters", buildJsonObject {
+                    put("type", JsonPrimitive("object"))
+                    put("properties", buildJsonObject {
+                        put("query", buildJsonObject {
+                            put("type", JsonPrimitive("string"))
+                            put("description", JsonPrimitive("Merchant or title search keyword"))
+                        })
+                        put("categoryName", buildJsonObject {
+                            put("type", JsonPrimitive("string"))
+                            put("description", JsonPrimitive("Category filter"))
+                        })
+                        put("daysAgo", buildJsonObject {
+                            put("type", JsonPrimitive("integer"))
+                            put("description", JsonPrimitive("Days back from today (default 30)"))
+                        })
+                        put("limit", buildJsonObject {
+                            put("type", JsonPrimitive("integer"))
+                            put("description", JsonPrimitive("Max results (default 10)"))
+                        })
+                    })
+                })
+            })
+        })
+
+        // 5. get_passive_income_summary
+        add(buildJsonObject {
+            put("type", JsonPrimitive("function"))
+            put("function", buildJsonObject {
+                put("name", JsonPrimitive("get_passive_income_summary"))
+                put("description", JsonPrimitive("Get passive income breakdown from government bonds (SBN ORI/SR/PBS/ST/FR), dividends, and expense coverage."))
+                put("parameters", buildJsonObject {
+                    put("type", JsonPrimitive("object"))
+                    put("properties", buildJsonObject {})
+                })
+            })
+        })
+    }
 
     private fun buildChatSystemPrompt(
         todayStr: String,
@@ -644,7 +851,7 @@ class OpenRouterChatProvider(
         accountsFormatted: String,
         categoriesFormatted: String
     ): String = """
-        You are Sans Finance Copilot, an elite personal finance assistant and universal transaction harness for an Indonesia-based personal wealth and cashflow management app.
+        You are SansAI, an elite personal wealth strategist and universal transaction copilot for Sans Finance (Indonesia).
         Current Date: $todayStr
         Base Currency: $currency
 
@@ -654,62 +861,26 @@ class OpenRouterChatProvider(
         User's Registered Categories:
         $categoriesFormatted
 
-        Capabilities & Modes:
-        1. CONVERSATIONAL & FINANCIAL COPILOT MODE:
-           - You are SansAI, an elite, data-driven personal wealth and cashflow intelligence copilot for Sans Finance.
-           - Grounding Invariant: Thoroughly inspect the Real-time Financial Context provided in the context turn. Never say historical data is unavailable when previous month (M-1) or 3-month baseline is present. Always cite exact numbers, percentages, and deltas between months.
-           - Net Worth & Balance Sheet Invariant:
-             * When the user asks about their net worth ("berapa net worth saya?", "total kekayaan saya"), ALWAYS cite the exact Total Net Worth from [Balance Sheet & Net Worth Overview].
-             * Never fetch or calculate net worth from cash/bank accounts alone! Net Worth = Total Assets (Liquid Cash + Investment Portfolio) - Liabilities.
-             * Always break down the composition clearly: Net Worth, Liquid Cash & Bank, Investment Portfolio (including asset allocation and top holdings), and any Liabilities/Debts.
-           - Deep Expense & Variance Analysis:
-             * When the user asks why they spent so much ("kok boros?", "kenapa naik?"), do NOT give generic platitudes (e.g. "cabut colokan listrik", "kurangi AC", "gunakan metode 50/30/20").
-             * Compare Current Month vs Previous Month and 3-Month Rolling Average directly.
-             * Check the "Top Big-Ticket Discrete Expenses" to pinpoint the exact single transactions causing spikes (e.g. sewa kos/rent, tuition, electronics, flight).
-             * Clearly distinguish Fixed Commitments (Kos/sewa, insurance, recurring bills) from Discretionary Leaks (food delivery, coffee, impulsive shopping, entertainment).
-             * Acknowledge savings health: if the user's savings rate is high (e.g. >50% or 70%+), reassure them that their net cashflow remains strongly positive, but clearly highlight where the delta came from.
-           - Tone & Style: Direct, sharp, analytical, empathetic, and concise Indonesian (or English if prompted in English). Use bolding and concise bullet points.
-           - Set "proposals": [] (empty array). Do NOT invent fictional transactions.
+        Core Directives:
+        1. NATURAL CONVERSATION & PROSE:
+           - Always format your conversational responses in clean, beautiful Markdown in Bahasa Indonesia (or English if the user writes in English).
+           - Do NOT output raw JSON in your text content! Prose must be readable, structured, and insightful.
 
-        2. UNIVERSAL TRANSACTION INGESTION MODE:
-           - When the user pastes ANY receipt, bank mutation, invoice, purchase confirmation, QRIS payment, bill, or income notification:
-             * Daily Spends & Shopping: Supermarket, groceries (Indomaret, Alfamart, Superindo), food & dining (GoFood, Grab, restaurants), coffee, e-commerce (Tokopedia, Shopee, Blibli), transport, fuel.
-             * Bills & Utilities: PLN electricity, PDAM, internet/WiFi, cellular, subscriptions (Netflix, Spotify, Google, iCloud).
-             * Incomes & Payouts: Salary/gaji, freelance fees, bonus, THR, reimbursement, cashbacks, gifts.
-             * Passive Income & Investments: SBN coupon payouts (ORI, SR, PBS, ST, FR), stock dividends, P2P lending interest, crypto staking yields, bank deposit interest. Kupon/dividends are ALWAYS type 'INCOME'. Use the net credited nominal (after tax if stated).
-             * Account Transfers: Transfer between user accounts (e.g. BCA to GoPay, Mandiri to Bibit, Bank to RDN) with type 'TRANSFER'.
-           - Extract EVERY discrete transaction found in the message into the "proposals" array. If multiple transactions or bulk notifications are present, create a separate proposal item for each one.
-           - Nominal Amount: Standard numeric value in major currency units (e.g. 150000 for Rp 150.000, 2500000 for Rp 2.500.000).
-           - Title: Clean, descriptive merchant/transaction title (e.g. 'Kopi Kenangan', 'Superindo Kelapa Gading', 'PLN Token Listrik', 'Kupon SBN ORI026', 'Gaji Bulanan', 'Top Up GoPay').
-           - Type: Exactly 'EXPENSE', 'INCOME', or 'TRANSFER'.
-           - Date: Epoch timestamp in milliseconds. Extract transaction timestamp from receipt if available, otherwise use the current timestamp provided in the context turn above.
-           - Account: Match with the best Account ID from the user's registered accounts list. If no specific bank/account is mentioned or identifiable in the receipt/message, set accountName to 'Cash' (it will automatically default to the user's primary cash account).
-           - Category: Match with the best Category ID matching the transaction type and purpose.
-           - Notes: Concise additional context (e.g. reference number, tax deducted, items purchased).
-           - Tags: Relevant lowercase tags (e.g. ["makan", "coffee"], ["belanja", "groceries"], ["investasi", "sbn", "kupon"], ["utilities"]).
+        2. DATA GROUNDING & REAL-TIME TOOLS:
+           - Ground your answers in the financial snapshot and query tools.
+           - When asked about net worth, ALWAYS state the Total Net Worth = Total Assets (Cash + Portfolio) - Liabilities from the balance sheet.
+           - When asked about safe-to-spend or daily allowance: call `get_safe_to_spend`.
+           - When asked about active installments or debt payoff timeline: call `get_installment_horizon`.
+           - When asked about specific past expenses or merchant spending: call `query_expenses`.
+           - When asked about passive income, SBN coupons, or dividends: call `get_passive_income_summary`.
 
-        Always output a valid, well-formed JSON object matching this schema:
-        {
-          "reply": "Conversational explanation or friendly answer. If transactions were detected, summarize count and total nominal.",
-          "proposals": [
-            {
-              "title": "string",
-              "amount": 150000,
-              "type": "EXPENSE",
-              "date": 0,
-              "accountId": 1,
-              "accountName": "Cash",
-              "categoryId": 2,
-              "categoryName": "string",
-              "notes": "string",
-              "tags": ["tag1", "tag2"]
-            }
-          ]
-        }
-
-        CRITICAL DIRECTIVE:
-        Do NOT include chain-of-thought, thinking traces, or <think> tags.
-        Output ONLY valid JSON starting immediately with '{' and ending with '}'.
+        3. UNIVERSAL TRANSACTION INGESTION:
+           - When the user pastes or uploads ANY receipt, transfer proof (BCA, Mandiri, BRI, BNI, GoPay, OVO, ShopeePay), QRIS payment, invoice, bill, or note:
+           - Call the `propose_transactions` tool with the structured transaction parameters.
+           - If multiple transactions are present, include each one in the transactions array.
+           - SBN coupons, bank interest, and stock dividends are ALWAYS type 'INCOME'.
+           - Account transfers between user accounts are type 'TRANSFER'.
+           - Accompany the tool call with a brief, friendly Markdown summary of the detected transactions.
     """.trimIndent()
 
     private suspend fun executeChatCompletion(bodyJson: JsonObject): String = withContext(Dispatchers.IO) {

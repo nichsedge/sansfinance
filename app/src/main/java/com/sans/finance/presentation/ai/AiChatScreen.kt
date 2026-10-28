@@ -65,6 +65,23 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.Search
 import com.sans.finance.presentation.ai.components.MarkdownContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -109,6 +126,20 @@ fun AiChatScreen(
     val clipboard = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()
 
+    val context = LocalContext.current
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        viewModel.onFileSelected(uri, context)
+    }
+
+    val quickPrompts = listOf(
+        "Berapa Safe-to-Spend hari ini?",
+        "Kenapa pengeluaran bulan ini naik?",
+        "Cek horizon cicilan & komitmen",
+        "Proyeksi passive income & kupon SBN"
+    )
+
     LaunchedEffect(state.messages.size) {
         if (state.messages.isNotEmpty()) {
             listState.animateScrollToItem(state.messages.size - 1)
@@ -149,10 +180,147 @@ fun AiChatScreen(
                     .imePadding()
             ) {
                 Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    // Quick-Action Suggestion Chips
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(bottom = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        quickPrompts.forEach { prompt ->
+                            SuggestionChip(
+                                onClick = { viewModel.sendMessage(prompt) },
+                                label = { Text(prompt, fontSize = 12.sp) },
+                                colors = SuggestionChipDefaults.suggestionChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                border = SuggestionChipDefaults.suggestionChipBorder(
+                                    enabled = true,
+                                    borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
+                            )
+                        }
+                    }
+
+                    // Attached Document / Receipt Preview
+                    if (state.selectedImageUri != null) {
+                        val bitmap = remember(state.selectedImageUri, state.isPdf) {
+                            runCatching {
+                                val uri = Uri.parse(state.selectedImageUri)
+                                if (state.isPdf) {
+                                    val pfd = context.contentResolver.openFileDescriptor(uri, "r")
+                                    pfd?.use { fd ->
+                                        val renderer = android.graphics.pdf.PdfRenderer(fd)
+                                        if (renderer.pageCount > 0) {
+                                            val page = renderer.openPage(0)
+                                            val bmp = android.graphics.Bitmap.createBitmap(
+                                                page.width,
+                                                page.height,
+                                                android.graphics.Bitmap.Config.ARGB_8888
+                                            )
+                                            val canvas = android.graphics.Canvas(bmp)
+                                            canvas.drawColor(android.graphics.Color.WHITE)
+                                            page.render(bmp, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                            page.close()
+                                            renderer.close()
+                                            bmp
+                                        } else null
+                                    }
+                                } else {
+                                    val stream = context.contentResolver.openInputStream(uri)
+                                    val bmp = BitmapFactory.decodeStream(stream)
+                                    stream?.close()
+                                    bmp
+                                }
+                            }.getOrNull()
+                        }
+                        if (bitmap != null) {
+                            Row(
+                                modifier = Modifier
+                                    .padding(bottom = 8.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
+                                    .padding(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                ) {
+                                    Image(
+                                        bitmap = bitmap.asImageBitmap(),
+                                        contentDescription = state.selectedFileName ?: "Selected Document",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    if (state.isPdf) {
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.error,
+                                            shape = RoundedCornerShape(bottomEnd = 4.dp),
+                                            modifier = Modifier.align(Alignment.TopStart)
+                                        ) {
+                                            Text(
+                                                text = "PDF",
+                                                color = MaterialTheme.colorScheme.onError,
+                                                fontSize = 8.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.width(10.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = state.selectedFileName ?: (if (state.isPdf) "Dokumen PDF" else "Gambar Struk"),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = if (state.isPdf) "Halaman 1 siap dianalisis AI" else "Struk siap dianalisis AI",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                IconButton(
+                                    onClick = viewModel::onClearSelectedImage,
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Hapus Dokumen",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.Bottom
                     ) {
+                        IconButton(
+                            onClick = {
+                                filePickerLauncher.launch(arrayOf("image/*", "application/pdf"))
+                            },
+                            modifier = Modifier.padding(bottom = 4.dp, end = 2.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AttachFile,
+                                contentDescription = "Lampirkan Foto atau Dokumen PDF",
+                                tint = if (state.selectedImageUri != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
                         OutlinedTextField(
                             value = state.inputText,
                             onValueChange = viewModel::onInputTextChanged,
@@ -372,6 +540,156 @@ fun ChatMessageItem(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+
+        // Active Agentic Status Indicator (e.g. checking Room DB)
+        if (!isUser && message.statusText != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .padding(bottom = 6.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(12.dp),
+                    strokeWidth = 1.5.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = message.statusText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
+
+        // Collapsible Thinking Accordion for Reasoning Models
+        if (!isUser && message.thinkingText.isNotBlank()) {
+            var isThinkingExpanded by remember { mutableStateOf(false) }
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth(0.96f)
+                    .padding(bottom = 6.dp)
+                    .clickable { isThinkingExpanded = !isThinkingExpanded }
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Psychology,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = if (message.isStreaming && message.text.isEmpty())
+                                    "Sedang menganalisis konteks..."
+                                else
+                                    "Pemikiran Model",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Icon(
+                            imageVector = if (isThinkingExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (isThinkingExpanded) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = message.thinkingText,
+                            style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Attached document/image preview for user message
+        if (isUser && message.imageUri != null) {
+            val context = LocalContext.current
+            var isPdfDoc by remember { mutableStateOf(false) }
+            val userBitmap = remember(message.imageUri) {
+                runCatching {
+                    val uri = Uri.parse(message.imageUri)
+                    val mime = context.contentResolver.getType(uri) ?: ""
+                    val isPdf = mime.contains("pdf", ignoreCase = true) || uri.toString().endsWith(".pdf", ignoreCase = true)
+                    isPdfDoc = isPdf
+                    if (isPdf) {
+                        val pfd = context.contentResolver.openFileDescriptor(uri, "r")
+                        pfd?.use { fd ->
+                            val renderer = android.graphics.pdf.PdfRenderer(fd)
+                            if (renderer.pageCount > 0) {
+                                val page = renderer.openPage(0)
+                                val bmp = android.graphics.Bitmap.createBitmap(
+                                    page.width,
+                                    page.height,
+                                    android.graphics.Bitmap.Config.ARGB_8888
+                                )
+                                val canvas = android.graphics.Canvas(bmp)
+                                canvas.drawColor(android.graphics.Color.WHITE)
+                                page.render(bmp, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                page.close()
+                                renderer.close()
+                                bmp
+                            } else null
+                        }
+                    } else {
+                        val stream = context.contentResolver.openInputStream(uri)
+                        val bmp = BitmapFactory.decodeStream(stream)
+                        stream?.close()
+                        bmp
+                    }
+                }.getOrNull()
+            }
+            if (userBitmap != null) {
+                Box(
+                    modifier = Modifier
+                        .padding(bottom = 6.dp)
+                        .size(160.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
+                ) {
+                    Image(
+                        bitmap = userBitmap.asImageBitmap(),
+                        contentDescription = "Dokumen Terunggah",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    if (isPdfDoc) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.error,
+                            shape = RoundedCornerShape(bottomEnd = 6.dp),
+                            modifier = Modifier.align(Alignment.TopStart)
+                        ) {
+                            Text(
+                                text = "PDF",
+                                color = MaterialTheme.colorScheme.onError,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
 

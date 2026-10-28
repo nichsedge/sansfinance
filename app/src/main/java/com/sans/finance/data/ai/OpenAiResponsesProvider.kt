@@ -225,7 +225,8 @@ class OpenAiResponsesProvider(
         categories: List<CategorySummary>,
         currency: String,
         conversationHistory: List<ChatMessage>,
-        financialContext: FinancialContextSnapshot?
+        financialContext: FinancialContextSnapshot?,
+        base64Image: String?
     ): AiAssistantResponse {
         val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
         val accountsFormatted = accounts.joinToString(separator = "\n") {

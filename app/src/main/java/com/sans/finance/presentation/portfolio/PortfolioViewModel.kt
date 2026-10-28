@@ -742,6 +742,7 @@ class PortfolioViewModel @Inject constructor(
                             _aiState.value = PortfolioAiState(isAnalyzing = false, streamingText = "", analysis = null)
                             _importMessage.value = "AI Analysis gagal: ${event.message}"
                         }
+                        else -> Unit
                     }
                 }
             } catch (e: Exception) {

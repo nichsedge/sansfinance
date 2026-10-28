@@ -13,6 +13,54 @@ object AiJsonParser {
 
     private const val TAG = "AiJsonParser"
 
+    fun parseProposalArguments(
+        argumentsJson: String,
+        accounts: List<AccountSummary>,
+        categories: List<CategorySummary>
+    ): List<AiTransactionProposal> {
+        val clean = sanitizeModelOutput(argumentsJson).trim()
+        val proposals = mutableListOf<AiTransactionProposal>()
+
+        // Check if array directly
+        if (clean.startsWith("[")) {
+            val arr = runCatching { JSONArray(clean) }.getOrNull()
+            if (arr != null) {
+                for (i in 0 until arr.length()) {
+                    val obj = arr.optJSONObject(i) ?: continue
+                    parseProposalObject(obj, accounts, categories)?.let { proposals.add(it) }
+                }
+                return proposals
+            }
+        }
+
+        val jsonStr = extractJsonString(clean)
+        var rootObj = tryParseJsonObject(jsonStr) ?: run {
+            val repaired = repairTruncatedJson(jsonStr)
+            tryParseJsonObject(repaired)
+        }
+
+        if (rootObj != null) {
+            val proposalsArr = rootObj.optJSONArray("transactions")
+                ?: rootObj.optJSONArray("proposals")
+                ?: rootObj.optJSONArray("items")
+
+            if (proposalsArr != null) {
+                for (i in 0 until proposalsArr.length()) {
+                    val item = proposalsArr.optJSONObject(i) ?: continue
+                    parseProposalObject(item, accounts, categories)?.let { proposals.add(it) }
+                }
+            } else {
+                parseProposalObject(rootObj, accounts, categories)?.let { proposals.add(it) }
+            }
+        }
+
+        if (proposals.isEmpty()) {
+            proposals.addAll(extractProposalsViaRegex(argumentsJson, accounts, categories))
+        }
+
+        return proposals
+    }
+
     fun parseAssistantResponse(
         rawText: String,
         accounts: List<AccountSummary>,
@@ -460,6 +508,76 @@ object AiJsonParser {
                 parseProposalObject(obj, accounts, categories)?.let { proposals.add(it) }
             }
         }
+        if (proposals.isEmpty()) {
+            proposals.addAll(extractMarkdownTableProposals(text, accounts, categories))
+        }
         return proposals
+    }
+
+    private fun extractMarkdownTableProposals(
+        text: String,
+        accounts: List<AccountSummary>,
+        categories: List<CategorySummary>
+    ): List<AiTransactionProposal> {
+        val list = mutableListOf<AiTransactionProposal>()
+        val defaultAccount = findDefaultCashAccount(accounts) ?: accounts.firstOrNull() ?: return emptyList()
+        val defaultCategory = categories.firstOrNull() ?: return emptyList()
+
+        val lines = text.lines()
+        for (line in lines) {
+            val trimmed = line.trim()
+            if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) continue
+            val rawCols = trimmed.split("|")
+            if (rawCols.size < 4) continue
+            val cols = rawCols.subList(1, rawCols.size - 1).map { it.trim().replace("**", "") }
+            if (cols.any { it.contains("Nominal", ignoreCase = true) || it.contains("---") }) continue
+
+            var amount: Double? = null
+            var isExpense = true
+            for (col in cols) {
+                val m = Regex("""(-?)\s*(?:Rp\.?|IDR)?\s*([0-9]{1,3}(?:[.,][0-9]{3})*(?:[.,][0-9]{2})?)""", RegexOption.IGNORE_CASE).find(col)
+                if (m != null && (col.contains("rp", ignoreCase = true) || col.contains(".") || col.contains(","))) {
+                    val sign = m.groupValues[1]
+                    val valStr = m.groupValues[2].replace(".", "").replace(",", ".")
+                    val parsedVal = valStr.toDoubleOrNull()
+                    if (parsedVal != null && parsedVal >= 100.0) {
+                        amount = parsedVal
+                        if (sign == "-" || col.contains("expense", ignoreCase = true) || col.contains("keluar", ignoreCase = true)) {
+                            isExpense = true
+                        }
+                        break
+                    }
+                }
+            }
+
+            if (amount != null) {
+                val title = cols.getOrNull(1)?.takeIf { it.isNotBlank() && !it.contains("rp", ignoreCase = true) }
+                    ?: cols.firstOrNull() ?: "Transaksi"
+                val matchedCategory = matchCategory(
+                    categoryIdRaw = null,
+                    categoryNameRaw = null,
+                    title = title,
+                    type = if (isExpense) "EXPENSE" else "INCOME",
+                    categories = categories
+                )
+
+                list.add(
+                    AiTransactionProposal(
+                        id = java.util.UUID.randomUUID().toString(),
+                        title = title,
+                        amountInCents = kotlin.math.round(amount * 100.0).toLong(),
+                        type = if (isExpense) "EXPENSE" else "INCOME",
+                        date = System.currentTimeMillis(),
+                        accountId = defaultAccount.id,
+                        accountName = defaultAccount.name,
+                        categoryId = matchedCategory?.id ?: 1L,
+                        categoryName = matchedCategory?.name ?: "Umum",
+                        notes = "E-statement",
+                        tags = emptyList()
+                    )
+                )
+            }
+        }
+        return list
     }
 }

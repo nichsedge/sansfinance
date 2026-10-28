@@ -30,6 +30,19 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.sans.finance.domain.usecase.GetCashFlowPacingUseCase
+import com.sans.finance.domain.usecase.GetInstallmentHorizonUseCase
+import com.sans.finance.domain.usecase.GetDividendYieldSummaryUseCase
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.coroutines.withContext
+import android.net.Uri
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
+import java.io.ByteArrayOutputStream
 import java.util.UUID
 import javax.inject.Inject
 
@@ -42,7 +55,11 @@ data class AiChatUiState(
     val isAiConfigured: Boolean = true,
     val accounts: List<AccountSummary> = emptyList(),
     val categories: List<CategorySummary> = emptyList(),
-    val successSnackbarMessage: String? = null
+    val successSnackbarMessage: String? = null,
+    val selectedImageUri: String? = null,
+    val selectedImageBase64: String? = null,
+    val selectedFileName: String? = null,
+    val isPdf: Boolean = false
 )
 
 @HiltViewModel
@@ -56,7 +73,10 @@ class AiChatViewModel @Inject constructor(
     private val getWealthMetricsUseCase: GetWealthMetricsUseCase,
     private val portfolioRepository: PortfolioRepository,
     private val accountTypeRepository: AccountTypeRepository,
-    private val currencyDao: CurrencyDao
+    private val currencyDao: CurrencyDao,
+    private val getCashFlowPacingUseCase: GetCashFlowPacingUseCase,
+    private val getInstallmentHorizonUseCase: GetInstallmentHorizonUseCase,
+    private val getDividendYieldSummaryUseCase: GetDividendYieldSummaryUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AiChatUiState())
@@ -130,17 +150,227 @@ class AiChatViewModel @Inject constructor(
         _uiState.update { it.copy(inputText = text) }
     }
 
+    fun onFileSelected(uri: Uri?, context: Context) {
+        if (uri == null) {
+            _uiState.update { it.copy(selectedImageUri = null, selectedImageBase64 = null, selectedFileName = null, isPdf = false) }
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val mimeType = context.contentResolver.getType(uri) ?: ""
+                val isPdf = mimeType.contains("pdf", ignoreCase = true) || uri.toString().endsWith(".pdf", ignoreCase = true)
+
+                var fileName: String? = null
+                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex != -1 && cursor.moveToFirst()) {
+                        fileName = cursor.getString(nameIndex)
+                    }
+                }
+
+                val bitmap: Bitmap? = if (isPdf) {
+                    renderPdfToBitmap(uri, context)
+                } else {
+                    val inputStream = context.contentResolver.openInputStream(uri)
+                    val bmp = BitmapFactory.decodeStream(inputStream)
+                    inputStream?.close()
+                    bmp
+                }
+
+                if (bitmap != null) {
+                    val maxDim = if (isPdf) 2560 else 1600
+                    val ratio = minOf(1f, maxDim.toFloat() / maxOf(bitmap.width, bitmap.height).toFloat())
+                    val scaled = if (ratio < 1f) {
+                        Bitmap.createScaledBitmap(
+                            bitmap,
+                            (bitmap.width * ratio).toInt(),
+                            (bitmap.height * ratio).toInt(),
+                            true
+                        )
+                    } else bitmap
+
+                    val stream = ByteArrayOutputStream()
+                    scaled.compress(Bitmap.CompressFormat.JPEG, 78, stream)
+                    val bytes = stream.toByteArray()
+                    val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+
+                    _uiState.update {
+                        it.copy(
+                            selectedImageUri = uri.toString(),
+                            selectedImageBase64 = base64,
+                            selectedFileName = fileName ?: if (isPdf) "Dokumen.pdf" else "Gambar.jpg",
+                            isPdf = isPdf
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("AiChatViewModel", "Gagal memproses file: ${e.message}", e)
+            }
+        }
+    }
+
+    private fun renderPdfToBitmap(uri: Uri, context: Context): Bitmap? {
+        val pfd = context.contentResolver.openFileDescriptor(uri, "r") ?: return null
+        return try {
+            val renderer = android.graphics.pdf.PdfRenderer(pfd)
+            val pageCount = renderer.pageCount
+            if (pageCount == 0) return null
+            val pagesToRender = minOf(pageCount, 4)
+            val scale = 2f
+
+            var totalHeight = 0
+            var maxWidth = 0
+            for (i in 0 until pagesToRender) {
+                val page = renderer.openPage(i)
+                totalHeight += (page.height * scale).toInt()
+                maxWidth = maxOf(maxWidth, (page.width * scale).toInt())
+                page.close()
+            }
+
+            val finalBitmap = Bitmap.createBitmap(maxWidth, totalHeight, Bitmap.Config.ARGB_8888)
+            val finalCanvas = android.graphics.Canvas(finalBitmap)
+            finalCanvas.drawColor(android.graphics.Color.WHITE)
+
+            var currentY = 0f
+            for (i in 0 until pagesToRender) {
+                val page = renderer.openPage(i)
+                val pw = (page.width * scale).toInt()
+                val ph = (page.height * scale).toInt()
+                val pageBitmap = Bitmap.createBitmap(pw, ph, Bitmap.Config.ARGB_8888)
+                val pageCanvas = android.graphics.Canvas(pageBitmap)
+                pageCanvas.drawColor(android.graphics.Color.WHITE)
+                page.render(pageBitmap, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                finalCanvas.drawBitmap(pageBitmap, 0f, currentY, null)
+                currentY += ph
+                pageBitmap.recycle()
+                page.close()
+            }
+            renderer.close()
+            finalBitmap
+        } catch (e: Exception) {
+            android.util.Log.e("AiChatViewModel", "Gagal merender PDF: ${e.message}", e)
+            null
+        } finally {
+            runCatching { pfd.close() }
+        }
+    }
+
+    fun onClearSelectedImage() {
+        _uiState.update { it.copy(selectedImageUri = null, selectedImageBase64 = null, selectedFileName = null, isPdf = false) }
+    }
+
+    private suspend fun executeLocalTool(name: String, argumentsJson: String): String = withContext(Dispatchers.IO) {
+        try {
+            when (name) {
+                "get_safe_to_spend" -> {
+                    val pacing = getCashFlowPacingUseCase().first()
+                    buildJsonObject {
+                        put("dailyAllowance", JsonPrimitive(pacing.dailyAllowance))
+                        put("remainingDaysInCycle", JsonPrimitive(pacing.remainingDaysInCycle))
+                        put("remainingBudget", JsonPrimitive(pacing.remainingBudget))
+                        put("committedUpcomingBills", JsonPrimitive(pacing.committedUpcomingBills))
+                        put("netDiscretionaryRemaining", JsonPrimitive(pacing.netDiscretionaryRemaining))
+                        put("pacingPcnt", JsonPrimitive(pacing.pacingPcnt))
+                        put("currencyCode", JsonPrimitive(pacing.currencyCode))
+                    }.toString()
+                }
+                "get_installment_horizon" -> {
+                    val roadmap = getInstallmentHorizonUseCase().first()
+                    buildJsonObject {
+                        put("currentMonthlyCommitment", JsonPrimitive(roadmap.currentMonthlyCommitment))
+                        put("totalOutstandingBalance", JsonPrimitive(roadmap.totalOutstandingBalance))
+                        put("currencyCode", JsonPrimitive(roadmap.currencyCode))
+                        roadmap.fullyPaidDateEpochMs?.let {
+                            val dateStr = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(it))
+                            put("fullyPaidDate", JsonPrimitive(dateStr))
+                        }
+                        put("milestones", buildJsonArray {
+                            roadmap.milestones.take(6).forEach { m ->
+                                add(buildJsonObject {
+                                    put("monthsAhead", JsonPrimitive(m.monthsAhead))
+                                    put("monthlyPaymentDue", JsonPrimitive(m.monthlyPaymentDue))
+                                    put("monthlyCashFlowFreed", JsonPrimitive(m.monthlyCashFlowFreed))
+                                    put("remainingActivePlansCount", JsonPrimitive(m.remainingActivePlansCount))
+                                })
+                            }
+                        })
+                    }.toString()
+                }
+                "query_expenses" -> {
+                    val argsObj = runCatching { org.json.JSONObject(argumentsJson) }.getOrNull()
+                    val query = argsObj?.optString("query")?.takeIf { it.isNotBlank() }
+                    val categoryName = argsObj?.optString("categoryName")?.takeIf { it.isNotBlank() }
+                    val daysAgo = argsObj?.optInt("daysAgo", 30) ?: 30
+                    val limit = argsObj?.optInt("limit", 10) ?: 10
+
+                    val since = System.currentTimeMillis() - (daysAgo * 86_400_000L)
+                    val allTx = expenseRepository.getExpensesBetween(since, System.currentTimeMillis()).first()
+                    val filtered = allTx
+                        .filter { tx ->
+                            val matchesQuery = query == null || tx.title.contains(query, ignoreCase = true) ||
+                                (tx.details != null && tx.details.contains(query, ignoreCase = true))
+                            val matchesCategory = categoryName == null ||
+                                tx.categoryName.equals(categoryName, ignoreCase = true) ||
+                                (tx.categoryName != null && tx.categoryName.contains(categoryName, ignoreCase = true))
+                            matchesQuery && matchesCategory
+                        }
+                        .take(limit)
+
+                    buildJsonObject {
+                        put("count", JsonPrimitive(filtered.size))
+                        put("items", buildJsonArray {
+                            filtered.forEach { tx ->
+                                val dateStr = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(tx.date))
+                                add(buildJsonObject {
+                                    put("title", JsonPrimitive(tx.title))
+                                    put("amount", JsonPrimitive(tx.amount))
+                                    put("type", JsonPrimitive(tx.type))
+                                    put("date", JsonPrimitive(dateStr))
+                                    put("category", JsonPrimitive(tx.categoryName ?: "General"))
+                                    put("accountId", JsonPrimitive(tx.accountId))
+                                })
+                            }
+                        })
+                    }.toString()
+                }
+                "get_passive_income_summary" -> {
+                    val yield = getDividendYieldSummaryUseCase().first()
+                    buildJsonObject {
+                        put("totalAnnualIncomeInBase", JsonPrimitive(yield.totalAnnualIncomeInBase))
+                        put("totalMonthlyIncomeInBase", JsonPrimitive(yield.totalMonthlyIncomeInBase))
+                        put("portfolioYieldOnCost", JsonPrimitive(String.format(java.util.Locale.US, "%.2f%%", yield.portfolioYieldOnCost * 100.0)))
+                        put("expenseCoveragePercentage", JsonPrimitive(String.format(java.util.Locale.US, "%.1f%%", yield.expenseCoveragePercentage)))
+                        put("baseCurrency", JsonPrimitive(yield.baseCurrency))
+                        put("holdingsWithYieldCount", JsonPrimitive(yield.holdingsWithYield.size))
+                    }.toString()
+                }
+                else -> "{ \"status\": \"unknown_tool\" }"
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AiChatViewModel", "Error executing tool $name: ${e.message}", e)
+            "{ \"error\": \"${e.message}\" }"
+        }
+    }
+
     fun sendMessage(overrideText: String? = null) {
         val textToSend = (overrideText ?: _uiState.value.inputText).trim()
-        if (textToSend.isBlank() || _uiState.value.isLoading || _uiState.value.isStreaming) return
+        val imageUri = _uiState.value.selectedImageUri
+        val imageBase64 = _uiState.value.selectedImageBase64
+
+        if ((textToSend.isBlank() && imageUri == null) || _uiState.value.isLoading || _uiState.value.isStreaming) return
 
         // Cancel any ongoing stream
         streamingJob?.cancel()
 
+        val displayText = if (textToSend.isBlank() && imageUri != null) {
+            if (_uiState.value.isPdf) "Analisis dokumen PDF ini dan catat semua transaksinya" else "Analisis struk ini"
+        } else textToSend
+
         val userMessage = ChatMessage(
             id = UUID.randomUUID().toString(),
             sender = ChatSender.USER,
-            text = textToSend
+            text = displayText,
+            imageUri = imageUri
         )
 
         // Create an empty assistant placeholder for streaming
@@ -156,6 +386,10 @@ class AiChatViewModel @Inject constructor(
             it.copy(
                 messages = it.messages + userMessage + assistantPlaceholder,
                 inputText = "",
+                selectedImageUri = null,
+                selectedImageBase64 = null,
+                selectedFileName = null,
+                isPdf = false,
                 isLoading = true,
                 isStreaming = true,
                 errorMessage = null
@@ -166,7 +400,6 @@ class AiChatViewModel @Inject constructor(
             try {
                 val provider = aiProviderFactory.create()
                 if (provider == null) {
-                    // Remove placeholder, show error
                     _uiState.update {
                         it.copy(
                             messages = it.messages.filter { msg -> msg.id != assistantId },
@@ -186,76 +419,96 @@ class AiChatViewModel @Inject constructor(
                 // Fast in-context financial snapshot from Room DB
                 val financialSnapshot = runCatching { getFinancialSnapshot(baseCurrency) }.getOrNull()
 
-                // Use streaming — collect tokens incrementally
+                // Use streaming with native tools and thinking tokens
                 provider.streamChat(
-                    userMessage = textToSend,
+                    userMessage = displayText,
                     accounts = accounts,
                     categories = categories,
                     currency = baseCurrency,
                     conversationHistory = _uiState.value.messages
                         .filter { it.id != assistantId }
                         .takeLast(6),
-                    financialContext = financialSnapshot
+                    financialContext = financialSnapshot,
+                    base64Image = imageBase64,
+                    toolExecutor = ::executeLocalTool
                 ).collect { event ->
-                        when (event) {
-                            is StreamEvent.TextDelta -> {
-                                _uiState.update { state ->
-                                    val updated = state.messages.map { msg ->
-                                        if (msg.id == assistantId) {
-                                            msg.copy(text = msg.text + event.text)
-                                        } else msg
-                                    }
-                                    state.copy(messages = updated, isLoading = false)
+                    when (event) {
+                        is StreamEvent.ThinkingDelta -> {
+                            _uiState.update { state ->
+                                val updated = state.messages.map { msg ->
+                                    if (msg.id == assistantId) {
+                                        msg.copy(thinkingText = msg.thinkingText + event.text)
+                                    } else msg
                                 }
+                                state.copy(messages = updated, isLoading = false)
                             }
+                        }
 
-                            is StreamEvent.Done -> {
-                                // Parse the full response for proposals
-                                val parsed = AiJsonParser.parseAssistantResponse(
-                                    event.fullText, accounts, categories
+                        is StreamEvent.TextDelta -> {
+                            _uiState.update { state ->
+                                val updated = state.messages.map { msg ->
+                                    if (msg.id == assistantId) {
+                                        msg.copy(text = msg.text + event.text, statusText = null)
+                                    } else msg
+                                }
+                                state.copy(messages = updated, isLoading = false)
+                            }
+                        }
+
+                        is StreamEvent.StatusUpdate -> {
+                            _uiState.update { state ->
+                                val updated = state.messages.map { msg ->
+                                    if (msg.id == assistantId) {
+                                        msg.copy(statusText = event.statusText)
+                                    } else msg
+                                }
+                                state.copy(messages = updated)
+                            }
+                        }
+
+                        is StreamEvent.Done -> {
+                            _uiState.update { state ->
+                                val updated = state.messages.map { msg ->
+                                    if (msg.id == assistantId) {
+                                        msg.copy(
+                                            text = event.fullText.ifBlank { msg.text },
+                                            proposals = event.proposals,
+                                            isStreaming = false,
+                                            statusText = null
+                                        )
+                                    } else msg
+                                }
+                                state.copy(
+                                    messages = updated,
+                                    isLoading = false,
+                                    isStreaming = false
                                 )
-                                _uiState.update { state ->
-                                    val updated = state.messages.map { msg ->
-                                        if (msg.id == assistantId) {
-                                            msg.copy(
-                                                text = parsed.reply.ifBlank { msg.text },
-                                                proposals = parsed.proposals,
-                                                isStreaming = false
-                                            )
-                                        } else msg
-                                    }
-                                    state.copy(
-                                        messages = updated,
-                                        isLoading = false,
-                                        isStreaming = false
-                                    )
-                                }
                             }
+                        }
 
-                            is StreamEvent.Error -> {
-                                _uiState.update { state ->
-                                    // Remove empty placeholder on error
-                                    val cleaned = state.messages.filter { msg ->
-                                        msg.id != assistantId || msg.text.isNotBlank()
-                                    }.map { msg ->
-                                        if (msg.id == assistantId) msg.copy(isStreaming = false)
-                                        else msg
-                                    }
-                                    state.copy(
-                                        messages = cleaned,
-                                        isLoading = false,
-                                        isStreaming = false,
-                                        errorMessage = event.message
-                                    )
+                        is StreamEvent.Error -> {
+                            _uiState.update { state ->
+                                val cleaned = state.messages.filter { msg ->
+                                    msg.id != assistantId || msg.text.isNotBlank()
+                                }.map { msg ->
+                                    if (msg.id == assistantId) msg.copy(isStreaming = false, statusText = null)
+                                    else msg
                                 }
+                                state.copy(
+                                    messages = cleaned,
+                                    isLoading = false,
+                                    isStreaming = false,
+                                    errorMessage = event.message
+                                )
                             }
                         }
                     }
+                }
             } catch (e: Exception) {
                 android.util.Log.e("AiChatViewModel", "Gagal memproses AI: ${e.message}", e)
                 _uiState.update { state ->
                     val cleaned = state.messages.map { msg ->
-                        if (msg.id == assistantId) msg.copy(isStreaming = false) else msg
+                        if (msg.id == assistantId) msg.copy(isStreaming = false, statusText = null) else msg
                     }.filter { msg ->
                         msg.id != assistantId || msg.text.isNotBlank()
                     }

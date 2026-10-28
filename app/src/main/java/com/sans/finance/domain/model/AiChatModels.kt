@@ -30,16 +30,27 @@ enum class ChatSender {
 
 @Immutable
 @Serializable
+data class AiToolCall(
+    val id: String = UUID.randomUUID().toString(),
+    val name: String,
+    val argumentsJson: String
+)
+
+@Immutable
+@Serializable
 data class ChatMessage(
     val id: String = UUID.randomUUID().toString(),
     val sender: ChatSender,
     val text: String,
+    val thinkingText: String = "",
     val timestamp: Long = System.currentTimeMillis(),
     val proposal: AiTransactionProposal? = null,
     val proposals: List<AiTransactionProposal> = emptyList(),
     val isConfirmed: Boolean = false,
     val isRejected: Boolean = false,
-    val isStreaming: Boolean = false
+    val isStreaming: Boolean = false,
+    val imageUri: String? = null,
+    val statusText: String? = null
 ) {
     val allConfirmed: Boolean
         get() = (proposals.isNotEmpty() && proposals.all { it.isConfirmed }) || (proposal != null && isConfirmed)
@@ -108,8 +119,20 @@ data class AiAssistantResponse(
 sealed interface StreamEvent {
     /** A chunk of text content from the model. */
     data class TextDelta(val text: String) : StreamEvent
+
+    /** A chunk of thinking / reasoning from the model (e.g. DeepSeek R1, Gemini Thinking). */
+    data class ThinkingDelta(val text: String) : StreamEvent
+
+    /** Agentic status update (e.g. searching database, checking pacing). */
+    data class StatusUpdate(val statusText: String) : StreamEvent
+
     /** Stream completed successfully; [fullText] contains the entire accumulated response. */
-    data class Done(val fullText: String) : StreamEvent
+    data class Done(
+        val fullText: String,
+        val toolCalls: List<AiToolCall> = emptyList(),
+        val proposals: List<AiTransactionProposal> = emptyList()
+    ) : StreamEvent
+
     /** An error occurred during streaming. */
     data class Error(val message: String) : StreamEvent
 }

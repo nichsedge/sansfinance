@@ -34,11 +34,13 @@ interface AiProvider {
         categories: List<CategorySummary>,
         currency: String,
         conversationHistory: List<ChatMessage> = emptyList(),
-        financialContext: FinancialContextSnapshot? = null
+        financialContext: FinancialContextSnapshot? = null,
+        base64Image: String? = null
     ): AiAssistantResponse
 
     /**
      * Stream a chat response via SSE. Emits [StreamEvent.TextDelta] for each token,
+     * [StreamEvent.ThinkingDelta] for reasoning tokens, [StreamEvent.StatusUpdate] for tool status,
      * [StreamEvent.Done] when complete, or [StreamEvent.Error] on failure.
      * Default implementation falls back to non-streaming [parseReceiptOrChat].
      */
@@ -48,37 +50,20 @@ interface AiProvider {
         categories: List<CategorySummary>,
         currency: String,
         conversationHistory: List<ChatMessage> = emptyList(),
-        financialContext: FinancialContextSnapshot? = null
+        financialContext: FinancialContextSnapshot? = null,
+        base64Image: String? = null,
+        toolExecutor: (suspend (name: String, argumentsJson: String) -> String)? = null
     ): Flow<StreamEvent> = kotlinx.coroutines.flow.flow {
         val response = parseReceiptOrChat(
-            userMessage, accounts, categories, currency, conversationHistory, financialContext
+            userMessage = userMessage,
+            accounts = accounts,
+            categories = categories,
+            currency = currency,
+            conversationHistory = conversationHistory,
+            financialContext = financialContext,
+            base64Image = base64Image
         )
-        if (response.proposals.isNotEmpty()) {
-            val jsonProposals = org.json.JSONArray().apply {
-                response.proposals.forEach { p ->
-                    put(org.json.JSONObject().apply {
-                        put("id", p.id)
-                        put("title", p.title)
-                        put("amount", p.amountInCents / 100.0)
-                        put("type", p.type)
-                        put("date", p.date)
-                        put("accountId", p.accountId)
-                        put("accountName", p.accountName)
-                        put("categoryId", p.categoryId)
-                        put("categoryName", p.categoryName)
-                        put("notes", p.notes)
-                        put("tags", org.json.JSONArray(p.tags))
-                    })
-                }
-            }
-            val fullPayload = org.json.JSONObject().apply {
-                put("reply", response.reply)
-                put("proposals", jsonProposals)
-            }.toString()
-            emit(StreamEvent.Done(fullPayload))
-        } else {
-            emit(StreamEvent.Done(response.reply))
-        }
+        emit(StreamEvent.Done(fullText = response.reply, proposals = response.proposals))
     }
 }
 

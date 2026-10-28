@@ -137,15 +137,20 @@ Reference snapshot: `sans_finance_db_snapshot.sqlite`.
 
 - **Cloud AI Only**: Support for **OpenAI** and OpenAI-compatible APIs (e.g., **OpenRouter**). Used strictly for high-value on-demand analysis:
   - Monthly Review closing summaries and Portfolio Health Insights.
-  - Interactive **AI Chat & Smart Receipt Ingestion**: Parsing raw text receipts (such as CIMB Niaga SBN coupon payouts, bank slips, or expense notes) into structured transaction proposals.
+  - Interactive **SansAI Financial Copilot & Universal Transaction Ingestion**: Natural Markdown conversation, native OpenAI/OpenRouter tool calling (`tools: [...]`), multi-turn query tool execution, and multimodal receipt ingestion (text, camera photos, mobile banking screenshots).
   - **Human-in-the-Loop (HITL) Guarantee**: The AI never directly mutates the database; it presents an interactive confirmation proposal card allowing account/category review and explicit confirmation before persisting via `AddTransactionUseCase`.
-- **SSE Streaming Architecture**:
-  - **`AiProvider.streamChat()`** returns `Flow<StreamEvent>` (TextDelta / Done / Error) for real-time token-by-token rendering via Server-Sent Events.
-  - **OpenRouter**: Uses `callbackFlow` + Okio `BufferedSource` SSE parsing with `stream: true`. A dedicated `streamingClient` with `readTimeout(0)` prevents timeout during long token pauses.
-  - **OpenAI**: Falls back to non-streaming via the default `AiProvider.streamChat()` implementation (OpenAI `/v1/responses` endpoint does not support SSE streaming).
-  - **Non-streaming retained**: `parseReceiptOrChat()` (blocking, `response_format: json_object`) remains for Monthly Review, Portfolio Analysis, and as a fallback.
-  - **Prompt Caching**: The streaming system prompt is static (no `System.currentTimeMillis()` interpolation); dynamic context (timestamp, date) is injected as a separate user context turn to enable OpenRouter prefix caching.
-  - **OkHttp**: Base client uses `pingInterval(20s)` for HTTP/2 PING keep-alive to defeat carrier CGNAT idle eviction on cellular networks.
+- **SSE Streaming & Native Function Calling Architecture**:
+  - **`AiProvider.streamChat()`** returns `Flow<StreamEvent>` (TextDelta, ThinkingDelta, StatusUpdate, Done, Error) for real-time token-by-token rendering via Server-Sent Events.
+  - **Clean Prose Streaming**: Assistant conversational prose streams directly as Markdown into the UI without enclosing JSON syntax or regex flickers.
+  - **Native Tool Calling**: Structured transaction proposals are dispatched via native `propose_transactions` function definitions rather than fragile JSON prompt schema hacks.
+  - **Agentic DB Query Tools**: SansAI executes read-only local Room queries on demand via multi-turn tool loops:
+    * `get_safe_to_spend`: Queries `GetCashFlowPacingUseCase` for real-time daily discretionary runway.
+    * `get_installment_horizon`: Queries `GetInstallmentHorizonUseCase` for active debt commitments and payoff timeline.
+    * `query_expenses`: Searches SQLite database by title/merchant keyword, category, and date range.
+    * `get_passive_income_summary`: Queries `GetDividendYieldSummaryUseCase` for SBN bond coupons and dividend coverage.
+  - **Collapsible Thinking Accordion**: Captures `delta.reasoning` tokens from reasoning models (DeepSeek R1, Gemini Thinking, Claude 3.7) and renders an animated collapsible thinking block.
+  - **Multimodal Ingestion**: Supports direct receipt images and bank statement/invoice PDF attachments (rendered natively via Android `PdfRenderer` to JPEG base64) alongside prompt text.
+  - **Prompt Caching**: Static system prompts with dynamic timestamp/context turns for prefix caching on OpenRouter.
 - **Real-time Financial Grounding Snapshot**:
   - `AiChatViewModel` injects a zero-latency (~5ms) `FinancialContextSnapshot` into the dynamic context turn: Current Month totals, Previous Month (M-1) totals/top categories, 3-Month rolling baseline average expense, Top Big-Ticket discrete items (spike drivers), and liquid account balances.
   - This eliminates generic platitudes (e.g. telling user to unplug electricity appliances when the spike is actually rent) and ensures SansAI performs deep historical variance analysis.

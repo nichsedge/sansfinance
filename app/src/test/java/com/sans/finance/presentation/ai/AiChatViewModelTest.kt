@@ -40,7 +40,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -60,6 +62,9 @@ class AiChatViewModelTest {
     private lateinit var portfolioRepository: PortfolioRepository
     private lateinit var accountTypeRepository: AccountTypeRepository
     private lateinit var currencyDao: CurrencyDao
+    private lateinit var getCashFlowPacingUseCase: com.sans.finance.domain.usecase.GetCashFlowPacingUseCase
+    private lateinit var getInstallmentHorizonUseCase: com.sans.finance.domain.usecase.GetInstallmentHorizonUseCase
+    private lateinit var getDividendYieldSummaryUseCase: com.sans.finance.domain.usecase.GetDividendYieldSummaryUseCase
     private lateinit var aiProvider: AiProvider
 
     private val accountsFlow = MutableStateFlow<List<AccountEntity>>(emptyList())
@@ -85,7 +90,10 @@ class AiChatViewModelTest {
         getWealthMetricsUseCase = getWealthMetricsUseCase,
         portfolioRepository = portfolioRepository,
         accountTypeRepository = accountTypeRepository,
-        currencyDao = currencyDao
+        currencyDao = currencyDao,
+        getCashFlowPacingUseCase = getCashFlowPacingUseCase,
+        getInstallmentHorizonUseCase = getInstallmentHorizonUseCase,
+        getDividendYieldSummaryUseCase = getDividendYieldSummaryUseCase
     )
 
     @Before
@@ -102,6 +110,9 @@ class AiChatViewModelTest {
         portfolioRepository = mockk(relaxed = true)
         accountTypeRepository = mockk(relaxed = true)
         currencyDao = mockk(relaxed = true)
+        getCashFlowPacingUseCase = mockk(relaxed = true)
+        getInstallmentHorizonUseCase = mockk(relaxed = true)
+        getDividendYieldSummaryUseCase = mockk(relaxed = true)
         aiProvider = mockk(relaxed = true)
 
         every { accountRepository.getAllAccounts() } returns accountsFlow
@@ -113,6 +124,36 @@ class AiChatViewModelTest {
         every { portfolioRepository.getLatestSnapshot() } returns holdingsFlow
         every { accountTypeRepository.getAllAccountTypes() } returns accountTypesFlow
         every { currencyDao.getAllRates() } returns ratesFlow
+        every { getCashFlowPacingUseCase() } returns flowOf(
+            com.sans.finance.domain.model.DailySafeToSpend(
+                dailyAllowance = 100_000L,
+                remainingDaysInCycle = 10,
+                remainingBudget = 1_000_000L,
+                committedUpcomingBills = 0L,
+                netDiscretionaryRemaining = 1_000_000L,
+                pacingPcnt = 1.0f,
+                currencyCode = "IDR"
+            )
+        )
+        every { getInstallmentHorizonUseCase() } returns flowOf(
+            com.sans.finance.domain.model.InstallmentHorizonRoadmap(
+                currentMonthlyCommitment = 0L,
+                totalOutstandingBalance = 0L,
+                milestones = emptyList(),
+                fullyPaidDateEpochMs = null,
+                currencyCode = "IDR"
+            )
+        )
+        every { getDividendYieldSummaryUseCase() } returns flowOf(
+            com.sans.finance.domain.model.DividendYieldSummary(
+                totalAnnualIncomeInBase = 0.0,
+                totalMonthlyIncomeInBase = 0.0,
+                portfolioYieldOnCost = 0.0,
+                expenseCoveragePercentage = 0.0,
+                holdingsWithYield = emptyList(),
+                baseCurrency = "IDR"
+            )
+        )
         every { getWealthMetricsUseCase() } returns flowOf(
             WealthMetrics(
                 cashAssets = 50_000_000_00L,
@@ -133,7 +174,7 @@ class AiChatViewModelTest {
         )
 
         every {
-            aiProvider.streamChat(any(), any(), any(), any(), any(), any())
+            aiProvider.streamChat(any(), any(), any(), any(), any(), any(), any(), any())
         } answers {
             val userMsg = firstArg<String>()
             val accs = secondArg<List<AccountSummary>>()
@@ -141,34 +182,10 @@ class AiChatViewModelTest {
             val curr = arg<String>(3)
             val hist = arg<List<ChatMessage>>(4)
             val snap = arg<com.sans.finance.domain.model.FinancialContextSnapshot?>(5)
+            val img = arg<String?>(6)
             kotlinx.coroutines.flow.flow {
-                val resp = aiProvider.parseReceiptOrChat(userMsg, accs, cats, curr, hist, snap)
-                if (resp.proposals.isNotEmpty()) {
-                    val jsonProposals = org.json.JSONArray().apply {
-                        resp.proposals.forEach { p ->
-                            put(org.json.JSONObject().apply {
-                                put("id", p.id)
-                                put("title", p.title)
-                                put("amount", p.amountInCents / 100.0)
-                                put("type", p.type)
-                                put("date", p.date)
-                                put("accountId", p.accountId)
-                                put("accountName", p.accountName)
-                                put("categoryId", p.categoryId)
-                                put("categoryName", p.categoryName)
-                                put("notes", p.notes)
-                                put("tags", org.json.JSONArray(p.tags))
-                            })
-                        }
-                    }
-                    val fullPayload = org.json.JSONObject().apply {
-                        put("reply", resp.reply)
-                        put("proposals", jsonProposals)
-                    }.toString()
-                    emit(com.sans.finance.domain.model.StreamEvent.Done(fullPayload))
-                } else {
-                    emit(com.sans.finance.domain.model.StreamEvent.Done(resp.reply))
-                }
+                val resp = aiProvider.parseReceiptOrChat(userMsg, accs, cats, curr, hist, snap, img)
+                emit(com.sans.finance.domain.model.StreamEvent.Done(fullText = resp.reply, proposals = resp.proposals))
             }
         }
 
@@ -473,7 +490,7 @@ class AiChatViewModelTest {
 
         var capturedSnapshot: com.sans.finance.domain.model.FinancialContextSnapshot? = null
         every {
-            aiProvider.streamChat(any(), any(), any(), any(), any(), any())
+            aiProvider.streamChat(any(), any(), any(), any(), any(), any(), any(), any())
         } answers {
             capturedSnapshot = arg<com.sans.finance.domain.model.FinancialContextSnapshot?>(5)
             kotlinx.coroutines.flow.flowOf(com.sans.finance.domain.model.StreamEvent.Done("Net worth Anda terhitung."))
@@ -509,5 +526,50 @@ class AiChatViewModelTest {
             assertEquals("ETH (Crypto)", snap.topPortfolioHoldings[1].first)
             assertEquals(50_000_000_00L, snap.topPortfolioHoldings[1].second)
         }
+    }
+
+    @Test
+    fun `sendMessage collects thinking tokens and updates thinkingText`() = runTest {
+        every {
+            aiProvider.streamChat(any(), any(), any(), any(), any(), any(), any(), any())
+        } returns kotlinx.coroutines.flow.flow {
+            emit(com.sans.finance.domain.model.StreamEvent.ThinkingDelta("Menganalisis pengeluaran kopi... "))
+            emit(com.sans.finance.domain.model.StreamEvent.ThinkingDelta("Kategori Food & Dining teridentifikasi."))
+            emit(com.sans.finance.domain.model.StreamEvent.TextDelta("Pengeluaran kopi Anda terkendali."))
+            emit(com.sans.finance.domain.model.StreamEvent.Done(fullText = "Pengeluaran kopi Anda terkendali."))
+        }
+
+        val viewModel = createViewModel()
+        viewModel.sendMessage("Cek pengeluaran kopi")
+
+        val assistantMsg = viewModel.uiState.value.messages.last()
+        assertEquals("Pengeluaran kopi Anda terkendali.", assistantMsg.text)
+        assertEquals("Menganalisis pengeluaran kopi... Kategori Food & Dining teridentifikasi.", assistantMsg.thinkingText)
+    }
+
+    @Test
+    fun `sendMessage updates status text during tool execution`() = runTest {
+        every {
+            aiProvider.streamChat(any(), any(), any(), any(), any(), any(), any(), any())
+        } returns kotlinx.coroutines.flow.flow {
+            emit(com.sans.finance.domain.model.StreamEvent.StatusUpdate("🔍 Mengecek Safe-to-Spend hari ini..."))
+            emit(com.sans.finance.domain.model.StreamEvent.TextDelta("Safe-to-spend Anda adalah Rp 100.000."))
+            emit(com.sans.finance.domain.model.StreamEvent.Done(fullText = "Safe-to-spend Anda adalah Rp 100.000."))
+        }
+
+        val viewModel = createViewModel()
+        viewModel.sendMessage("Berapa safe to spend?")
+
+        val assistantMsg = viewModel.uiState.value.messages.last()
+        assertEquals("Safe-to-spend Anda adalah Rp 100.000.", assistantMsg.text)
+        assertFalse(assistantMsg.isStreaming)
+    }
+
+    @Test
+    fun `onClearSelectedImage resets image state`() = runTest {
+        val viewModel = createViewModel()
+        viewModel.onClearSelectedImage()
+        assertNull(viewModel.uiState.value.selectedImageUri)
+        assertNull(viewModel.uiState.value.selectedImageBase64)
     }
 }

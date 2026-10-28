@@ -29,7 +29,7 @@ Get the latest signed APK directly from [GitHub Releases](https://github.com/nic
 - **Dividend & Cash Yield Tracker:** Dedicated portfolio yield analysis tracking annual passive run-rate, weighted yield-on-cost %, coupon schedules, and lifestyle expense coverage.
 
 ### ⚡ Daily Financial Operations
-- **SansAI Financial Copilot & Universal Ingestion:** Real-time conversational AI grounded in live SQLite financial metrics (expenses, income, savings rate, liquid cash balances) and smart receipt parsing (CIMB Niaga SBN coupon payouts, BCA transfer slips, QRIS notes) with SSE token streaming and **Human-in-the-Loop (HITL)** proposal confirmation before persisting.
+- **SansAI Financial Copilot & Universal Ingestion:** Real-time conversational AI grounded in live SQLite financial metrics, native tool/function calling (`tools: [...]`), agentic database query loops (Safe-to-Spend pacing, installment horizons, transaction search, SBN coupons), multimodal ingestion for receipt images and bank statement/invoice PDFs (via native `PdfRenderer`), collapsible reasoning token streams (DeepSeek R1 / Gemini Thinking), and **Human-in-the-Loop (HITL)** transaction proposal confirmation cards before persisting.
 - **Safe-to-Spend Runway Pacing:** Real-time calculation of daily discretionary allowances after accounting for upcoming committed bills and billing cycle days.
 - **Installment Horizon Roadmap:** Timeline matrix projecting future monthly debt obligation reductions and freed cash flow milestones.
 - **Home Screen Widgets (Jetpack Glance):** Reactive Material 3 widgets for instant financial health glance and one-tap transaction logging.
