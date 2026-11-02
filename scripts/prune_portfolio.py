@@ -17,7 +17,7 @@ DEFAULT_GCS_BUCKET = os.getenv("PORTFOLIO_GCS_BUCKET", "ichsanul-portfolio-snaps
 
 DATA_DIR = os.getenv("PORTFOLIO_DATA_DIR")
 if not DATA_DIR:
-    standard_path = os.path.join(PROJECTS_DIR, "portfolio-integration", "data")
+    standard_path = os.path.join(PROJECTS_DIR, "ierp", "data", "portfolio")
     if os.path.exists(standard_path):
         DATA_DIR = standard_path
     else:

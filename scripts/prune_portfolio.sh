@@ -42,12 +42,7 @@ if [ "$DEVICE_CONNECTED" = true ]; then
     fi
 fi
 
-# Determine Python binary (prefer portfolio-integration venv if available)
 PYTHON_BIN="python3"
-VENV_PYTHON="../portfolio-integration/.venv/bin/python"
-if [ -f "$VENV_PYTHON" ]; then
-    PYTHON_BIN="$VENV_PYTHON"
-fi
 
 # Run Python prune script
 echo "🐍 Running prune_portfolio.py using $PYTHON_BIN..."

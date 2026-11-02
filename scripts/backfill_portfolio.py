@@ -15,7 +15,7 @@ PROJECTS_DIR = os.path.dirname(SANS_FINANCE_DIR)
 DB_PATH = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("--") else os.path.join(SANS_FINANCE_DIR, "sans_finance_db_snapshot.sqlite")
 DATA_DIR = os.getenv("PORTFOLIO_DATA_DIR")
 if not DATA_DIR:
-    standard_path = os.path.join(PROJECTS_DIR, "portfolio-integration", "data")
+    standard_path = os.path.join(PROJECTS_DIR, "ierp", "data", "portfolio")
     if os.path.exists(standard_path):
         DATA_DIR = standard_path
     else:

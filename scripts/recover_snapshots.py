@@ -6,7 +6,7 @@ from datetime import datetime
 DB_PATH = "sans_finance_db_snapshot.sqlite"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECTS_DIR = os.path.dirname(os.path.dirname(SCRIPT_DIR))
-OUTPUT_DIR = os.path.join(PROJECTS_DIR, "portfolio-integration", "data")
+OUTPUT_DIR = os.getenv("PORTFOLIO_DATA_DIR") or os.path.join(PROJECTS_DIR, "ierp", "data", "portfolio")
 
 def get_asset_class(category: str) -> str:
     mapping = {
