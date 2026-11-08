@@ -286,14 +286,19 @@ class SettingsViewModel @Inject constructor(
                         val now = System.currentTimeMillis()
 
                         for (item in items) {
-                            val amountLong = item.amount.toLong()
+                            // Sans Finance stores all amounts internally in cents (multiplied by 100)
+                            val amountCents = java.math.BigDecimal.valueOf(item.amount)
+                                .multiply(java.math.BigDecimal.valueOf(100))
+                                .setScale(0, java.math.RoundingMode.HALF_UP)
+                                .toLong()
+
                             val itemTime = runCatching {
                                 java.time.OffsetDateTime.parse(item.receivedAt, java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli()
                             }.getOrDefault(now)
 
-                            // Deduplication: same amount within 24h window (86_400_000 ms)
+                            // Deduplication: same amount in cents within 24h window (86_400_000 ms)
                             val isDuplicate = existingExpenses.any { existing ->
-                                existing.amount == amountLong && kotlin.math.abs(existing.date - itemTime) < 86_400_000L
+                                existing.amount == amountCents && kotlin.math.abs(existing.date - itemTime) < 86_400_000L
                             }
 
                             if (isDuplicate) {
@@ -314,7 +319,7 @@ class SettingsViewModel @Inject constructor(
                                     date = itemTime,
                                     title = item.merchant,
                                     details = "Imported from email (${item.paymentMethod})",
-                                    amount = amountLong,
+                                    amount = amountCents,
                                     categoryId = matchedCat?.id ?: 1L,
                                     accountId = matchedAcc?.id ?: 1L,
                                     type = "EXPENSE",
