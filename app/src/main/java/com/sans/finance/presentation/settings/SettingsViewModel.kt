@@ -246,6 +246,107 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun getSyncGatewayUrl(): String = userPreferences.value.syncGatewayUrl
+    fun getSyncGatewayToken(): String = userPreferences.value.syncGatewayToken
+
+    fun saveSyncGatewayConfig(url: String, token: String) {
+        viewModelScope.launch {
+            userPreferencesRepository.setSyncGatewayConfig(url, token)
+        }
+    }
+
+    fun syncEmailExpenses() {
+        _isLoading.value = true
+        _error.value = null
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val prefs = userPreferences.value
+                val fetchResult = com.sans.finance.data.util.CloudStorageSyncer.fetchInboxExpenses(prefs)
+                fetchResult.fold(
+                    onSuccess = { items ->
+                        if (items.isEmpty()) {
+                            _syncMessage.value = "Staging inbox kosong (tidak ada transaksi baru)."
+                            _isLoading.value = false
+                            return@fold
+                        }
+
+                        // Load existing categories & accounts to map correctly
+                        val categories = db.categoryDao.getAllCategoriesSync()
+                        val accounts = db.accountDao.getAllAccountsOnce()
+                        val defaultAccount = accounts.firstOrNull { it.name.contains("cash", ignoreCase = true) }
+                            ?: accounts.firstOrNull()
+
+                        // Load all existing expense entities for deduplication
+                        val existingExpenses = db.expenseDao.getAllExpenseEntities()
+
+                        val toAck = mutableListOf<String>()
+                        var newInsertedCount = 0
+                        var duplicateCount = 0
+
+                        val now = System.currentTimeMillis()
+
+                        for (item in items) {
+                            val amountLong = item.amount.toLong()
+                            val itemTime = runCatching {
+                                java.time.OffsetDateTime.parse(item.receivedAt, java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli()
+                            }.getOrDefault(now)
+
+                            // Deduplication: same amount within 24h window (86_400_000 ms)
+                            val isDuplicate = existingExpenses.any { existing ->
+                                existing.amount == amountLong && kotlin.math.abs(existing.date - itemTime) < 86_400_000L
+                            }
+
+                            if (isDuplicate) {
+                                duplicateCount++
+                                toAck.add(item.id)
+                            } else {
+                                // Match category or fallback to Misc
+                                val matchedCat = categories.firstOrNull { it.name.equals(item.category, ignoreCase = true) }
+                                    ?: categories.firstOrNull { it.name.equals("Misc", ignoreCase = true) }
+                                    ?: categories.firstOrNull()
+
+                                // Match account or fallback to default
+                                val matchedAcc = accounts.firstOrNull { acc ->
+                                    item.paymentMethod.contains(acc.name, ignoreCase = true) || acc.name.contains(item.paymentMethod, ignoreCase = true)
+                                } ?: defaultAccount
+
+                                val entity = com.sans.finance.data.local.entity.ExpenseEntity(
+                                    date = itemTime,
+                                    title = item.merchant,
+                                    details = "Imported from email (${item.paymentMethod})",
+                                    amount = amountLong,
+                                    categoryId = matchedCat?.id ?: 1L,
+                                    accountId = matchedAcc?.id ?: 1L,
+                                    type = "EXPENSE",
+                                    currency = item.currency,
+                                    status = "COMPLETED",
+                                    isRecurring = false
+                                )
+                                db.expenseDao.insertExpense(entity)
+                                newInsertedCount++
+                                toAck.add(item.id)
+                            }
+                        }
+
+                        // Acknowledge processed IDs to Cloud Run / Turso
+                        if (toAck.isNotEmpty()) {
+                            com.sans.finance.data.util.CloudStorageSyncer.acknowledgeInboxExpenses(toAck, prefs)
+                        }
+
+                        _syncMessage.value = "Sync Selesai: $newInsertedCount transaksi baru ditambahkan, $duplicateCount duplikat dilewati."
+                    },
+                    onFailure = { err ->
+                        _error.value = err.message ?: "Gagal menarik data email expenses"
+                    }
+                )
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Terjadi kesalahan saat sync"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun getR2AccountId(): String = userPreferences.value.r2AccountId
     fun getR2AccessKeyId(): String = userPreferences.value.r2AccessKeyId
     fun getR2SecretAccessKey(): String = userPreferences.value.r2SecretAccessKey

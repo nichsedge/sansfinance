@@ -117,7 +117,7 @@ fun SettingsScreen(
     var showAllCurrenciesDialog by remember { mutableStateOf(false) }
     var showBackupFrequencyDialog by remember { mutableStateOf(false) }
     var showCloudProviderDialog by remember { mutableStateOf(false) }
-    var showR2ConfigDialog by remember { mutableStateOf(false) }
+    var showSyncGatewayConfigDialog by remember { mutableStateOf(false) }
     var showRestoreCloudConfirmDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.syncMessage.value) {
@@ -174,11 +174,12 @@ fun SettingsScreen(
             cloudBackupProvider = cloudBackupProvider,
             onFrequencyClick = { showBackupFrequencyDialog = true },
             onProviderClick = { showCloudProviderDialog = true },
-            onConfigureR2Click = { showR2ConfigDialog = true },
+            onConfigureR2Click = { showSyncGatewayConfigDialog = true },
             onWifiOnlyToggle = { viewModel.setBackupWifiOnly(it, context) },
             onRequiresChargingToggle = { viewModel.setBackupRequiresCharging(it, context) },
             onBackupNow = { viewModel.uploadBackupToCloud(context) },
-            onRestoreFromCloud = { showRestoreCloudConfirmDialog = true }
+            onRestoreFromCloud = { showRestoreCloudConfirmDialog = true },
+            onSyncEmailInbox = { viewModel.syncEmailExpenses() }
         )
     }
 
@@ -200,23 +201,18 @@ fun SettingsScreen(
             onSelect = { provider ->
                 viewModel.setCloudBackupProvider(provider)
                 showCloudProviderDialog = false
-                if (provider == "CLOUDFLARE_R2" && viewModel.getR2AccountId().isBlank()) {
-                    showR2ConfigDialog = true
-                }
             }
         )
     }
 
-    if (showR2ConfigDialog) {
-        R2ConfigDialog(
-            currentAccountId = viewModel.getR2AccountId(),
-            currentAccessKeyId = viewModel.getR2AccessKeyId(),
-            currentSecretAccessKey = viewModel.getR2SecretAccessKey(),
-            currentBucketName = viewModel.getR2BucketName(),
-            onDismiss = { showR2ConfigDialog = false },
-            onSave = { accId, keyId, secKey, bucket ->
-                viewModel.saveR2Config(accId, keyId, secKey, bucket)
-                showR2ConfigDialog = false
+    if (showSyncGatewayConfigDialog) {
+        SyncGatewayConfigDialog(
+            currentUrl = viewModel.getSyncGatewayUrl(),
+            currentToken = viewModel.getSyncGatewayToken(),
+            onDismiss = { showSyncGatewayConfigDialog = false },
+            onSave = { url, token ->
+                viewModel.saveSyncGatewayConfig(url, token)
+                showSyncGatewayConfigDialog = false
             }
         )
     }
@@ -351,7 +347,8 @@ fun SettingsContent(
     onWifiOnlyToggle: (Boolean) -> Unit,
     onRequiresChargingToggle: (Boolean) -> Unit,
     onBackupNow: () -> Unit,
-    onRestoreFromCloud: () -> Unit
+    onRestoreFromCloud: () -> Unit,
+    onSyncEmailInbox: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -526,7 +523,8 @@ fun SettingsContent(
                 onWifiOnlyToggle = onWifiOnlyToggle,
                 onRequiresChargingToggle = onRequiresChargingToggle,
                 onBackupNow = onBackupNow,
-                onRestoreFromCloud = onRestoreFromCloud
+                onRestoreFromCloud = onRestoreFromCloud,
+                onSyncEmailInbox = onSyncEmailInbox
             )
         }
 
@@ -1110,7 +1108,8 @@ private fun WhatsAppBackupSettingsCard(
     onWifiOnlyToggle: (Boolean) -> Unit,
     onRequiresChargingToggle: (Boolean) -> Unit,
     onBackupNow: () -> Unit,
-    onRestoreFromCloud: () -> Unit
+    onRestoreFromCloud: () -> Unit,
+    onSyncEmailInbox: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1205,10 +1204,10 @@ private fun WhatsAppBackupSettingsCard(
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    val providerLabel = if (provider.equals("CLOUDFLARE_R2", ignoreCase = true) || provider.equals("R2", ignoreCase = true)) {
-                        "Cloudflare R2 (Free Tier / Zero Egress)"
-                    } else {
-                        "Google Cloud Storage (GCS)"
+                    val providerLabel = when {
+                        provider.equals("GATEWAY", ignoreCase = true) -> "Cloud Run Sync Gateway (Recommended)"
+                        provider.equals("CLOUDFLARE_R2", ignoreCase = true) || provider.equals("R2", ignoreCase = true) -> "Cloudflare R2 (Legacy Direct S3)"
+                        else -> "Google Cloud Storage (GCS)"
                     }
                     Text(
                         providerLabel,
@@ -1217,19 +1216,48 @@ private fun WhatsAppBackupSettingsCard(
                         fontWeight = FontWeight.Bold
                     )
                 }
-                if (provider.equals("CLOUDFLARE_R2", ignoreCase = true) || provider.equals("R2", ignoreCase = true)) {
-                    TextButton(
-                        onClick = onConfigureR2Click,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text("Configure", style = MaterialTheme.typography.labelSmall)
-                    }
+                TextButton(
+                    onClick = onConfigureR2Click,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text("Settings", style = MaterialTheme.typography.labelSmall)
                 }
                 Icon(
                     Icons.Default.ChevronRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 )
+            }
+
+            // Email Expenses Sync Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Email Expenses (Gmail)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        "Tarik struk & transaksi baru dari Turso inbox",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Button(
+                    onClick = onSyncEmailInbox,
+                    enabled = !isLoading,
+                    shape = MaterialTheme.shapes.medium,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text("Sync Inbox", style = MaterialTheme.typography.labelMedium)
+                }
             }
 
             // Frequency row
@@ -1334,8 +1362,9 @@ private fun CloudProviderDialog(
     onSelect: (String) -> Unit
 ) {
     val options = listOf(
-        "GCS" to "Google Cloud Storage (GCS)",
-        "CLOUDFLARE_R2" to "Cloudflare R2 (10 GB Free / $0 Egress)"
+        "GATEWAY" to "Cloud Sync Gateway (Cloud Run & R2)",
+        "CLOUDFLARE_R2" to "Cloudflare R2 (Legacy Direct S3)",
+        "GCS" to "Google Cloud Storage (GCS)"
     )
 
     AlertDialog(
@@ -1368,6 +1397,60 @@ private fun CloudProviderDialog(
             }
         },
         confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun SyncGatewayConfigDialog(
+    currentUrl: String,
+    currentToken: String,
+    onDismiss: () -> Unit,
+    onSave: (url: String, token: String) -> Unit
+) {
+    var url by remember { mutableStateOf(if (currentUrl.isBlank()) "https://gmail-expenses-worker-886416340889.us-central1.run.app" else currentUrl) }
+    var token by remember { mutableStateOf(currentToken) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Cloud Sync Gateway Configuration", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "Gunakan endpoint Cloud Run pribadi untuk sinkronisasi Gmail Inbox dan R2 Backup tanpa perlu master S3 credentials.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text("Gateway URL") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = token,
+                    onValueChange = { token = it },
+                    label = { Text("Sync Auth Token") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(url.trim(), token.trim()) }
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }

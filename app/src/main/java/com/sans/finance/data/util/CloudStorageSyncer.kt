@@ -25,9 +25,22 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
 enum class CloudStorageProvider(val label: String) {
-    GCS("Google Cloud Storage (GCS)"),
-    CLOUDFLARE_R2("Cloudflare R2 (S3-Compatible)")
+    GATEWAY("Cloud Sync Gateway (Cloud Run & R2)"),
+    CLOUDFLARE_R2("Cloudflare R2 (Legacy Direct S3)"),
+    GCS("Google Cloud Storage (GCS)")
 }
+
+data class InboxExpense(
+    val id: String,
+    val source: String,
+    val messageId: String,
+    val merchant: String,
+    val amount: Double,
+    val currency: String,
+    val category: String,
+    val paymentMethod: String,
+    val receivedAt: String
+)
 
 data class CloudflareR2Config(
     val accountId: String,
@@ -70,6 +83,7 @@ object CloudStorageSyncer {
         }
         val provider = getActiveProvider(prefs)
         when (provider) {
+            CloudStorageProvider.GATEWAY -> uploadDatabaseBackupToGateway(dbFile, prefs)
             CloudStorageProvider.CLOUDFLARE_R2 -> uploadDatabaseBackupToR2(context, dbFile, prefs)
             CloudStorageProvider.GCS -> uploadDatabaseBackupToGcs(context, dbFile, prefs)
         }
@@ -82,6 +96,7 @@ object CloudStorageSyncer {
     ): Result<File> = withContext(Dispatchers.IO) {
         val provider = getActiveProvider(prefs)
         when (provider) {
+            CloudStorageProvider.GATEWAY -> downloadDatabaseBackupFromGateway(destFile, prefs)
             CloudStorageProvider.CLOUDFLARE_R2 -> downloadDatabaseBackupFromR2(destFile, prefs)
             CloudStorageProvider.GCS -> Result.failure(Exception("GCS backup download not supported"))
         }
@@ -93,6 +108,7 @@ object CloudStorageSyncer {
     ): SnapshotImportResult = withContext(Dispatchers.IO) {
         val provider = getActiveProvider(prefs)
         when (provider) {
+            CloudStorageProvider.GATEWAY,
             CloudStorageProvider.CLOUDFLARE_R2 -> downloadLatestSnapshotFromR2(prefs)
             CloudStorageProvider.GCS -> downloadLatestSnapshotFromGcs(context, prefs)
         }
@@ -100,10 +116,152 @@ object CloudStorageSyncer {
 
     fun getActiveProvider(prefs: UserPreferences): CloudStorageProvider {
         val key = prefs.cloudBackupProvider
-        return if (key.equals("GCS", ignoreCase = true) || key.equals("GOOGLE_CLOUD_STORAGE", ignoreCase = true)) {
-            CloudStorageProvider.GCS
+        return when {
+            key.equals("GCS", ignoreCase = true) || key.equals("GOOGLE_CLOUD_STORAGE", ignoreCase = true) -> CloudStorageProvider.GCS
+            key.equals("CLOUDFLARE_R2", ignoreCase = true) || key.equals("R2", ignoreCase = true) -> CloudStorageProvider.CLOUDFLARE_R2
+            else -> CloudStorageProvider.GATEWAY
+        }
+    }
+
+    suspend fun fetchInboxExpenses(prefs: UserPreferences): Result<List<InboxExpense>> = withContext(Dispatchers.IO) {
+        val baseUrl = prefs.syncGatewayUrl.trimEnd('/')
+        val token = prefs.syncGatewayToken.trim()
+        if (token.isBlank()) {
+            return@withContext Result.failure(Exception("Sync Auth Token is not configured."))
+        }
+        try {
+            val url = URL("$baseUrl/api/inbox")
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                setRequestProperty("Authorization", "Bearer $token")
+                setRequestProperty("X-Sync-Token", token)
+                connectTimeout = 15000
+                readTimeout = 20000
+            }
+            if (conn.responseCode != 200) {
+                val err = conn.errorStream?.bufferedReader()?.readText() ?: "HTTP ${conn.responseCode}"
+                return@withContext Result.failure(Exception("Failed to fetch inbox: $err"))
+            }
+            val jsonText = conn.inputStream.bufferedReader().use { it.readText() }
+            val root = JSONObject(jsonText)
+            val itemsJson = root.optJSONArray("items") ?: return@withContext Result.success(emptyList())
+            val list = mutableListOf<InboxExpense>()
+            for (i in 0 until itemsJson.length()) {
+                val obj = itemsJson.getJSONObject(i)
+                list.add(
+                    InboxExpense(
+                        id = obj.optString("id"),
+                        source = obj.optString("source", "gmail"),
+                        messageId = obj.optString("message_id"),
+                        merchant = obj.optString("merchant", "Unknown"),
+                        amount = obj.optDouble("amount", 0.0),
+                        currency = obj.optString("currency", "IDR"),
+                        category = obj.optString("category", "Misc"),
+                        paymentMethod = obj.optString("payment_method", "Unknown"),
+                        receivedAt = obj.optString("received_at")
+                    )
+                )
+            }
+            Result.success(list)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun acknowledgeInboxExpenses(ids: List<String>, prefs: UserPreferences): Result<Int> = withContext(Dispatchers.IO) {
+        if (ids.isEmpty()) return@withContext Result.success(0)
+        val baseUrl = prefs.syncGatewayUrl.trimEnd('/')
+        val token = prefs.syncGatewayToken.trim()
+        if (token.isBlank()) return@withContext Result.success(0)
+        try {
+            val url = URL("$baseUrl/api/inbox/ack")
+            val payload = JSONObject().apply {
+                put("ids", org.json.JSONArray(ids))
+            }.toString()
+
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                doOutput = true
+                setRequestProperty("Authorization", "Bearer $token")
+                setRequestProperty("X-Sync-Token", token)
+                setRequestProperty("Content-Type", "application/json")
+                connectTimeout = 15000
+                readTimeout = 20000
+            }
+            conn.outputStream.use { it.write(payload.toByteArray(StandardCharsets.UTF_8)) }
+            if (conn.responseCode == 200) {
+                val resp = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                Result.success(resp.optInt("acknowledged_count", ids.size))
+            } else {
+                Result.failure(Exception("Ack failed HTTP ${conn.responseCode}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private suspend fun uploadDatabaseBackupToGateway(
+        dbFile: File,
+        prefs: UserPreferences
+    ): Result<String> = withContext(Dispatchers.IO) {
+        val baseUrl = prefs.syncGatewayUrl.trimEnd('/')
+        val token = prefs.syncGatewayToken.trim()
+        if (token.isBlank()) {
+            return@withContext Result.failure(Exception("Sync Auth Token is not configured. Please set your token in Settings."))
+        }
+        val url = URL("$baseUrl/api/backup")
+        val conn = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "PUT"
+            doOutput = true
+            setRequestProperty("Authorization", "Bearer $token")
+            setRequestProperty("X-Sync-Token", token)
+            setRequestProperty("Content-Type", "application/x-sqlite3")
+            setFixedLengthStreamingMode(dbFile.length())
+            connectTimeout = 15000
+            readTimeout = 45000
+        }
+        dbFile.inputStream().use { input ->
+            conn.outputStream.use { output ->
+                input.copyTo(output)
+            }
+        }
+        val code = conn.responseCode
+        if (code in 200..299) {
+            Result.success("Cloud Backup Successful via Gateway")
         } else {
-            CloudStorageProvider.CLOUDFLARE_R2
+            val err = conn.errorStream?.bufferedReader()?.readText() ?: "HTTP $code"
+            Result.failure(Exception("Gateway upload failed ($code): $err"))
+        }
+    }
+
+    private suspend fun downloadDatabaseBackupFromGateway(
+        destFile: File,
+        prefs: UserPreferences
+    ): Result<File> = withContext(Dispatchers.IO) {
+        val baseUrl = prefs.syncGatewayUrl.trimEnd('/')
+        val token = prefs.syncGatewayToken.trim()
+        if (token.isBlank()) {
+            return@withContext Result.failure(Exception("Sync Auth Token is not configured. Please set your token in Settings."))
+        }
+        val url = URL("$baseUrl/api/backup")
+        val conn = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            setRequestProperty("Authorization", "Bearer $token")
+            setRequestProperty("X-Sync-Token", token)
+            connectTimeout = 15000
+            readTimeout = 45000
+        }
+        val code = conn.responseCode
+        if (code == 200) {
+            conn.inputStream.use { input ->
+                destFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            Result.success(destFile)
+        } else {
+            val err = conn.errorStream?.bufferedReader()?.readText() ?: "HTTP $code"
+            Result.failure(Exception("Gateway download failed ($code): $err"))
         }
     }
 

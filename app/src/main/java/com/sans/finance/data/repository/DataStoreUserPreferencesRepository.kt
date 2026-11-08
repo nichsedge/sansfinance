@@ -38,6 +38,8 @@ class DataStoreUserPreferencesRepository @Inject constructor(
         val LAST_BACKUP_TIME = longPreferencesKey("last_backup_time")
         val LAST_BACKUP_SIZE_BYTES = longPreferencesKey("last_backup_size_bytes")
         val CLOUD_BACKUP_PROVIDER = stringPreferencesKey("cloud_backup_provider")
+        val SYNC_GATEWAY_URL = stringPreferencesKey("sync_gateway_url")
+        val SYNC_GATEWAY_TOKEN = stringPreferencesKey("sync_gateway_token")
         val R2_ACCOUNT_ID = stringPreferencesKey("r2_account_id")
         val R2_ACCESS_KEY_ID = stringPreferencesKey("r2_access_key_id")
         val R2_SECRET_ACCESS_KEY = stringPreferencesKey("r2_secret_access_key")
@@ -55,7 +57,9 @@ class DataStoreUserPreferencesRepository @Inject constructor(
             backupRequiresCharging = preferences[PreferencesKeys.BACKUP_REQUIRES_CHARGING] ?: true,
             lastBackupTime = preferences[PreferencesKeys.LAST_BACKUP_TIME] ?: 0L,
             lastBackupSizeBytes = preferences[PreferencesKeys.LAST_BACKUP_SIZE_BYTES] ?: 0L,
-            cloudBackupProvider = preferences[PreferencesKeys.CLOUD_BACKUP_PROVIDER] ?: "CLOUDFLARE_R2",
+            cloudBackupProvider = preferences[PreferencesKeys.CLOUD_BACKUP_PROVIDER] ?: "GATEWAY",
+            syncGatewayUrl = preferences[PreferencesKeys.SYNC_GATEWAY_URL] ?: "https://gmail-expenses-worker-886416340889.us-central1.run.app",
+            syncGatewayToken = preferences[PreferencesKeys.SYNC_GATEWAY_TOKEN] ?: "",
             r2AccountId = preferences[PreferencesKeys.R2_ACCOUNT_ID] ?: "",
             r2AccessKeyId = preferences[PreferencesKeys.R2_ACCESS_KEY_ID] ?: "",
             r2SecretAccessKey = CryptoManager.decrypt(preferences[PreferencesKeys.R2_SECRET_ACCESS_KEY] ?: ""),
@@ -118,6 +122,13 @@ class DataStoreUserPreferencesRepository @Inject constructor(
         }
     }
 
+    override suspend fun setSyncGatewayConfig(url: String, token: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SYNC_GATEWAY_URL] = url
+            preferences[PreferencesKeys.SYNC_GATEWAY_TOKEN] = token
+        }
+    }
+
     override suspend fun setR2Config(accountId: String, accessKeyId: String, secretAccessKey: String, bucketName: String) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.R2_ACCOUNT_ID] = accountId
@@ -156,6 +167,8 @@ class DataStoreUserPreferencesRepository @Inject constructor(
             preferences[PreferencesKeys.LAST_BACKUP_TIME] = prefs.lastBackupTime
             preferences[PreferencesKeys.LAST_BACKUP_SIZE_BYTES] = prefs.lastBackupSizeBytes
             preferences[PreferencesKeys.CLOUD_BACKUP_PROVIDER] = prefs.cloudBackupProvider
+            preferences[PreferencesKeys.SYNC_GATEWAY_URL] = prefs.syncGatewayUrl
+            preferences[PreferencesKeys.SYNC_GATEWAY_TOKEN] = prefs.syncGatewayToken
             preferences[PreferencesKeys.R2_ACCOUNT_ID] = prefs.r2AccountId
             preferences[PreferencesKeys.R2_ACCESS_KEY_ID] = prefs.r2AccessKeyId
             preferences[PreferencesKeys.R2_SECRET_ACCESS_KEY] = CryptoManager.encrypt(prefs.r2SecretAccessKey)
