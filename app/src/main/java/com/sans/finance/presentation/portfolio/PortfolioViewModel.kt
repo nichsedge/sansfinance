@@ -525,16 +525,12 @@ class PortfolioViewModel @Inject constructor(
         }
     }
 
-    fun syncFromGcs() {
-        syncFromCloud()
-    }
-
     fun syncFromCloud() {
         viewModelScope.launch {
             try {
                 val prefs = userPreferencesRepository.userPreferences.first()
                 val provider = com.sans.finance.data.util.CloudStorageSyncer.getActiveProvider(prefs)
-                val providerLabel = if (provider == com.sans.finance.data.util.CloudStorageProvider.CLOUDFLARE_R2) "Cloudflare R2" else "GCS"
+                val providerLabel = if (provider == com.sans.finance.data.util.CloudStorageProvider.CLOUDFLARE_R2) "Cloudflare R2" else "Sync Gateway"
                 _importMessage.value = "Connecting to $providerLabel..."
                 val (date, items, exchangeRate, advisor) = com.sans.finance.data.util.CloudStorageSyncer.downloadLatestSnapshot(context, prefs)
 

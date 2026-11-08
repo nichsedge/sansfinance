@@ -17,7 +17,6 @@ interface UserPreferencesRepository {
     suspend fun setCloudBackupProvider(provider: String)
     suspend fun setSyncGatewayConfig(url: String, token: String)
     suspend fun setR2Config(accountId: String, accessKeyId: String, secretAccessKey: String, bucketName: String)
-    suspend fun setGcsBucketName(bucketName: String)
     suspend fun exportJson(): String
     suspend fun importJson(json: String)
 }

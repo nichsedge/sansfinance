@@ -153,76 +153,6 @@ def download_snapshots_from_r2(bucket_name, temp_dir, existing_dates=None):
         print(f"❌ Failed to download snapshots from Cloudflare R2: {e}")
         return False
 
-def download_snapshots_from_gcs(bucket_name, temp_dir, existing_dates=None):
-    """Downloads snapshot files from GCS to a temporary directory, skipping already imported ones."""
-    try:
-        from google.cloud import storage
-    except ImportError:
-        print("❌ Error: google-cloud-storage package is not installed.")
-        print("💡 Please install it by running: pip install google-cloud-storage")
-        sys.exit(1)
-
-    creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    if not creds_path:
-        # Check relative to sansfinance project directory
-        local_creds = "../creds/gcp/SA_cred_general.json"
-        if os.path.exists(local_creds):
-            creds_path = local_creds
-        else:
-            # Check absolute path dynamically from projects directory
-            abs_creds = os.path.join(PROJECTS_DIR, "creds", "gcp", "SA_cred_general.json")
-            if os.path.exists(abs_creds):
-                creds_path = abs_creds
-
-    if creds_path:
-        print(f"🔑 Using service account credentials from: {creds_path}")
-        client = storage.Client.from_service_account_json(creds_path)
-    else:
-        print("ℹ️ Using Google Application Default Credentials (ADC)")
-        client = storage.Client()
-
-    if existing_dates is None:
-        existing_dates = set()
-
-    try:
-        bucket = client.bucket(bucket_name)
-        blobs = bucket.list_blobs(prefix="snapshots/")
-        
-        os.makedirs(temp_dir, exist_ok=True)
-        download_count = 0
-        skipped_count = 0
-        
-        for blob in blobs:
-            # We only want json snapshot files in the snapshots/ directory
-            if blob.name.endswith("_snapshot.json"):
-                filename = os.path.basename(blob.name)
-                
-                # Incremental Check: parse date from filename YYYY-MM-DD_snapshot.json
-                date_match = re.match(r"(\d{4}-\d{2}-\d{2})_snapshot\.json", filename)
-                if date_match:
-                    date_str = date_match.group(1)
-                    try:
-                        date_ms = parse_date_to_millis(date_str)
-                        if date_ms in existing_dates:
-                            skipped_count += 1
-                            continue
-                    except Exception:
-                        pass
-
-                dest_path = os.path.join(temp_dir, filename)
-                print(f"📥 Downloading gs://{bucket_name}/{blob.name} to {dest_path}...")
-                blob.download_to_filename(dest_path)
-                download_count += 1
-                
-        if skipped_count > 0:
-            print(f"ℹ️ Skipped {skipped_count} snapshot(s) already present in the database.")
-        print(f"✅ Downloaded {download_count} new snapshot file(s) from GCS.")
-        return True
-    except Exception as e:
-        print(f"❌ Failed to download snapshots from GCS: {e}")
-        return False
-
-
 def extract_price(details):
     if not details:
         return None
@@ -258,7 +188,6 @@ def main():
         pass
 
     data_dir = DATA_DIR
-    gcs_bucket = os.getenv("PORTFOLIO_GCS_BUCKET")
     r2_bucket = os.getenv("PORTFOLIO_R2_BUCKET") or os.getenv("R2_BUCKET_NAME") or "ichsanul-dev"
     provider = os.getenv("PORTFOLIO_STORAGE_PROVIDER", "r2").lower()
     temp_dir = "./build/cloud_snapshots"
@@ -283,11 +212,11 @@ def main():
 
     if not files:
         if is_temp_dir:
-            print("✅ Database is already up to date with GCS (no new snapshots).")
+            print("✅ Database is already up to date with R2 (no new snapshots).")
         else:
             print("⚠️ No snapshot files found. Aborting to prevent erasing existing database data.")
         if is_temp_dir and os.path.exists(temp_dir):
-            print("🧹 Cleaning up GCS temporary snapshots directory...")
+            print("🧹 Cleaning up temporary snapshots directory...")
             shutil.rmtree(temp_dir)
         conn.close()
         return
@@ -310,7 +239,7 @@ def main():
     if not dates_to_import:
         print("⚠️ No valid dates found in snapshot files. Aborting.")
         if is_temp_dir and os.path.exists(temp_dir):
-            print("🧹 Cleaning up GCS temporary snapshots directory...")
+            print("🧹 Cleaning up temporary snapshots directory...")
             shutil.rmtree(temp_dir)
         conn.close()
         return
@@ -437,7 +366,7 @@ def main():
     conn.close()
 
     if is_temp_dir and os.path.exists(temp_dir):
-        print("🧹 Cleaning up GCS temporary snapshots directory...")
+        print("🧹 Cleaning up temporary snapshots directory...")
         shutil.rmtree(temp_dir)
 
     print("✅ Backfill complete!")

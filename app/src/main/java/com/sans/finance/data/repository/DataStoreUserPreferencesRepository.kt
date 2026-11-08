@@ -44,7 +44,6 @@ class DataStoreUserPreferencesRepository @Inject constructor(
         val R2_ACCESS_KEY_ID = stringPreferencesKey("r2_access_key_id")
         val R2_SECRET_ACCESS_KEY = stringPreferencesKey("r2_secret_access_key")
         val R2_BUCKET_NAME = stringPreferencesKey("r2_bucket_name")
-        val GCS_BUCKET_NAME = stringPreferencesKey("gcs_bucket_name")
     }
 
     override val userPreferences: Flow<UserPreferences> = context.dataStore.data.map { preferences ->
@@ -63,8 +62,7 @@ class DataStoreUserPreferencesRepository @Inject constructor(
             r2AccountId = preferences[PreferencesKeys.R2_ACCOUNT_ID] ?: "",
             r2AccessKeyId = preferences[PreferencesKeys.R2_ACCESS_KEY_ID] ?: "",
             r2SecretAccessKey = CryptoManager.decrypt(preferences[PreferencesKeys.R2_SECRET_ACCESS_KEY] ?: ""),
-            r2BucketName = preferences[PreferencesKeys.R2_BUCKET_NAME] ?: "ichsanul-dev",
-            gcsBucketName = preferences[PreferencesKeys.GCS_BUCKET_NAME] ?: "ichsanul-portfolio-snapshots"
+            r2BucketName = preferences[PreferencesKeys.R2_BUCKET_NAME] ?: "ichsanul-dev"
         )
     }
 
@@ -138,12 +136,6 @@ class DataStoreUserPreferencesRepository @Inject constructor(
         }
     }
 
-    override suspend fun setGcsBucketName(bucketName: String) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.GCS_BUCKET_NAME] = bucketName
-        }
-    }
-
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -173,7 +165,6 @@ class DataStoreUserPreferencesRepository @Inject constructor(
             preferences[PreferencesKeys.R2_ACCESS_KEY_ID] = prefs.r2AccessKeyId
             preferences[PreferencesKeys.R2_SECRET_ACCESS_KEY] = CryptoManager.encrypt(prefs.r2SecretAccessKey)
             preferences[PreferencesKeys.R2_BUCKET_NAME] = prefs.r2BucketName
-            preferences[PreferencesKeys.GCS_BUCKET_NAME] = prefs.gcsBucketName
         }
     }
 }

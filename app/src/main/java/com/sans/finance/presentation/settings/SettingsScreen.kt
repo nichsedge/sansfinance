@@ -1209,9 +1209,8 @@ private fun WhatsAppBackupSettingsCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     val providerLabel = when {
-                        provider.equals("GATEWAY", ignoreCase = true) -> "Cloud Run Sync Gateway (Recommended)"
                         provider.equals("CLOUDFLARE_R2", ignoreCase = true) || provider.equals("R2", ignoreCase = true) -> "Cloudflare R2 (Legacy Direct S3)"
-                        else -> "Google Cloud Storage (GCS)"
+                        else -> "Cloud Run Sync Gateway (Recommended)"
                     }
                     Text(
                         providerLabel,
@@ -1375,8 +1374,7 @@ private fun CloudProviderDialog(
 ) {
     val options = listOf(
         "GATEWAY" to "Cloud Sync Gateway (Cloud Run & R2)",
-        "CLOUDFLARE_R2" to "Cloudflare R2 (Legacy Direct S3)",
-        "GCS" to "Google Cloud Storage (GCS)"
+        "CLOUDFLARE_R2" to "Cloudflare R2 (Legacy Direct S3)"
     )
 
     AlertDialog(

@@ -333,8 +333,8 @@ private fun BeginnerGuideSection(
 
         UploadMethodItem(
             stepNumber = "3",
-            title = "Cloud Storage Sync (R2 / GCS)",
-            description = "Unggah file snapshot ke Cloudflare R2 atau GCS Anda sebagai 'portfolio/latest_snapshot.json'. Konfigurasi di Settings > Cloud Storage, lalu tekan tombol 'Sync from Cloud'.",
+            title = "Cloud Storage Sync (Gateway / R2)",
+            description = "Unggah file snapshot ke Cloudflare R2 atau Gateway Anda sebagai 'portfolio/latest_snapshot.json'. Konfigurasi di Settings > Cloud Storage, lalu tekan tombol 'Sync from Cloud'.",
             icon = Icons.Default.CloudDownload
         )
     }

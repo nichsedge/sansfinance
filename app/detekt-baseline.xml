@@ -2,6 +2,8 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
+    <ID>ComplexCondition:AiChatViewModel.kt:AiChatViewModel$(textToSend.isBlank() &amp;&amp; imageUri == null) || _uiState.value.isLoading || _uiState.value.isStreaming</ID>
+    <ID>ComplexCondition:AiJsonParser.kt:AiJsonParser$m != null &amp;&amp; (col.contains("rp", ignoreCase = true) || col.contains(".") || col.contains(","))</ID>
     <ID>ComplexCondition:MathExpressionEvaluator.kt:MathExpressionEvaluator$ch == '-' &amp;&amp; currentNum.isEmpty() &amp;&amp; (tokens.isEmpty() || tokens.last() is Char)</ID>
     <ID>ConstructorParameterNaming:ExpenseDao.kt:TransferFlow$val account_id: Long</ID>
     <ID>ConstructorParameterNaming:ExpenseDao.kt:TransferFlow$val to_account_id: Long?</ID>
@@ -14,11 +16,14 @@
     <ID>CyclomaticComplexMethod:AiChatScreen.kt:@OptIn(ExperimentalLayoutApi::class) @Composable fun AiProposalCard</ID>
     <ID>CyclomaticComplexMethod:AiChatScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun AiChatScreen</ID>
     <ID>CyclomaticComplexMethod:AiChatViewModel.kt:AiChatViewModel$fun sendMessage</ID>
+    <ID>CyclomaticComplexMethod:AiChatViewModel.kt:AiChatViewModel$private suspend fun executeLocalTool: String</ID>
     <ID>CyclomaticComplexMethod:AiChatViewModel.kt:AiChatViewModel$private suspend fun getFinancialSnapshot: com.sans.finance.domain.model.FinancialContextSnapshot</ID>
     <ID>CyclomaticComplexMethod:AiJsonParser.kt:AiJsonParser$fun mapIndonesianCategoryToEnglish: String?</ID>
     <ID>CyclomaticComplexMethod:AiJsonParser.kt:AiJsonParser$fun parseAssistantResponse: AiAssistantResponse</ID>
     <ID>CyclomaticComplexMethod:AiJsonParser.kt:AiJsonParser$fun parseFlexibleAmount: Double</ID>
+    <ID>CyclomaticComplexMethod:AiJsonParser.kt:AiJsonParser$fun parseProposalArguments: List&lt;AiTransactionProposal&gt;</ID>
     <ID>CyclomaticComplexMethod:AiJsonParser.kt:AiJsonParser$fun repairTruncatedJson: String</ID>
+    <ID>CyclomaticComplexMethod:AiJsonParser.kt:AiJsonParser$private fun extractMarkdownTableProposals: List&lt;AiTransactionProposal&gt;</ID>
     <ID>CyclomaticComplexMethod:AiJsonParser.kt:AiJsonParser$private fun parseProposalObject: AiTransactionProposal?</ID>
     <ID>CyclomaticComplexMethod:AiSettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun AiSettingsScreen</ID>
     <ID>CyclomaticComplexMethod:CurrencyFormatter.kt:CurrencyFormatter$fun formatAmountCompact: String</ID>
@@ -57,9 +62,12 @@
     <ID>CyclomaticComplexMethod:PortfolioCharts.kt:@Composable fun NetWorthTrendChart</ID>
     <ID>CyclomaticComplexMethod:PortfolioCsvParser.kt:PortfolioCsvParser$fun parse: Triple&lt;Long, List&lt;PortfolioHoldingEntity&gt;, Double?&gt;</ID>
     <ID>CyclomaticComplexMethod:PortfolioListComponents.kt:@Composable fun EnhancedHoldingItem</ID>
+    <ID>CyclomaticComplexMethod:PortfolioListComponents.kt:@Composable fun PortfolioFilterBar</ID>
     <ID>CyclomaticComplexMethod:PortfolioListComponents.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun HoldingDetailBottomSheet</ID>
+    <ID>CyclomaticComplexMethod:PortfolioListComponents.kt:fun getCategoryIconAndColor: Pair&lt;ImageVector, Color&gt;</ID>
     <ID>CyclomaticComplexMethod:PortfolioScreen.kt:@Composable fun PortfolioHeader</ID>
     <ID>CyclomaticComplexMethod:PortfolioScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun PortfolioScreen</ID>
+    <ID>CyclomaticComplexMethod:PortfolioViewModel.kt:PortfolioViewModel$private fun computeSovereignAdvisorFromDb: com.sans.finance.data.util.SovereignAdvisorJson</ID>
     <ID>CyclomaticComplexMethod:ReSyncDryRunScreen.kt:@Composable private fun AccountDryRunItem</ID>
     <ID>CyclomaticComplexMethod:ReSyncDryRunScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun ReSyncDryRunScreen</ID>
     <ID>CyclomaticComplexMethod:RecurringDetailBottomSheet.kt:@Composable private fun RecurringCadenceCard</ID>
@@ -69,8 +77,8 @@
     <ID>CyclomaticComplexMethod:SavingsVelocityCard.kt:@Composable fun SavingsVelocityCard</ID>
     <ID>CyclomaticComplexMethod:SearchScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class) @Composable fun SearchScreen</ID>
     <ID>CyclomaticComplexMethod:SearchScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun SearchFilterSheet</ID>
-    <ID>CyclomaticComplexMethod:SettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun SettingsScreen</ID>
-    <ID>CyclomaticComplexMethod:SettingsViewModel.kt:SettingsViewModel$fun exportFullBackup</ID>
+    <ID>CyclomaticComplexMethod:SettingsViewModel.kt:SettingsViewModel$fun syncEmailExpenses</ID>
+    <ID>CyclomaticComplexMethod:SovereignAdvisorBottomSheet.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun SovereignAdvisorBottomSheet</ID>
     <ID>CyclomaticComplexMethod:TransactionStatsScreen.kt:@Composable fun PieChartWithLabels</ID>
     <ID>CyclomaticComplexMethod:TransactionStatsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun TrendChart</ID>
     <ID>CyclomaticComplexMethod:TransactionStatsViewModel.kt:TransactionStatsViewModel$private fun loadData</ID>
@@ -99,6 +107,10 @@
     <ID>FunctionNaming:AiSettingsScreen.kt:@Composable private fun ProviderRow</ID>
     <ID>FunctionNaming:AiSettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun AiSettingsScreen</ID>
     <ID>FunctionNaming:AppTopBar.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun AppTopBar</ID>
+    <ID>FunctionNaming:AssetClassTargetBottomSheet.kt:@Composable private fun AllAssetsAllocationSection</ID>
+    <ID>FunctionNaming:AssetClassTargetBottomSheet.kt:@Composable private fun PortfolioAllocationBudgetMeter</ID>
+    <ID>FunctionNaming:AssetClassTargetBottomSheet.kt:@Composable private fun SingleAssetThresholdSection</ID>
+    <ID>FunctionNaming:AssetClassTargetBottomSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun AssetClassTargetBottomSheet</ID>
     <ID>FunctionNaming:BudgetScreen.kt:@Composable fun BudgetItem</ID>
     <ID>FunctionNaming:BudgetScreen.kt:@Composable fun BudgetSuggestionCard</ID>
     <ID>FunctionNaming:BudgetScreen.kt:@Composable fun BudgetSummaryHeader</ID>
@@ -181,7 +193,6 @@
     <ID>FunctionNaming:PortfolioScreen.kt:@Composable fun MultiCurrencyBreakdownCard</ID>
     <ID>FunctionNaming:PortfolioScreen.kt:@Composable fun PortfolioAiInsightCard</ID>
     <ID>FunctionNaming:PortfolioScreen.kt:@Composable fun PortfolioHeader</ID>
-    <ID>FunctionNaming:PortfolioScreen.kt:@Composable fun TargetEditDialog</ID>
     <ID>FunctionNaming:PortfolioScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun PortfolioScreen</ID>
     <ID>FunctionNaming:PrivacyText.kt:@Composable fun PrivacyText</ID>
     <ID>FunctionNaming:ReSyncDryRunScreen.kt:@Composable private fun AccountDryRunItem</ID>
@@ -206,12 +217,14 @@
     <ID>FunctionNaming:SettingsScreen.kt:@Composable private fun CloudProviderDialog</ID>
     <ID>FunctionNaming:SettingsScreen.kt:@Composable private fun R2ConfigDialog</ID>
     <ID>FunctionNaming:SettingsScreen.kt:@Composable private fun SettingsToggleCard</ID>
+    <ID>FunctionNaming:SettingsScreen.kt:@Composable private fun SyncGatewayConfigDialog</ID>
     <ID>FunctionNaming:SettingsScreen.kt:@Composable private fun WhatsAppBackupSettingsCard</ID>
     <ID>FunctionNaming:SettingsScreen.kt:@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class) @Composable fun SettingsContent</ID>
     <ID>FunctionNaming:SettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun AllCurrenciesDialog</ID>
     <ID>FunctionNaming:SettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun SettingsScreen</ID>
     <ID>FunctionNaming:SettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable private fun SettingsClickableCard</ID>
-    <ID>FunctionNaming:SovereignAdvisorCard.kt:@OptIn(ExperimentalLayoutApi::class) @Composable fun SovereignAdvisorCard</ID>
+    <ID>FunctionNaming:SovereignAdvisorBottomSheet.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun SovereignAdvisorBottomSheet</ID>
+    <ID>FunctionNaming:SovereignFocusStrip.kt:@Composable fun SovereignFocusStrip</ID>
     <ID>FunctionNaming:Sparkline.kt:@Composable fun Sparkline</ID>
     <ID>FunctionNaming:SummaryCard.kt:@Composable fun SummaryCard</ID>
     <ID>FunctionNaming:SummaryCard.kt:@Composable private fun SummaryItem</ID>
@@ -245,8 +258,10 @@
     <ID>FunctionNaming:WealthScreen.kt:@Composable private fun MilestoneRowItem</ID>
     <ID>FunctionNaming:WealthScreen.kt:@Composable private fun StrategyNavRow</ID>
     <ID>FunctionNaming:WealthScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun WealthScreen</ID>
+    <ID>LargeClass:AiChatViewModel.kt:AiChatViewModel : ViewModel</ID>
     <ID>LargeClass:ExpenseRepositoryImpl.kt:ExpenseRepositoryImpl : ExpenseRepository</ID>
     <ID>LargeClass:OpenRouterChatProvider.kt:OpenRouterChatProvider : AiProvider</ID>
+    <ID>LargeClass:PortfolioViewModel.kt:PortfolioViewModel : ViewModel</ID>
     <ID>LongMethod:AccountScreen.kt:@Composable fun AccountGroupCard</ID>
     <ID>LongMethod:AccountScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun AccountScreen</ID>
     <ID>LongMethod:AccountStatsScreen.kt:@Composable fun TotalStatsBarChart</ID>
@@ -260,11 +275,16 @@
     <ID>LongMethod:AiChatScreen.kt:@OptIn(ExperimentalLayoutApi::class) @Composable fun AiProposalCard</ID>
     <ID>LongMethod:AiChatScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun AiChatScreen</ID>
     <ID>LongMethod:AiChatViewModel.kt:AiChatViewModel$fun sendMessage</ID>
+    <ID>LongMethod:AiChatViewModel.kt:AiChatViewModel$private suspend fun executeLocalTool: String</ID>
     <ID>LongMethod:AiChatViewModel.kt:AiChatViewModel$private suspend fun getFinancialSnapshot: com.sans.finance.domain.model.FinancialContextSnapshot</ID>
     <ID>LongMethod:AiChatViewModelTest.kt:AiChatViewModelTest$@Before fun setUp</ID>
     <ID>LongMethod:AiChatViewModelTest.kt:AiChatViewModelTest$@Test fun `sendMessage injects accurate Net Worth and portfolio holdings into FinancialContextSnapshot`</ID>
     <ID>LongMethod:AiJsonParser.kt:AiJsonParser$private fun parseProposalObject: AiTransactionProposal?</ID>
     <ID>LongMethod:AiSettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun AiSettingsScreen</ID>
+    <ID>LongMethod:AssetClassTargetBottomSheet.kt:@Composable private fun AllAssetsAllocationSection</ID>
+    <ID>LongMethod:AssetClassTargetBottomSheet.kt:@Composable private fun PortfolioAllocationBudgetMeter</ID>
+    <ID>LongMethod:AssetClassTargetBottomSheet.kt:@Composable private fun SingleAssetThresholdSection</ID>
+    <ID>LongMethod:AssetClassTargetBottomSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun AssetClassTargetBottomSheet</ID>
     <ID>LongMethod:BudgetScreen.kt:@Composable fun BudgetItem</ID>
     <ID>LongMethod:BudgetScreen.kt:@Composable fun DailySafeToSpendCard</ID>
     <ID>LongMethod:BudgetScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun AddBudgetDialog</ID>
@@ -308,6 +328,7 @@
     <ID>LongMethod:InstallmentsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun InstallmentsScreen</ID>
     <ID>LongMethod:MainActivity.kt:@Composable fun AppNavigation</ID>
     <ID>LongMethod:MainScreen.kt:@Composable fun MainScreen</ID>
+    <ID>LongMethod:MaintainDatabaseUseCase.kt:MaintainDatabaseUseCase$suspend operator fun invoke: DatabaseHealthReport</ID>
     <ID>LongMethod:MarkdownContent.kt:@Composable fun MarkdownContent</ID>
     <ID>LongMethod:MarkdownContent.kt:fun parseMarkdownToAnnotatedString: AnnotatedString</ID>
     <ID>LongMethod:MonthlyCashFlowCard.kt:@Composable fun MonthlyCashFlowCard</ID>
@@ -320,9 +341,8 @@
     <ID>LongMethod:OpenRouterChatProvider.kt:OpenRouterChatProvider$override fun streamPortfolioAnalysis: Flow&lt;StreamEvent&gt;</ID>
     <ID>LongMethod:OpenRouterChatProvider.kt:OpenRouterChatProvider$override suspend fun generateMonthlyReview: MonthlyReviewResult</ID>
     <ID>LongMethod:OpenRouterChatProvider.kt:OpenRouterChatProvider$override suspend fun generatePortfolioAnalysis: PortfolioAnalysisResult</ID>
-    <ID>LongMethod:OpenRouterChatProvider.kt:OpenRouterChatProvider$override suspend fun parseReceiptOrChat: AiAssistantResponse</ID>
-    <ID>LongMethod:OpenRouterChatProvider.kt:OpenRouterChatProvider$private fun buildChatSystemPrompt: String</ID>
     <ID>LongMethod:OpenRouterChatProvider.kt:OpenRouterChatProvider$private fun buildFinancialContextString: String</ID>
+    <ID>LongMethod:OpenRouterChatProvider.kt:OpenRouterChatProvider$private fun buildToolsJson: kotlinx.serialization.json.JsonArray</ID>
     <ID>LongMethod:OpenRouterChatProvider.kt:OpenRouterChatProvider$private suspend fun executeChatCompletion: String</ID>
     <ID>LongMethod:OpenRouterModelPickerBottomSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun OpenRouterModelPickerBottomSheet</ID>
     <ID>LongMethod:PortfolioBenchmarkCard.kt:@Composable fun BenchmarkComparisonChart</ID>
@@ -345,6 +365,7 @@
     <ID>LongMethod:PortfolioScreen.kt:@Composable fun PortfolioAiInsightCard</ID>
     <ID>LongMethod:PortfolioScreen.kt:@Composable fun PortfolioHeader</ID>
     <ID>LongMethod:PortfolioScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun PortfolioScreen</ID>
+    <ID>LongMethod:PortfolioViewModel.kt:PortfolioViewModel$private fun computeSovereignAdvisorFromDb: com.sans.finance.data.util.SovereignAdvisorJson</ID>
     <ID>LongMethod:QuickAddGlanceWidget.kt:QuickAddGlanceWidget$override suspend fun provideGlance</ID>
     <ID>LongMethod:QuickAddWidgetProvider.kt:QuickAddWidgetProvider$override fun onUpdate</ID>
     <ID>LongMethod:ReSyncDryRunScreen.kt:@Composable private fun AccountDryRunItem</ID>
@@ -362,8 +383,9 @@
     <ID>LongMethod:SettingsScreen.kt:@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class) @Composable fun SettingsContent</ID>
     <ID>LongMethod:SettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun AllCurrenciesDialog</ID>
     <ID>LongMethod:SettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun SettingsScreen</ID>
-    <ID>LongMethod:SettingsViewModel.kt:SettingsViewModel$fun exportFullBackup</ID>
-    <ID>LongMethod:SovereignAdvisorCard.kt:@OptIn(ExperimentalLayoutApi::class) @Composable fun SovereignAdvisorCard</ID>
+    <ID>LongMethod:SettingsViewModel.kt:SettingsViewModel$fun syncEmailExpenses</ID>
+    <ID>LongMethod:SovereignAdvisorBottomSheet.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun SovereignAdvisorBottomSheet</ID>
+    <ID>LongMethod:SovereignFocusStrip.kt:@Composable fun SovereignFocusStrip</ID>
     <ID>LongMethod:Sparkline.kt:@Composable fun Sparkline</ID>
     <ID>LongMethod:SpendingRecapWorker.kt:SpendingRecapWorker$override suspend fun doWork: Result</ID>
     <ID>LongMethod:SummaryCard.kt:@Composable fun SummaryCard</ID>
@@ -410,21 +432,32 @@
     <ID>MagicNumber:AiChatScreen.kt:0.85f</ID>
     <ID>MagicNumber:AiChatScreen.kt:0.96f</ID>
     <ID>MagicNumber:AiChatScreen.kt:0xFF2E7D32</ID>
-    <ID>MagicNumber:AiChatScreen.kt:0xFF4CAF50</ID>
+    <ID>MagicNumber:AiChatViewModel.kt:AiChatViewModel$100.0</ID>
     <ID>MagicNumber:AiChatViewModel.kt:AiChatViewModel$1000L</ID>
     <ID>MagicNumber:AiChatViewModel.kt:AiChatViewModel$100_000_000_000L</ID>
     <ID>MagicNumber:AiChatViewModel.kt:AiChatViewModel$1726000000000L</ID>
     <ID>MagicNumber:AiChatViewModel.kt:AiChatViewModel$6</ID>
+    <ID>MagicNumber:AiChatViewModel.kt:AiChatViewModel$78</ID>
+    <ID>MagicNumber:AiJsonParser.kt:AiJsonParser$100.0</ID>
     <ID>MagicNumber:AiJsonParser.kt:AiJsonParser$3</ID>
+    <ID>MagicNumber:AiJsonParser.kt:AiJsonParser$4</ID>
     <ID>MagicNumber:AiSettingsViewModel.kt:AiSettingsViewModel$400</ID>
     <ID>MagicNumber:AppModule.kt:AppModule$15</ID>
     <ID>MagicNumber:AppModule.kt:AppModule$20</ID>
+    <ID>MagicNumber:AssetClassTargetBottomSheet.kt:0.001f</ID>
+    <ID>MagicNumber:AssetClassTargetBottomSheet.kt:10</ID>
+    <ID>MagicNumber:AssetClassTargetBottomSheet.kt:10.0</ID>
+    <ID>MagicNumber:AssetClassTargetBottomSheet.kt:100</ID>
+    <ID>MagicNumber:AssetClassTargetBottomSheet.kt:100.0</ID>
+    <ID>MagicNumber:AssetClassTargetBottomSheet.kt:100f</ID>
+    <ID>MagicNumber:AssetClassTargetBottomSheet.kt:20.0</ID>
+    <ID>MagicNumber:AssetClassTargetBottomSheet.kt:25.0</ID>
+    <ID>MagicNumber:AssetClassTargetBottomSheet.kt:5.0</ID>
+    <ID>MagicNumber:AssetClassTargetBottomSheet.kt:50.0</ID>
     <ID>MagicNumber:BenchmarkModels.kt:BenchmarkType.DEPOSIT$0.0575</ID>
     <ID>MagicNumber:BenchmarkModels.kt:BenchmarkType.GOLD$0.082</ID>
     <ID>MagicNumber:BenchmarkModels.kt:BenchmarkType.IHSG$0.078</ID>
     <ID>MagicNumber:BenchmarkModels.kt:BenchmarkType.SP500$0.105</ID>
-    <ID>MagicNumber:BudgetScreen.kt:0xFF4CAF50</ID>
-    <ID>MagicNumber:BudgetScreen.kt:0xFFF44336</ID>
     <ID>MagicNumber:BudgetScreen.kt:100</ID>
     <ID>MagicNumber:CircularGauge.kt:100f</ID>
     <ID>MagicNumber:CloudStorageSyncer.kt:CloudStorageSyncer$1024L</ID>
@@ -454,8 +487,6 @@
     <ID>MagicNumber:EmergencyFundModels.kt:SafetyBufferTier.Companion$6.0</ID>
     <ID>MagicNumber:EmergencyFundModels.kt:SafetyBufferTier.FAIR$3.0</ID>
     <ID>MagicNumber:EmergencyFundModels.kt:SafetyBufferTier.STRONG$6.0</ID>
-    <ID>MagicNumber:ExpenseListScreen.kt:0xFF43A047</ID>
-    <ID>MagicNumber:ExpenseListScreen.kt:0xFFE53935</ID>
     <ID>MagicNumber:ExpenseRepositoryImpl.kt:ExpenseRepositoryImpl$200</ID>
     <ID>MagicNumber:FiStressTestBottomSheet.kt:0.035f</ID>
     <ID>MagicNumber:FiStressTestBottomSheet.kt:0.03f</ID>
@@ -486,6 +517,7 @@
     <ID>MagicNumber:OpenAiResponsesProvider.kt:OpenAiResponsesProvider$500</ID>
     <ID>MagicNumber:OpenAiResponsesProvider.kt:OpenAiResponsesProvider$6</ID>
     <ID>MagicNumber:OpenRouterChatProvider.kt:OpenRouterChatProvider$100f</ID>
+    <ID>MagicNumber:OpenRouterChatProvider.kt:OpenRouterChatProvider$4</ID>
     <ID>MagicNumber:OpenRouterChatProvider.kt:OpenRouterChatProvider$400</ID>
     <ID>MagicNumber:OpenRouterChatProvider.kt:OpenRouterChatProvider$401</ID>
     <ID>MagicNumber:OpenRouterChatProvider.kt:OpenRouterChatProvider$402</ID>
@@ -524,9 +556,12 @@
     <ID>MagicNumber:PortfolioListComponents.kt:0xFF6366F1</ID>
     <ID>MagicNumber:PortfolioListComponents.kt:0xFF64748B</ID>
     <ID>MagicNumber:PortfolioListComponents.kt:0xFF8B5CF6</ID>
+    <ID>MagicNumber:PortfolioListComponents.kt:0xFFEAB308</ID>
     <ID>MagicNumber:PortfolioListComponents.kt:0xFFF59E0B</ID>
     <ID>MagicNumber:PortfolioListComponents.kt:100</ID>
     <ID>MagicNumber:PortfolioScreen.kt:100</ID>
+    <ID>MagicNumber:PortfolioViewModel.kt:PortfolioViewModel$10.0</ID>
+    <ID>MagicNumber:PortfolioViewModel.kt:PortfolioViewModel$365</ID>
     <ID>MagicNumber:ReSyncDryRunScreen.kt:0xFF10B981</ID>
     <ID>MagicNumber:ReSyncDryRunScreen.kt:0xFFF43F5E</ID>
     <ID>MagicNumber:ReSyncDryRunScreen.kt:1.75f</ID>
@@ -542,7 +577,16 @@
     <ID>MagicNumber:SearchScreen.kt:100</ID>
     <ID>MagicNumber:SettingsScreen.kt:0.8f</ID>
     <ID>MagicNumber:SettingsViewModel.kt:SettingsViewModel$1000</ID>
-    <ID>MagicNumber:SovereignAdvisorCard.kt:0xFF2E7D32</ID>
+    <ID>MagicNumber:SovereignAdvisorBottomSheet.kt:0xFF2E7D32</ID>
+    <ID>MagicNumber:SovereignAdvisorBottomSheet.kt:0xFF3E2723</ID>
+    <ID>MagicNumber:SovereignAdvisorBottomSheet.kt:0xFF4E342E</ID>
+    <ID>MagicNumber:SovereignAdvisorBottomSheet.kt:0xFFC62828</ID>
+    <ID>MagicNumber:SovereignAdvisorBottomSheet.kt:0xFFD84315</ID>
+    <ID>MagicNumber:SovereignAdvisorBottomSheet.kt:0xFFE65100</ID>
+    <ID>MagicNumber:SovereignAdvisorBottomSheet.kt:0xFFE8F5E9</ID>
+    <ID>MagicNumber:SovereignAdvisorBottomSheet.kt:0xFFFFB300</ID>
+    <ID>MagicNumber:SovereignAdvisorBottomSheet.kt:0xFFFFEBEE</ID>
+    <ID>MagicNumber:SovereignAdvisorBottomSheet.kt:0xFFFFF8E1</ID>
     <ID>MagicNumber:Sparkline.kt:6f</ID>
     <ID>MagicNumber:SuggestBudgetsUseCase.kt:SuggestBudgetsUseCase$3</ID>
     <ID>MagicNumber:SyncExchangeRatesWorker.kt:SyncExchangeRatesWorker$3</ID>
@@ -568,16 +612,13 @@
     <ID>MagicNumber:WealthForecastingScreen.kt:6f</ID>
     <ID>MagicNumber:WealthForecastingScreen.kt:8f</ID>
     <ID>MagicNumber:WealthForecastingViewModel.kt:WealthForecastingViewModel$12</ID>
-    <ID>MagicNumber:WealthScreen.kt:0xFF00BCD4</ID>
-    <ID>MagicNumber:WealthScreen.kt:0xFF2196F3</ID>
-    <ID>MagicNumber:WealthScreen.kt:0xFF4CAF50</ID>
-    <ID>MagicNumber:WealthScreen.kt:0xFF9C27B0</ID>
-    <ID>MagicNumber:WealthScreen.kt:0xFFFF9800</ID>
+    <ID>MagicNumber:WealthScreen.kt:0xFF06B6D4</ID>
+    <ID>MagicNumber:WealthScreen.kt:0xFF8B5CF6</ID>
     <ID>MagicNumber:WealthScreen.kt:3</ID>
     <ID>MagicNumber:WealthScreen.kt:5</ID>
     <ID>MagicNumber:WealthViewModel.kt:WealthViewModel$2000</ID>
     <ID>MatchingDeclarationName:AccountScreen.kt:AccountUpdateParams</ID>
-    <ID>MaxLineLength:AccountScreen.kt:Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move Down", modifier = Modifier.size(18.dp))</ID>
+    <ID>MaxLineLength:AccountScreen.kt:Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move Down", modifier = Modifier.size(20.dp))</ID>
     <ID>MaxLineLength:AccountScreen.kt:Row</ID>
     <ID>MaxLineLength:AccountScreen.kt:color = if (isIncrease) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error</ID>
     <ID>MaxLineLength:AccountStatsScreen.kt:color</ID>
@@ -619,19 +660,34 @@
     <ID>MaxLineLength:AddTransactionViewModel.kt:AddTransactionViewModel$recurrenceTotalOccurrences = if (isRecurring &amp;&amp; recurrenceEndType == "AFTER_COUNT") recurrenceTotalOccurrences.toIntOrNull() else null</ID>
     <ID>MaxLineLength:AddTransactionViewModel.kt:AddTransactionViewModel$val currentCatMatches = currentCats.any { it.id == categoryId &amp;&amp; (it.type == type || type == "TRANSFER") }</ID>
     <ID>MaxLineLength:AiChatScreen.kt:"Silakan masukkan API key OpenRouter Anda untuk mengaktifkan parsing receipt otomatis dan chat AI."</ID>
+    <ID>MaxLineLength:AiChatScreen.kt:.</ID>
     <ID>MaxLineLength:AiChatScreen.kt:Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))</ID>
+    <ID>MaxLineLength:AiChatScreen.kt:imageVector = if (isThinkingExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore</ID>
+    <ID>MaxLineLength:AiChatScreen.kt:page.render(bmp, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)</ID>
     <ID>MaxLineLength:AiChatScreen.kt:text = "$pendingCount belum dikonfirmasi (${CurrencyFormatter.formatAmount(totalPendingAmount, "IDR")})"</ID>
+    <ID>MaxLineLength:AiChatScreen.kt:text = if (state.isPdf) "Halaman 1 siap dianalisis AI" else "Struk siap dianalisis AI"</ID>
+    <ID>MaxLineLength:AiChatScreen.kt:text = state.selectedFileName ?: (if (state.isPdf) "Dokumen PDF" else "Gambar Struk")</ID>
+    <ID>MaxLineLength:AiChatScreen.kt:tint = if (state.selectedImageUri != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant</ID>
+    <ID>MaxLineLength:AiChatScreen.kt:val isPdf = mime.contains("pdf", ignoreCase = true) || uri.toString().endsWith(".pdf", ignoreCase = true)</ID>
     <ID>MaxLineLength:AiChatScreen.kt:val totalPendingAmount = message.proposals.filter { !it.isConfirmed &amp;&amp; !it.isRejected }.sumOf { it.amountInCents }</ID>
+    <ID>MaxLineLength:AiChatViewModel.kt:AiChatViewModel$_uiState.update { it.copy(selectedImageUri = null, selectedImageBase64 = null, selectedFileName = null, isPdf = false) }</ID>
     <ID>MaxLineLength:AiChatViewModel.kt:AiChatViewModel$errorMessage = "API key AI belum diset. Silakan konfigurasi API key OpenRouter Anda di Pengaturan &gt; AI Settings."</ID>
     <ID>MaxLineLength:AiChatViewModel.kt:AiChatViewModel$holding.category.isNotBlank() -&gt; holding.category.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }</ID>
     <ID>MaxLineLength:AiChatViewModel.kt:AiChatViewModel$private suspend</ID>
+    <ID>MaxLineLength:AiChatViewModel.kt:AiChatViewModel$put("expenseCoveragePercentage", JsonPrimitive(String.format(java.util.Locale.US, "%.1f%%", yield.expenseCoveragePercentage)))</ID>
+    <ID>MaxLineLength:AiChatViewModel.kt:AiChatViewModel$put("portfolioYieldOnCost", JsonPrimitive(String.format(java.util.Locale.US, "%.2f%%", yield.portfolioYieldOnCost * 100.0)))</ID>
     <ID>MaxLineLength:AiChatViewModel.kt:AiChatViewModel$text = "Halo! Saya Sans Finance Copilot. Anda bisa berdiskusi tentang strategi keuangan, budgeting, dana darurat, atau langsung menempel bukti transfer/struk belanja (QRIS, kupon SBN, e-commerce, gaji, dll) untuk pencatatan otomatis dengan konfirmasi Anda."</ID>
     <ID>MaxLineLength:AiChatViewModel.kt:AiChatViewModel$val</ID>
+    <ID>MaxLineLength:AiChatViewModel.kt:AiChatViewModel$val dateStr = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(it))</ID>
+    <ID>MaxLineLength:AiChatViewModel.kt:AiChatViewModel$val dateStr = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(tx.date))</ID>
     <ID>MaxLineLength:AiChatViewModel.kt:AiChatViewModel$val dateStr = java.text.SimpleDateFormat("dd MMM", java.util.Locale.getDefault()).format(java.util.Date(tx.date))</ID>
+    <ID>MaxLineLength:AiChatViewModel.kt:AiChatViewModel$val isPdf = mimeType.contains("pdf", ignoreCase = true) || uri.toString().endsWith(".pdf", ignoreCase = true)</ID>
     <ID>MaxLineLength:AiChatViewModel.kt:AiChatViewModel$val prevExpense = expenseRepository.getTotalAmountByTypeBetween(startOfPrevMonth, endOfPrevMonth, "EXPENSE").first() ?: 0L</ID>
     <ID>MaxLineLength:AiChatViewModel.kt:AiChatViewModel$val prevIncome = expenseRepository.getTotalAmountByTypeBetween(startOfPrevMonth, endOfPrevMonth, "INCOME").first() ?: 0L</ID>
     <ID>MaxLineLength:AiChatViewModel.kt:AiChatViewModel$val total3MExpense = expenseRepository.getTotalAmountByTypeBetween(startOf3M, startOfMonth, "EXPENSE").first() ?: 0L</ID>
+    <ID>MaxLineLength:AiChatViewModelTest.kt:AiChatViewModelTest$assertEquals("Menganalisis pengeluaran kopi... Kategori Food &amp; Dining teridentifikasi.", assistantMsg.thinkingText)</ID>
     <ID>MaxLineLength:AiJsonParser.kt:AiJsonParser$categories.firstOrNull { it.name.equals(classification.suggestedCategory, ignoreCase = true) }?.let { return it }</ID>
+    <ID>MaxLineLength:AiJsonParser.kt:AiJsonParser$if</ID>
     <ID>MaxLineLength:AiJsonParser.kt:AiJsonParser$s in listOf("belanja", "shopping", "groceries", "supermarket", "minimarket", "sembako", "baju", "pakaian", "elektronik", "pasar")</ID>
     <ID>MaxLineLength:AiJsonParser.kt:AiJsonParser$s in listOf("bonus", "thr", "insentif", "hadiah", "reward", "cashback", "reimburse", "reimbursement", "komisi")</ID>
     <ID>MaxLineLength:AiJsonParser.kt:AiJsonParser$s in listOf("hiburan", "entertainment", "rekreasi", "wisata", "liburan", "nonton", "bioskop", "cinema", "game", "gaming", "hobi")</ID>
@@ -640,6 +696,7 @@
     <ID>MaxLineLength:AiJsonParser.kt:AiJsonParser$s in listOf("makanan", "makan", "kuliner", "f&amp;b", "restoran", "resto", "warung", "warteg", "kafe", "cafe", "minuman", "kopi", "snack", "sarapan", "lunch", "dinner")</ID>
     <ID>MaxLineLength:AiJsonParser.kt:AiJsonParser$s in listOf("transportasi", "transport", "bensin", "bbm", "spbu", "pertamina", "shell", "ojol", "taksi", "ojek", "krl", "mrt", "tol", "parkir", "kendaraan")</ID>
     <ID>MaxLineLength:AiJsonParser.kt:AiJsonParser$s in listOf("utilitas", "utility", "tagihan", "listrik", "pln", "air", "pdam", "internet", "wifi", "pulsa", "paket data", "kos", "kontrakan", "sewa", "bpjs")</ID>
+    <ID>MaxLineLength:AiJsonParser.kt:AiJsonParser$val m = Regex("""(-?)\s*(?:Rp\.?|IDR)?\s*([0-9]{1,3}(?:[.,][0-9]{3})*(?:[.,][0-9]{2})?)""", RegexOption.IGNORE_CASE).find(col)</ID>
     <ID>MaxLineLength:AiSettingsScreen.kt:"AI bersifat opsional. Kunci API Anda disimpan terenkripsi di perangkat (Android KeyStore). Tidak ada data database lengkap yang diunggah ke cloud."</ID>
     <ID>MaxLineLength:AiSettingsScreen.kt:colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))</ID>
     <ID>MaxLineLength:AiSettingsScreen.kt:contentDescription = if (openRouterKeyVisible) "Sembunyikan" else "Tampilkan"</ID>
@@ -649,29 +706,36 @@
     <ID>MaxLineLength:AiSettingsScreen.kt:visualTransformation = if (openRouterKeyVisible) VisualTransformation.None else PasswordVisualTransformation()</ID>
     <ID>MaxLineLength:AiSettingsScreen.kt:{ Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }</ID>
     <ID>MaxLineLength:AppModule.kt:AppModule$fun</ID>
+    <ID>MaxLineLength:AssetClassTargetBottomSheet.kt:.</ID>
+    <ID>MaxLineLength:AssetClassTargetBottomSheet.kt:Text(item.assetClass, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)</ID>
+    <ID>MaxLineLength:AssetClassTargetBottomSheet.kt:activeTrackColor = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary</ID>
+    <ID>MaxLineLength:AssetClassTargetBottomSheet.kt:border = if (isOverBudget) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error) else null</ID>
+    <ID>MaxLineLength:AssetClassTargetBottomSheet.kt:color = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant</ID>
+    <ID>MaxLineLength:AssetClassTargetBottomSheet.kt:colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))</ID>
+    <ID>MaxLineLength:AssetClassTargetBottomSheet.kt:if (isOverBudget) "Total Exceeds 100% Budget" else "Save Target (${String.format(Locale.US, "%.1f", targetPercentage)}%)"</ID>
+    <ID>MaxLineLength:AssetClassTargetBottomSheet.kt:targetPercentage = (allTargetsMap[item.assetClass] ?: item.targetPercentage).coerceIn(0.0, 100.0)</ID>
+    <ID>MaxLineLength:AssetClassTargetBottomSheet.kt:text</ID>
+    <ID>MaxLineLength:AssetClassTargetBottomSheet.kt:text = "Target exceeds 100% budget by +${String.format(Locale.US, "%.1f", overflow)}%. Reduce this target or auto-balance others."</ID>
+    <ID>MaxLineLength:AssetClassTargetBottomSheet.kt:text = CurrencyFormatter.formatAmountCompact((target.currentAmount * 100).toLong(), currentCurrency)</ID>
+    <ID>MaxLineLength:AssetClassTargetBottomSheet.kt:thumbColor = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary</ID>
     <ID>MaxLineLength:BudgetScreen.kt:Text("Based on 3-mo avg:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)</ID>
     <ID>MaxLineLength:BudgetScreen.kt:Text("Committed Upcoming Bills", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)</ID>
     <ID>MaxLineLength:BudgetScreen.kt:Text("Daily Discretionary Allowance", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)</ID>
     <ID>MaxLineLength:BudgetScreen.kt:Text("Set ${com.sans.finance.core.util.CurrencyFormatter.formatAmountCompact(suggestion.suggestedAmount, currencyCode)}", fontSize = 10.sp)</ID>
     <ID>MaxLineLength:BudgetScreen.kt:Text(suggestion.categoryName, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)</ID>
+    <ID>MaxLineLength:BudgetScreen.kt:color = if (pacing.pacingPcnt &lt;= 1.0f) com.sans.finance.ui.theme.IncomeGreen else com.sans.finance.ui.theme.ExpenseRed</ID>
     <ID>MaxLineLength:BudgetScreen.kt:colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f))</ID>
     <ID>MaxLineLength:BudgetScreen.kt:if (pacing.pacingPcnt &lt;= 1.0f) "On Track (${(pacing.pacingPcnt * 100).toInt()}%)" else "Fast Pace (${(pacing.pacingPcnt * 100).toInt()}%)"</ID>
-    <ID>MaxLineLength:BudgetScreen.kt:if (pacing.pacingPcnt &lt;= 1.0f) Color(0xFF4CAF50).copy(alpha = 0.15f) else Color(0xFFF44336).copy(alpha = 0.15f)</ID>
+    <ID>MaxLineLength:BudgetScreen.kt:if (pacing.pacingPcnt &lt;= 1.0f) com.sans.finance.ui.theme.IncomeGreen.copy(alpha = 0.15f) else com.sans.finance.ui.theme.ExpenseRed.copy(alpha = 0.15f)</ID>
     <ID>MaxLineLength:CategorySettingsScreen.kt:text = { Text("Are you sure you want to delete category '${category.name}'? All expenses in this category will become uncategorized.") }</ID>
     <ID>MaxLineLength:CircularGauge.kt:text = if (isPrivacyModeEnabled) "••%" else "${String.format(java.util.Locale.US, "%.2f", progress * 100f)}%"</ID>
-    <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$private fun base64UrlEncode: String</ID>
+    <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$key.equals("CLOUDFLARE_R2", ignoreCase = true) || key.equals("R2", ignoreCase = true) -&gt; CloudStorageProvider.CLOUDFLARE_R2</ID>
     <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$return "AWS4-HMAC-SHA256 Credential=$accessKey/$credentialScope, SignedHeaders=$signedHeaders, Signature=$signature"</ID>
+    <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$return@withContext Result.failure(Exception("Sync Auth Token is not configured. Please set your token in Settings."))</ID>
     <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$return@withContext Result.failure(latestResult.exceptionOrNull() ?: Exception("R2 latest upload failed"))</ID>
+    <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$suspend</ID>
     <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$val amzFormat = SimpleDateFormat("yyyyMMdd'T'HHmmss'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }</ID>
     <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$val canonicalRequest = listOf(httpMethod, canonicalUri, "", canonicalHeaders, signedHeaders, payloadHash).joinToString("\n")</ID>
-    <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$val conn = (URL("https://storage.googleapis.com/storage/v1/b/$bucketName/o/snapshots%2Flatest.json?alt=media").openConnection() as HttpURLConnection).apply { setRequestProperty("Authorization", "Bearer $token") }</ID>
-    <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$val conn = (URL(GCS_OAUTH_TOKEN_URL).openConnection() as HttpURLConnection).apply { requestMethod = "POST"; doOutput = true; setRequestProperty("Content-Type", "application/x-www-form-urlencoded") }</ID>
-    <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$val conn = (url.openConnection() as HttpURLConnection).apply { requestMethod = "POST"; doOutput = true; setRequestProperty("Authorization", "Bearer $token"); setRequestProperty("Content-Type", "application/x-sqlite3"); setFixedLengthStreamingMode(dbFile.length()) }</ID>
-    <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$val der = pem.replace("-----BEGIN PRIVATE KEY-----", "").replace("-----END PRIVATE KEY-----", "").replace("\\s".toRegex(), "")</ID>
-    <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$val jsonString = context.assets.open("SA_cred_general.json").use { it.bufferedReader().use { r -&gt; r.readText() } }</ID>
-    <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$val params = "grant_type=" + URLEncoder.encode("urn:ietf:params:oauth:grant-type:jwt-bearer", "UTF-8") + "&amp;assertion=" + URLEncoder.encode(assertion, "UTF-8")</ID>
-    <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$val signature = Signature.getInstance("SHA256withRSA").apply { initSign(privateKey); update(stringToSign.toByteArray(Charsets.UTF_8)) }</ID>
-    <ID>MaxLineLength:CloudStorageSyncer.kt:CloudStorageSyncer$val url = URL("https://storage.googleapis.com/upload/storage/v1/b/$bucketName/o?uploadType=media&amp;name=" + URLEncoder.encode("db/sans_finance_latest.sqlite", "UTF-8"))</ID>
     <ID>MaxLineLength:CloudStorageSyncer.kt:CloudflareR2Config$get() = accountId.isNotBlank() &amp;&amp; accessKeyId.isNotBlank() &amp;&amp; secretAccessKey.isNotBlank() &amp;&amp; bucketName.isNotBlank()</ID>
     <ID>MaxLineLength:CloudSyncAndBackupWorker.kt:CloudSyncAndBackupWorker$val (date, items, exchangeRate) = com.sans.finance.data.util.CloudStorageSyncer.downloadLatestSnapshot(context, prefs)</ID>
     <ID>MaxLineLength:CloudSyncAndBackupWorker.kt:CloudSyncAndBackupWorker$val uploadResult = com.sans.finance.data.util.CloudStorageSyncer.uploadDatabaseBackup(context, snapshotFile, prefs)</ID>
@@ -681,7 +745,7 @@
     <ID>MaxLineLength:DashboardItems.kt:color = if (budget.progress &gt; 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary</ID>
     <ID>MaxLineLength:DashboardItems.kt:color = if (budget.spentAmount &gt; budget.budgetAmount) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary</ID>
     <ID>MaxLineLength:DashboardScreen.kt:contentDescription = if (state.isPrivacyModeEnabled) "Privacy Mode Enabled" else "Privacy Mode Disabled"</ID>
-    <ID>MaxLineLength:DashboardScreen.kt:haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)</ID>
+    <ID>MaxLineLength:DashboardScreen.kt:haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)</ID>
     <ID>MaxLineLength:DashboardScreen.kt:imageVector = if (state.isPrivacyModeEnabled) Icons.Default.Lock else Icons.Default.LockOpen</ID>
     <ID>MaxLineLength:DashboardScreen.kt:tint = if (state.isPrivacyModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant</ID>
     <ID>MaxLineLength:DashboardViewModel.kt:DashboardViewModel$DashboardGoal(name = goal.name, progress = (currentAmountIdr / goal.targetAmount).toFloat().coerceIn(0f, 1f))</ID>
@@ -703,6 +767,7 @@
     <ID>MaxLineLength:DataManagementScreen.kt:containerColor = if (isStale) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface</ID>
     <ID>MaxLineLength:DataManagementScreen.kt:if (isStale) MaterialTheme.colorScheme.error.copy(alpha = 0.3f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)</ID>
     <ID>MaxLineLength:DataStoreUserPreferencesRepository.kt:DataStoreUserPreferencesRepository$override suspend</ID>
+    <ID>MaxLineLength:DataStoreUserPreferencesRepository.kt:DataStoreUserPreferencesRepository$syncGatewayUrl = preferences[PreferencesKeys.SYNC_GATEWAY_URL] ?: "https://gmail-expenses-worker-886416340889.us-central1.run.app"</ID>
     <ID>MaxLineLength:DatabaseMigrations.kt:DatabaseMigrations.&lt;no name provided&gt;$"DELETE FROM expenses WHERE id &gt;= $oldOffset AND (id - $oldOffset) IN (SELECT id FROM installment_items)"</ID>
     <ID>MaxLineLength:DatabaseMigrations.kt:DatabaseMigrations.&lt;no name provided&gt;$db.execSQL("CREATE INDEX IF NOT EXISTS `index_expenses_date_type_is_installment` ON `expenses` (`date`, `type`, `is_installment`)")</ID>
     <ID>MaxLineLength:DatabaseMigrations.kt:DatabaseMigrations.&lt;no name provided&gt;$db.execSQL("CREATE INDEX IF NOT EXISTS `index_expenses_is_recurring_date` ON `expenses` (`is_recurring`, `date`)")</ID>
@@ -781,30 +846,20 @@
     <ID>MaxLineLength:GetWealthMetricsUseCaseTest.kt:GetWealthMetricsUseCaseTest$assertEquals(120000L, metrics.monthlyExpense)</ID>
     <ID>MaxLineLength:GlobalBudgetCard.kt:(if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary)</ID>
     <ID>MaxLineLength:GlobalBudgetCard.kt:imageVector = if (spendingVelocity &gt; 1.1f) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingFlat</ID>
-    <ID>MaxLineLength:GoalScreen.kt:Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)</ID>
-    <ID>MaxLineLength:GoalScreen.kt:IconButton</ID>
+    <ID>MaxLineLength:GoalScreen.kt:Icon(Icons.Default.Edit, contentDescription = "Edit Goal", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)</ID>
     <ID>MaxLineLength:GoalScreen.kt:Text("CURRENT", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)</ID>
     <ID>MaxLineLength:GoalScreen.kt:Text("TARGET", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)</ID>
     <ID>MaxLineLength:GoalScreen.kt:border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))</ID>
     <ID>MaxLineLength:GoalScreen.kt:color = if (progress &gt;= 1f) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary</ID>
     <ID>MaxLineLength:GoalScreen.kt:keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)</ID>
+    <ID>MaxLineLength:GoalScreen.kt:modifier = Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f), CircleShape)</ID>
     <ID>MaxLineLength:GoalViewModel.kt:GoalViewModel$val assetClasses = (latestHoldings.map { it.assetClass } + defaultAssetClasses).filter { it.isNotBlank() }.distinct().sorted()</ID>
     <ID>MaxLineLength:GoalViewModelTest.kt:GoalViewModelTest$Goal(id = 1, name = "Total Portfolio Goal", targetAmount = 200_000_000, targetType = "TOTAL", targetName = null, currency = "IDR")</ID>
     <ID>MaxLineLength:GoalViewModelTest.kt:GoalViewModelTest$Goal(id = 2, name = "Crypto Goal", targetAmount = 100_000_000, targetType = "ASSET_CLASS", targetName = "Crypto", currency = "IDR")</ID>
     <ID>MaxLineLength:GoalViewModelTest.kt:GoalViewModelTest$Goal(id = 3, name = "Stock Goal", targetAmount = 5_000_000, targetType = "CATEGORY", targetName = "Indonesian Equities", currency = "IDR")</ID>
-    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$patterns = listOf("bpjs".toRegex(RegexOption.IGNORE_CASE), "bpjs kesehatan".toRegex(RegexOption.IGNORE_CASE), "bpjs ketenagakerjaan".toRegex(RegexOption.IGNORE_CASE))</ID>
-    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$patterns = listOf("cinema xxi".toRegex(RegexOption.IGNORE_CASE), "cgv".toRegex(RegexOption.IGNORE_CASE), "cinepolis".toRegex(RegexOption.IGNORE_CASE), "steam".toRegex(RegexOption.IGNORE_CASE), "playstation".toRegex(RegexOption.IGNORE_CASE), "nintendo".toRegex(RegexOption.IGNORE_CASE))</ID>
-    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$patterns = listOf("dividen".toRegex(RegexOption.IGNORE_CASE), "dividend".toRegex(RegexOption.IGNORE_CASE), "kupon sbn".toRegex(RegexOption.IGNORE_CASE), "imbal hasil".toRegex(RegexOption.IGNORE_CASE), "bunga deposito".toRegex(RegexOption.IGNORE_CASE))</ID>
-    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$patterns = listOf("gaji".toRegex(RegexOption.IGNORE_CASE), "payroll".toRegex(RegexOption.IGNORE_CASE), "salary".toRegex(RegexOption.IGNORE_CASE), "upah".toRegex(RegexOption.IGNORE_CASE))</ID>
-    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$patterns = listOf("gofood".toRegex(RegexOption.IGNORE_CASE), "grabfood".toRegex(RegexOption.IGNORE_CASE), "shopeefood".toRegex(RegexOption.IGNORE_CASE))</ID>
-    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$patterns = listOf("goride".toRegex(RegexOption.IGNORE_CASE), "gocar".toRegex(RegexOption.IGNORE_CASE), "grabbike".toRegex(RegexOption.IGNORE_CASE), "grabcar".toRegex(RegexOption.IGNORE_CASE), "bluebird".toRegex(RegexOption.IGNORE_CASE), "maxim".toRegex(RegexOption.IGNORE_CASE))</ID>
-    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$patterns = listOf("indomaret".toRegex(RegexOption.IGNORE_CASE), "alfamart".toRegex(RegexOption.IGNORE_CASE), "alfamidi".toRegex(RegexOption.IGNORE_CASE), "superindo".toRegex(RegexOption.IGNORE_CASE), "super indo".toRegex(RegexOption.IGNORE_CASE), "hypermart".toRegex(RegexOption.IGNORE_CASE), "grandlucky".toRegex(RegexOption.IGNORE_CASE), "sayurbox".toRegex(RegexOption.IGNORE_CASE), "astro".toRegex(RegexOption.IGNORE_CASE))</ID>
-    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$patterns = listOf("krl".toRegex(RegexOption.IGNORE_CASE), "mrt".toRegex(RegexOption.IGNORE_CASE), "lrt".toRegex(RegexOption.IGNORE_CASE), "transjakarta".toRegex(RegexOption.IGNORE_CASE), "commuter".toRegex(RegexOption.IGNORE_CASE), "kereta api".toRegex(RegexOption.IGNORE_CASE), "kai".toRegex(RegexOption.IGNORE_CASE))</ID>
-    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$patterns = listOf("mcdonald".toRegex(RegexOption.IGNORE_CASE), "mcd".toRegex(RegexOption.IGNORE_CASE), "kfc".toRegex(RegexOption.IGNORE_CASE), "burger king".toRegex(RegexOption.IGNORE_CASE), "hokben".toRegex(RegexOption.IGNORE_CASE), "solaria".toRegex(RegexOption.IGNORE_CASE))</ID>
-    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$patterns = listOf("netflix".toRegex(RegexOption.IGNORE_CASE), "spotify".toRegex(RegexOption.IGNORE_CASE), "youtube premium".toRegex(RegexOption.IGNORE_CASE), "disney".toRegex(RegexOption.IGNORE_CASE), "app store".toRegex(RegexOption.IGNORE_CASE), "google play".toRegex(RegexOption.IGNORE_CASE), "icloud".toRegex(RegexOption.IGNORE_CASE), "openai".toRegex(RegexOption.IGNORE_CASE), "chatgpt".toRegex(RegexOption.IGNORE_CASE), "claude".toRegex(RegexOption.IGNORE_CASE))</ID>
-    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$patterns = listOf("pertamina".toRegex(RegexOption.IGNORE_CASE), "spbu".toRegex(RegexOption.IGNORE_CASE), "shell".toRegex(RegexOption.IGNORE_CASE), "bp-akr".toRegex(RegexOption.IGNORE_CASE))</ID>
-    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$patterns = listOf("starbucks".toRegex(RegexOption.IGNORE_CASE), "kopi kenangan".toRegex(RegexOption.IGNORE_CASE), "fore coffee".toRegex(RegexOption.IGNORE_CASE), "tomoro".toRegex(RegexOption.IGNORE_CASE), "janji jiwa".toRegex(RegexOption.IGNORE_CASE), "mixue".toRegex(RegexOption.IGNORE_CASE))</ID>
-    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$patterns = listOf("telkomsel".toRegex(RegexOption.IGNORE_CASE), "indihome".toRegex(RegexOption.IGNORE_CASE), "myxl".toRegex(RegexOption.IGNORE_CASE), "xl axiata".toRegex(RegexOption.IGNORE_CASE), "by.u".toRegex(RegexOption.IGNORE_CASE), "tri".toRegex(RegexOption.IGNORE_CASE), "smartfren".toRegex(RegexOption.IGNORE_CASE), "biznet".toRegex(RegexOption.IGNORE_CASE), "first media".toRegex(RegexOption.IGNORE_CASE))</ID>
+    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$keywords = listOf("indomaret", "alfamart", "alfamidi", "superindo", "super indo", "hypermart", "grandlucky", "sayurbox", "astro")</ID>
+    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$keywords = listOf("netflix", "spotify", "youtube premium", "disney", "app store", "google play", "icloud", "openai", "chatgpt", "claude")</ID>
+    <ID>MaxLineLength:IndonesianMerchantClassifier.kt:IndonesianMerchantClassifier$keywords = listOf("telkomsel", "indihome", "myxl", "xl axiata", "by.u", "tri", "smartfren", "biznet", "first media")</ID>
     <ID>MaxLineLength:InstallmentDao.kt:InstallmentDao$@Query("SELECT SUM(amount) FROM installment_items WHERE status = 'Paid' AND due_date &gt;= :since AND due_date &lt; :until")</ID>
     <ID>MaxLineLength:InstallmentDao.kt:InstallmentDao$@Query("SELECT ii.id as id, ii.due_date as date, e.title as title, ii.amount as amount, e.category_id as category_id, e.details as details, e.id as expense_id, e.account_id as account_id, ii.month_number as month_number, i.duration_months as total_months, ii.status as status, e.currency as currency, c.name as category_name, c.icon as category_icon, (SELECT GROUP_CONCAT(t.name) FROM tags t JOIN expense_tag_ref etr ON t.id = etr.tagId WHERE etr.expenseId = e.id) as tags_list FROM installment_items ii JOIN installments i ON ii.installment_id = i.id JOIN expenses e ON i.expense_id = e.id JOIN categories c ON e.category_id = c.id WHERE ii.due_date &gt;= :since AND ii.due_date &lt; :until")</ID>
     <ID>MaxLineLength:InstallmentDao.kt:InstallmentDao$fun</ID>
@@ -861,13 +916,19 @@
     <ID>MaxLineLength:OpenAiResponsesProvider.kt:OpenAiResponsesProvider$sb.append("- Total Net Worth: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.netWorth, baseCurrency)}\n")</ID>
     <ID>MaxLineLength:OpenAiResponsesProvider.kt:OpenAiResponsesProvider$sb.append("\n[3-Month Rolling Baseline Average Expense: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.threeMonthAverageExpense, baseCurrency)}/month]\n")</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$// If 400 occurred and mentions reasoning, unrecognized parameters, or response_format, automatically retry without it</ID>
+    <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$// SSE streaming client: HTTP/1.1 and pingInterval prevent connection resets from intermediate edge proxies during long vision inference</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$Log.w("OpenRouter", "Model $model rejected parameters (strip reasoning=$shouldStripReasoning, response_format=$shouldStripResponseFormat); retrying...")</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$code == 401 -&gt; "API key OpenRouter tidak valid atau belum diisi. Periksa kembali API key Anda di Pengaturan AI."</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$code == 402 -&gt; "Saldo OpenRouter tidak mencukupi (insufficient credits). Silakan isi saldo atau gunakan model gratis."</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$code == 404 -&gt; "Model '$model' tidak ditemukan di OpenRouter. Silakan pilih model lain dari daftar rekomendasi."</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$code == 429 -&gt; "Rate limit OpenRouter tercapai atau server model sedang penuh. Tunggu beberapa saat dan coba lagi."</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$if</ID>
-    <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$put("content", JsonPrimitive("Understood. I have your up-to-date financial context and accounts."))</ID>
+    <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$put("description", JsonPrimitive("Get active installments, debt commitments, monthly obligations, and debt liberation schedule."))</ID>
+    <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$put("description", JsonPrimitive("Get passive income breakdown from government bonds (SBN ORI/SR/PBS/ST/FR), dividends, and expense coverage."))</ID>
+    <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$put("description", JsonPrimitive("Get real-time safe-to-spend allowance, daily discretionary budget pacing, and cycle days remaining."))</ID>
+    <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$put("description", JsonPrimitive("Nominal amount in standard currency units (e.g. 50000 for Rp 50.000)"))</ID>
+    <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$put("description", JsonPrimitive("Propose one or more structured transactions (expense, income, transfer) detected in receipts, QRIS, transfers, bills, or messages for user confirmation before persisting."))</ID>
+    <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$put("description", JsonPrimitive("Query user's historical expense records from SQLite database by merchant keyword, category, or time range."))</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$sb.append(" * $assetClass: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(amount, baseCurrency)} (${String.format(java.util.Locale.US, "%.1f", pct)}%)\n")</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$sb.append(" * $categoryName: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(amount, baseCurrency)}\n")</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$sb.append(" * $holdingName: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(amount, baseCurrency)}\n")</ID>
@@ -888,10 +949,15 @@
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$sb.append("- Total Net Worth: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.netWorth, baseCurrency)}\n")</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$sb.append("\n[3-Month Rolling Baseline Average Expense: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(snapshot.threeMonthAverageExpense, baseCurrency)}/month]\n")</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$throw Exception("Waktu tunggu habis (timeout 90 detik). Model '$model' terlalu lama merespons. Jika menggunakan model gratis, antrean server sedang padat. Disarankan gunakan model cepat seperti 'google/gemini-2.0-flash-001' atau 'openai/gpt-4.1-mini'.")</ID>
+    <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$trySend(StreamEvent.Done(fullText = accumulatedProse.toString(), toolCalls = completedToolCalls, proposals = proposals))</ID>
+    <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$trySend(StreamEvent.Done(fullText = accumulatedProse.toString(), toolCalls = emptyList(), proposals = fallbackProposals.proposals))</ID>
+    <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$trySend(StreamEvent.Error("Koneksi ke AI terputus (${e.localizedMessage ?: e.message}). Antrean model gratis mungkin sedang padat. Silakan coba kirim ulang."))</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$val content = messageObj?.get("content")?.let { element -&gt; runCatching { element.jsonPrimitive.content }.getOrNull() }</ID>
+    <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$val fallbackProposals = AiJsonParser.parseAssistantResponse(accumulatedProse.toString(), accounts, categories)</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$val reasoning = messageObj?.get("reasoning")?.let { element -&gt; runCatching { element.jsonPrimitive.content }.getOrNull() }</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$val shouldStripReasoning = (raw.contains("reasoning", ignoreCase = true) || raw.contains("unrecognized", ignoreCase = true)) &amp;&amp; bodyJson.containsKey("reasoning")</ID>
     <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$val shouldStripResponseFormat = raw.contains("response_format", ignoreCase = true) &amp;&amp; bodyJson.containsKey("response_format")</ID>
+    <ID>MaxLineLength:OpenRouterChatProvider.kt:OpenRouterChatProvider$val stripReasoning = errorBody.contains("reasoning", ignoreCase = true) || errorBody.contains("unrecognized", ignoreCase = true)</ID>
     <ID>MaxLineLength:OpenRouterModelPickerBottomSheet.kt:Icon(Icons.Default.Done, contentDescription = null, tint = MaterialTheme.colorScheme.primary)</ID>
     <ID>MaxLineLength:OpenRouterModelPickerBottomSheet.kt:Icon(Icons.Default.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary)</ID>
     <ID>MaxLineLength:PortfolioBenchmarkCard.kt:"Benchmark Alpha comparison (vs ${selectedBenchmark.displayName}) requires at least 2 snapshot dates over time. Sync future snapshots to measure your portfolio outperformance trajectory."</ID>
@@ -923,7 +989,7 @@
     <ID>MaxLineLength:PortfolioGuideBottomSheet.kt:colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))</ID>
     <ID>MaxLineLength:PortfolioGuideBottomSheet.kt:description = "Anda juga bisa mengimpor dan mengekspor file portofolio (CSV atau JSON) kapan saja melalui menu Settings &gt; Data Management &gt; Portfolio."</ID>
     <ID>MaxLineLength:PortfolioGuideBottomSheet.kt:description = "Simpan file .csv atau .json di memori HP / Google Drive, lalu tekan tombol pilih file di bawah atau via menu titik tiga di layar Portfolio."</ID>
-    <ID>MaxLineLength:PortfolioGuideBottomSheet.kt:description = "Unggah file snapshot ke Cloudflare R2 atau GCS Anda sebagai 'snapshots/latest.json'. Konfigurasi di Settings &gt; Cloud Storage, lalu tekan tombol 'Sync from Cloud'."</ID>
+    <ID>MaxLineLength:PortfolioGuideBottomSheet.kt:description = "Unggah file snapshot ke Cloudflare R2 atau Gateway Anda sebagai 'portfolio/latest_snapshot.json'. Konfigurasi di Settings &gt; Cloud Storage, lalu tekan tombol 'Sync from Cloud'."</ID>
     <ID>MaxLineLength:PortfolioGuideBottomSheet.kt:style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)</ID>
     <ID>MaxLineLength:PortfolioGuideBottomSheet.kt:text = "1. Buka Settings &gt; Cloud Storage di aplikasi ini.\n2. Masukkan R2 Account ID, Bucket, Access Key, dan Secret Key yang sama dengan .env workstation.\n3. Kembali ke Portfolio screen dan tekan tombol 'Sync from Cloud'. Data snapshot dan Sovereign Advisor AI akan otomatis tersinkronisasi!"</ID>
     <ID>MaxLineLength:PortfolioGuideBottomSheet.kt:text = "Ya! Aplikasi mendukung file CSV (paling cocok untuk Excel &amp; Google Sheets) maupun file JSON (snapshot terstruktur). Sans Finance menerapkan prinsip zero-credential: tidak pernah menyimpan password broker atau token rahasia perbankan Anda di HP demi privasi mutlak."</ID>
@@ -941,9 +1007,11 @@
     <ID>MaxLineLength:PortfolioHealthView.kt:onValueChange = { depositAmountIdr = ((it / 500_000f).toInt() * 500_000L).coerceIn(1_000_000L, 20_000_000L) }</ID>
     <ID>MaxLineLength:PortfolioHealthView.kt:text = "Target: ${String.format(java.util.Locale.US, "%.2f%%", item.targetPercentage)} (Current: ${String.format(java.util.Locale.US, "%.2f%%", item.currentPercentage)})"</ID>
     <ID>MaxLineLength:PortfolioHealthView.kt:val</ID>
+    <ID>MaxLineLength:PortfolioHealthView.kt:var depositAmountIdr by androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(5_000_000L) }</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:"$pnlSign${CurrencyFormatter.formatAmountCompact((totalGain * 100).toLong(), currentCurrency)} (${String.format(Locale.US, "%+.2f%%", valuedHolding.totalGainPercentage)})"</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:"FX Gain: $fxSign${CurrencyFormatter.formatAmountCompact((valuedHolding.fxGainInBase * 100).toLong(), currentCurrency)}"</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:"Price Gain: $priceSign${CurrencyFormatter.formatAmountCompact((valuedHolding.priceGainInBase * 100).toLong(), currentCurrency)}"</ID>
+    <ID>MaxLineLength:PortfolioListComponents.kt:"Set a custom display alias for '${holding.accountName?.takeIf { it.isNotBlank() } ?: holding.account}'. Leave empty to reset."</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:Text("Account / Custodian", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:Text("Annual Payout", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:Text("Category", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)</ID>
@@ -955,6 +1023,8 @@
     <ID>MaxLineLength:PortfolioListComponents.kt:Text("Total Return", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:Text(displayAccountName, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:c.contains("cash") || c.contains("bank") || c.contains("wallet") -&gt; Icons.Default.AccountBalanceWallet to Color(0xFF10B981)</ID>
+    <ID>MaxLineLength:PortfolioListComponents.kt:c.contains("commodity") || c.contains("gold") || c.contains("emas") -&gt; Icons.Default.PieChart to Color(0xFFEAB308)</ID>
+    <ID>MaxLineLength:PortfolioListComponents.kt:c.contains("equity") || c.contains("stock") || c.contains("saham") -&gt; Icons.AutoMirrored.Filled.ShowChart to Color(0xFF3B82F6)</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:c.contains("fixed") || c.contains("p2p") || c.contains("bond") || c.contains("sbn") -&gt; Icons.Default.Shield to Color(0xFF06B6D4)</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:color = if (valuedHolding.fxGainInBase &gt;= 0) Color(0xFF10B981) else MaterialTheme.colorScheme.error</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:color = if (valuedHolding.priceGainInBase &gt;= 0) Color(0xFF10B981) else MaterialTheme.colorScheme.error</ID>
@@ -964,19 +1034,19 @@
     <ID>MaxLineLength:PortfolioListComponents.kt:if (isPrivacyModeEnabled) "••••" else "${String.format(Locale.US, "%,.2f", holding.price)} ${holding.currency}"</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:if (isPrivacyModeEnabled) "••••" else String.format(Locale.US, "%,.4f", holding.quantity).trimEnd('0').trimEnd('.')</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:if (it.holding.id != 0L) it.holding.id.toString() else "${it.holding.source}_${it.holding.asset}_${it.holding.accountKey}"</ID>
-    <ID>MaxLineLength:PortfolioListComponents.kt:if (viewMode == PortfolioViewMode.FLAT) Icons.AutoMirrored.Filled.List else Icons.Default.Category</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:s.contains("cash") || s.contains("bank") || s.contains("p2p") || s.contains("account") || s.contains("sans") -&gt; Color(0xFF10B981)</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:text = "FX $fxSign${CurrencyFormatter.formatAmountCompact((fxGain * 100).toLong(), currentCurrency)}"</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:text = if (isPrivacyModeEnabled) "••••" else "${CurrencyFormatter.formatAmountCompact((originalValue * 100).toLong(), holding.currency)} (${holding.currency})"</ID>
+    <ID>MaxLineLength:PortfolioListComponents.kt:title = { Text("Account Alias", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:val</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:val lookupKey = if (holding.id != 0L) holding.id.toString() else "${holding.source}_${holding.asset}_${holding.accountKey}"</ID>
     <ID>MaxLineLength:PortfolioListComponents.kt:}</ID>
+    <ID>MaxLineLength:PortfolioRepositoryImpl.kt:PortfolioRepositoryImpl$override suspend</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:"Dapatkan evaluasi diversifikasi, risiko, dan rebalancing portofolio otomatis."</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:"FX: 1 ${summary.currency} = ${String.format(Locale.US, "%,.2f", summary.currentFxRate)} $baseCurrency"</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:.</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:Text("•", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)</ID>
-    <ID>MaxLineLength:PortfolioScreen.kt:color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:color = if (state.chartMode == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:color = if (state.chartMode == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)</ID>
@@ -992,6 +1062,8 @@
     <ID>MaxLineLength:PortfolioScreen.kt:if (state.chartMode == 1) MaterialTheme.colorScheme.primary else Color.Transparent</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:imageVector = if (diff &gt;= 0) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:imageVector = if (state.totalGainInBase &gt;= 0) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown</ID>
+    <ID>MaxLineLength:PortfolioScreen.kt:index == 0 -&gt; androidx.compose.foundation.shape.RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 4.dp, bottomEnd = 4.dp)</ID>
+    <ID>MaxLineLength:PortfolioScreen.kt:index == filteredHoldings.size - 1 -&gt; androidx.compose.foundation.shape.RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 24.dp, bottomEnd = 24.dp)</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:list.maxOfOrNull { getValued(it)?.totalGainPercentage ?: Double.NEGATIVE_INFINITY } ?: Double.NEGATIVE_INFINITY</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:list.minOfOrNull { getValued(it)?.totalGainPercentage ?: Double.POSITIVE_INFINITY } ?: Double.POSITIVE_INFINITY</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:text = "$sign${com.sans.finance.core.util.CurrencyFormatter.formatAmountCompact((diff * 100).toLong(), state.currentCurrency)} (${String.format(Locale.US, "%+.2f%%", percent)}) vs last snapshot"</ID>
@@ -1002,31 +1074,47 @@
     <ID>MaxLineLength:PortfolioScreen.kt:tint = if (state.selectedDateIndex &lt; state.snapshotDates.size - 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:tint = if (state.selectedDateIndex &gt; 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:val activeHistory = if (state.chartMode == 0 &amp;&amp; state.netWorthHistory.isNotEmpty()) state.netWorthHistory else state.valueHistory</ID>
-    <ID>MaxLineLength:PortfolioScreen.kt:val categoryTotal = holdings.sumOf { getValued(it)?.currentValueInBase ?: it.valueIdr }</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:val fxColor = if (state.totalFxGainInBase &gt;= 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error</ID>
-    <ID>MaxLineLength:PortfolioScreen.kt:val fxColor = if (summary.fxGainInBase &gt;= 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error</ID>
+    <ID>MaxLineLength:PortfolioScreen.kt:val fxColor = if (state.totalFxGainInBase &gt;= 0) com.sans.finance.ui.theme.IncomeGreen else MaterialTheme.colorScheme.error</ID>
+    <ID>MaxLineLength:PortfolioScreen.kt:val fxColor = if (summary.fxGainInBase &gt;= 0) com.sans.finance.ui.theme.IncomeGreen else MaterialTheme.colorScheme.error</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:val gainColor = if (state.totalGainInBase &gt;= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error</ID>
+    <ID>MaxLineLength:PortfolioScreen.kt:val groupTotal = holdings.sumOf { getValued(it)?.currentValueInBase ?: it.valueIdr }</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:val key = if (holding.id != 0L) holding.id.toString() else "${holding.source}_${holding.category}_${holding.asset}_${holding.accountKey}"</ID>
     <ID>MaxLineLength:PortfolioScreen.kt:val priceColor = if (state.totalPriceGainInBase &gt;= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error</ID>
-    <ID>MaxLineLength:PortfolioScreen.kt:viewMode = if (viewMode == PortfolioViewMode.GROUPED) PortfolioViewMode.FLAT else PortfolioViewMode.GROUPED</ID>
     <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioScreenState$val selectedBenchmark: com.sans.finance.domain.model.BenchmarkType = com.sans.finance.domain.model.BenchmarkType.SP500</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$"Automate Calendar Reminder: Set alert for 7 days prior to maturity to prevent cash sitting idle in checking."</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$"Equities Rebalance: Deploy remaining Rp ${String.format(java.util.Locale.US, "%,.0f", eqPortion)} into SRI-KEHATI / BBCA to automatically eliminate equity drift in 1 transaction."</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$"Pre-commit Rollover: On $matDateStr, allocate Rp ${String.format(java.util.Locale.US, "%,.0f", sbnPortion)} into next sovereign Sukuk/SBN (e.g. ST/SR) to lock in ~6.4%+ yield."</ID>
     <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$.</ID>
     <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$_aiState.value = PortfolioAiState(isAnalyzing = false, streamingText = "", analysis = parsed)</ID>
-    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$_sovereignAdvisor.value = parser.decodeFromString(com.sans.finance.data.util.SovereignAdvisorJson.serializer(), file.readText())</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$actionSummary = cached?.actionSummary ?: "Runway is Fortress (${String.format(java.util.Locale.US, "%.1f", runwayMonths)}m). Deploy excess dry powder into underweight Equities (SRI-KEHATI/BBCA) while keeping sovereign Sukuk compounding."</ID>
     <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$assetAllocation = currentState.assetClassTotals.map { it.assetClass to (if (currentState.totalValueInBase &gt; 0) it.totalIdr / currentState.totalValueInBase * 100.0 else 0.0) }</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$calmnessDirective = "Rp ${String.format(java.util.Locale.US, "%,.0f", lockedVaultIdr)} (${String.format(java.util.Locale.US, "%.1f", lockedVaultPct)}%) is locked in sovereign Sukuk compounding autonomously. Do not check or touch daily."</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$directives.add("Consolidate Stock Brokers: Sweep idle cash from $names into your primary active broker to eliminate dual RDN checking.")</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$directives.add("Liquidate Micro Stocks: Sell $names (&lt;1% each) and consolidate proceeds into BBCA or Sri Kehati Index Fund.")</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$directives.add("Sweep Crypto Dust: Convert or bridge $names into primary ETH/BTC or cash out to delete unused wallet apps.")</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$equitiesVerdicts = if (stockVerdicts.isNotEmpty()) stockVerdicts else (cached?.equitiesVerdicts ?: emptyList())</ID>
     <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$file.writeText(kotlinx.serialization.json.Json.encodeToString(com.sans.finance.data.util.SovereignAdvisorJson.serializer(), advisor))</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$file.writeText(kotlinx.serialization.json.Json.encodeToString(com.sans.finance.data.util.SovereignAdvisorJson.serializer(), result.advisor))</ID>
     <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$goals = currentState.goals.map { "${it.goal.name}: ${String.format(java.util.Locale.US, "%.1f%%", (it.currentAmount / it.goal.targetAmount * 100))}" }</ID>
     <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$healthStatus = currentState.healthList.map { "${it.assetClass}: ${it.status} (target: ${it.targetPercentage}%, aktual: ${String.format(java.util.Locale.US, "%.1f", it.currentPercentage)}%)" }</ID>
     <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$history.find { it.snapshot_date == previousDate }?.let { if (baseRate &gt; 0) it.totalIdr / baseRate else it.totalIdr }</ID>
-    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$kotlinx.serialization.json.Json { ignoreUnknownKeys = true }.decodeFromString&lt;List&lt;com.sans.finance.data.ai.PortfolioAnalysisInsight&gt;&gt;(insightsJson.toString())</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$oneStepAction = "Deposit Rp ${String.format(java.util.Locale.US, "%,.0f", depositAmount)} into $priorityClass (Stockbit / App). $underPctStr Zero debate."</ID>
     <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$private val getPortfolioBenchmarkComparisonUseCase: com.sans.finance.domain.usecase.GetPortfolioBenchmarkComparisonUseCase</ID>
     <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val</ID>
     <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val (date, items, exchangeRate, advisor) = com.sans.finance.data.util.CloudStorageSyncer.downloadLatestSnapshot(context, prefs)</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val clutterRating = if (clutterScore &gt;= 80) "Clean" else if (clutterScore &gt;= 60) "Moderate Clutter" else "High Cognitive Load"</ID>
     <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val convertedHistory = history.map { it.copy(totalIdr = if (baseRate &gt; 0) it.totalIdr / baseRate else it.totalIdr) }</ID>
-    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val obj = kotlinx.serialization.json.Json.parseToJsonElement(clean) as? kotlinx.serialization.json.JsonObject ?: return null</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val cryptoDust = dustHoldings.filter { it.category.contains("Spot", ignoreCase = true) || it.assetClass == "Crypto" }</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val names = cryptoDust.joinToString(", ") { "${it.asset} (Rp ${String.format(java.util.Locale.US, "%,.0f", it.valueIdr)})" }</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val names = rdnDust.joinToString(", ") { "${it.asset} (Rp ${String.format(java.util.Locale.US, "%,.0f", it.valueIdr)})" }</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val names = stockDust.joinToString(", ") { "${it.asset} (Rp ${String.format(java.util.Locale.US, "%,.0f", it.valueIdr)})" }</ID>
     <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val provider = aiProviderFactory.create() ?: throw Exception("AI Provider belum dikonfigurasi. Atur API key di Pengaturan &gt; AI Settings.")</ID>
-    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val providerLabel = if (provider == com.sans.finance.data.util.CloudStorageProvider.CLOUDFLARE_R2) "Cloudflare R2" else "GCS"</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val providerLabel = if (provider == com.sans.finance.data.util.CloudStorageProvider.CLOUDFLARE_R2) "Cloudflare R2" else "Sync Gateway"</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val rdnDust = dustHoldings.filter { it.asset.contains("RDN", ignoreCase = true) || it.source.contains("KSEI", ignoreCase = true) }</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val stockDust = dustHoldings.filter { it.category.contains("Stock", ignoreCase = true) || it.assetClass == "Equities" }</ID>
     <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val summary = obj["summary"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content } ?: "Portfolio Analysis"</ID>
+    <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$val verdictStr = cachedVerdict?.verdict ?: if (stock.asset.equals("BBCA", ignoreCase = true)) "BLUE-CHIP COMPOUNDER (CORE)" else if (stock.asset.equals("INDF", ignoreCase = true)) "DEEP VALUE BUFFER (HOLD)" else "HOLD THROUGH CYCLE"</ID>
     <ID>MaxLineLength:PortfolioViewModel.kt:PortfolioViewModel$valueHistory = history.map { it.copy(totalIdr = if (baseRate &gt; 0) it.totalIdr / baseRate else it.totalIdr) }</ID>
     <ID>MaxLineLength:ReSyncDryRunScreen.kt:"+" + if (isPrivacyMode) "••••" else CurrencyFormatter.formatAmount(result.delta, result.currency)</ID>
     <ID>MaxLineLength:ReSyncDryRunScreen.kt:"Adjustment: +" + if (isPrivacyMode) "••••" else CurrencyFormatter.formatAmount(-result.delta, result.currency) + " (Income)"</ID>
@@ -1065,26 +1153,44 @@
     <ID>MaxLineLength:SearchScreen.kt:initialSelectedEndDateMillis = if (state.activeDateFilter == DateRangeFilter.CUSTOM) state.endDate - 1 else null</ID>
     <ID>MaxLineLength:SearchScreen.kt:initialSelectedStartDateMillis = if (state.activeDateFilter == DateRangeFilter.CUSTOM) state.startDate else null</ID>
     <ID>MaxLineLength:SearchScreen.kt:tint = if (isFiltered) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant</ID>
+    <ID>MaxLineLength:SettingsScreen.kt:"Gunakan endpoint Cloud Run pribadi untuk sinkronisasi Gmail Inbox dan R2 Backup tanpa perlu master S3 credentials."</ID>
     <ID>MaxLineLength:SettingsScreen.kt:"This will download the latest verified backup from Cloudflare R2 and replace your local database. The app will restart automatically after restore.\n\nAre you sure you want to proceed?"</ID>
     <ID>MaxLineLength:SettingsScreen.kt:color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface</ID>
     <ID>MaxLineLength:SettingsScreen.kt:color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant</ID>
     <ID>MaxLineLength:SettingsScreen.kt:color = if (key == currentFrequency) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface</ID>
-    <ID>MaxLineLength:SettingsScreen.kt:val</ID>
+    <ID>MaxLineLength:SettingsScreen.kt:provider.equals("CLOUDFLARE_R2", ignoreCase = true) || provider.equals("R2", ignoreCase = true) -&gt; "Cloudflare R2 (Legacy Direct S3)"</ID>
+    <ID>MaxLineLength:SettingsScreen.kt:val pinned = com.sans.finance.presentation.util.DynamicShortcutManager.requestPinAddExpenseShortcut(context)</ID>
     <ID>MaxLineLength:SettingsScreen.kt:var bucketName by remember { mutableStateOf(if (currentBucketName.isBlank()) "ichsanul-dev" else currentBucketName) }</ID>
-    <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$android.provider.MediaStore.Downloads.getContentUri(android.provider.MediaStore.VOLUME_EXTERNAL_PRIMARY)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt:var url by remember { mutableStateOf(if (currentUrl.isBlank()) "https://gmail-expenses-worker-886416340889.us-central1.run.app" else currentUrl) }</ID>
+    <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$// For INCOME, always direct to the single Cash (Wallet) account to keep it 100% predictable</ID>
+    <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$?:</ID>
+    <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$_syncMessage.value = "Sync Selesai: $newInsertedCount transaksi baru ditambahkan, $duplicateCount duplikat dilewati."</ID>
     <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$if</ID>
     <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)</ID>
+    <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$item.paymentMethod.contains(acc.name, ignoreCase = true) || acc.name.contains(item.paymentMethod, ignoreCase = true)</ID>
+    <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$java.time.OffsetDateTime.parse(item.receivedAt, java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli()</ID>
     <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, "${android.os.Environment.DIRECTORY_DOWNLOADS}/")</ID>
+    <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$val</ID>
     <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$val backupFrequency: StateFlow&lt;String&gt; = userPreferences.map { it.backupFrequency }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "WEEKLY")</ID>
     <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$val backupRequiresCharging: StateFlow&lt;Boolean&gt; = userPreferences.map { it.backupRequiresCharging }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)</ID>
     <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$val backupWifiOnly: StateFlow&lt;Boolean&gt; = userPreferences.map { it.backupWifiOnly }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)</ID>
     <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$val cloudBackupProvider: StateFlow&lt;String&gt; = userPreferences.map { it.cloudBackupProvider }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "CLOUDFLARE_R2")</ID>
+    <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$val collectionUri = android.provider.MediaStore.Downloads.getContentUri(android.provider.MediaStore.VOLUME_EXTERNAL_PRIMARY)</ID>
     <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$val lastBackupSizeBytes: StateFlow&lt;Long&gt; = userPreferences.map { it.lastBackupSizeBytes }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)</ID>
     <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$val lastBackupTime: StateFlow&lt;Long&gt; = userPreferences.map { it.lastBackupTime }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)</ID>
     <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$val result = com.sans.finance.data.util.CloudStorageSyncer.downloadDatabaseBackup(context, downloadDest, userPreferences.value)</ID>
     <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$val result = com.sans.finance.data.util.CloudStorageSyncer.uploadDatabaseBackup(context, snapshotFile, userPreferences.value)</ID>
     <ID>MaxLineLength:SettingsViewModel.kt:SettingsViewModel$val selection = "${android.provider.MediaStore.MediaColumns.DISPLAY_NAME} LIKE 'sans_finance_db_snapshot%.sqlite'"</ID>
-    <ID>MaxLineLength:SovereignAdvisorCard.kt:text = if (!isPrivacyModeEnabled) String.format("Rp %,.0f", advisor.dryPowderIdr) else "••••••"</ID>
+    <ID>MaxLineLength:SovereignAdvisorBottomSheet.kt:"${playbook.maturingAsset} (Rp ${String.format(Locale.US, "%,.0f", playbook.principalIdr)}) jatuh tempo pada ${playbook.maturityDate} (${playbook.daysLeft} hari lagi)"</ID>
+    <ID>MaxLineLength:SovereignAdvisorBottomSheet.kt:"Aset terfragmentasi (&lt;1% NW): Rp ${if (!isPrivacyModeEnabled) String.format(Locale.US, "%,.0f", clutter.fragmentedTotalIdr) else "••••••"} (${clutter.fragmentedWeightPct}% NW)"</ID>
+    <ID>MaxLineLength:SovereignAdvisorBottomSheet.kt:"Potensi kupon hilang pasca jatuh tempo: -Rp ${String.format(Locale.US, "%,.0f", playbook.lostMonthlyIdr)}/bln net"</ID>
+    <ID>MaxLineLength:SovereignAdvisorBottomSheet.kt:color = if (clutter.clutterScore &gt;= 75) Color(0xFF2E7D32) else Color(0xFFC62828)</ID>
+    <ID>MaxLineLength:SovereignAdvisorBottomSheet.kt:containerColor</ID>
+    <ID>MaxLineLength:SovereignAdvisorBottomSheet.kt:containerColor = if (clutter.clutterScore &gt;= 75) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)</ID>
+    <ID>MaxLineLength:SovereignAdvisorBottomSheet.kt:if (!isPrivacyModeEnabled) String.format(Locale.US, "Rp %,.0f", item.valueIdr) else "••••••"</ID>
+    <ID>MaxLineLength:SovereignAdvisorBottomSheet.kt:text = if (!isPrivacyModeEnabled) String.format(Locale.US, "Rp %,.0f", advisor.dryPowderIdr) else "••••••"</ID>
+    <ID>MaxLineLength:SovereignFocusStrip.kt:advisor.depositRouter != null -&gt; "Prioritas DCA: ${advisor.depositRouter.priorityAssetClass}. Tap untuk arahan 1-langkah."</ID>
+    <ID>MaxLineLength:SovereignFocusStrip.kt:playbook != null &amp;&amp; playbook.hasUpcomingMaturity -&gt; "${playbook.maturingAsset} jatuh tempo. Tap untuk Playbook &amp; Rebalance."</ID>
     <ID>MaxLineLength:TagSettingsScreen.kt:text = { Text("Are you sure you want to delete tag '${tag.name}'? This will remove the tag from all associated expenses.") }</ID>
     <ID>MaxLineLength:TemporalComponents.kt:color</ID>
     <ID>MaxLineLength:TemporalComponents.kt:contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface</ID>
@@ -1139,9 +1245,9 @@
     <ID>MaxLineLength:WealthScreen.kt:haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)</ID>
     <ID>MaxLineLength:WealthScreen.kt:imageVector = if (state.isPrivacyModeEnabled) Icons.Default.Lock else Icons.Default.LockOpen</ID>
     <ID>MaxLineLength:WealthScreen.kt:text = if (displayedRunway &gt;= 99.0) "&gt;99 Mo" else "${String.format(Locale.US, "%.1f", displayedRunway)} Mo"</ID>
-    <ID>MaxLineLength:WealthScreen.kt:tint = if (isComplete) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)</ID>
     <ID>MaxLineLength:WealthScreen.kt:tint = if (state.isPrivacyModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant</ID>
     <ID>MaxLineLength:WealthViewModelTest.kt:WealthViewModelTest$Goal(id = 1, name = "Emergency Fund", targetAmount = 100_000_000L, targetType = "TOTAL", targetName = null, currency = "IDR")</ID>
+    <ID>NestedBlockDepth:AiJsonParser.kt:AiJsonParser$private fun extractMarkdownTableProposals: List&lt;AiTransactionProposal&gt;</ID>
     <ID>NestedBlockDepth:CurrencyRepositoryImpl.kt:CurrencyRepositoryImpl$private suspend fun fetchAndCacheHistoricalRates: Double?</ID>
     <ID>NewLineAtEndOfFile:Color.kt:com.sans.finance.ui.theme.Color.kt</ID>
     <ID>NewLineAtEndOfFile:Theme.kt:com.sans.finance.ui.theme.Theme.kt</ID>
@@ -1168,17 +1274,20 @@
     <ID>PrintStackTrace:SpendingRecapWorker.kt:SpendingRecapWorker$e</ID>
     <ID>PrintStackTrace:SyncExchangeRatesWorker.kt:SyncExchangeRatesWorker$e</ID>
     <ID>ReturnCount:AccountViewModel.kt:AccountViewModel$fun convertToBase: Long</ID>
+    <ID>ReturnCount:AiChatViewModel.kt:AiChatViewModel$private fun renderPdfToBitmap: Bitmap?</ID>
     <ID>ReturnCount:AiChatViewModel.kt:AiChatViewModel$private fun resolveAccount: AccountSummary?</ID>
     <ID>ReturnCount:AiJsonParser.kt:AiJsonParser$fun extractJsonString: String</ID>
     <ID>ReturnCount:AiJsonParser.kt:AiJsonParser$fun findDefaultCashAccount: AccountSummary?</ID>
     <ID>ReturnCount:AiJsonParser.kt:AiJsonParser$fun matchCategory: CategorySummary?</ID>
     <ID>ReturnCount:AiJsonParser.kt:AiJsonParser$fun parseAssistantResponse: AiAssistantResponse</ID>
     <ID>ReturnCount:AiJsonParser.kt:AiJsonParser$fun parseFlexibleAmount: Double</ID>
+    <ID>ReturnCount:AiJsonParser.kt:AiJsonParser$private fun extractMarkdownTableProposals: List&lt;AiTransactionProposal&gt;</ID>
     <ID>ReturnCount:ConvertCurrencyUseCase.kt:ConvertCurrencyUseCase$suspend operator fun invoke: Long</ID>
     <ID>ReturnCount:CurrencyRepositoryImpl.kt:CurrencyRepositoryImpl$override suspend fun getRateToIdr: Double?</ID>
     <ID>ReturnCount:CurrencyRepositoryImpl.kt:CurrencyRepositoryImpl$private suspend fun fetchAndCacheHistoricalRates: Double?</ID>
     <ID>ReturnCount:CurrencyRepositoryImpl.kt:CurrencyRepositoryImpl$private suspend fun findLocalFxRate: Double?</ID>
     <ID>ReturnCount:CurrencyRepositoryImpl.kt:CurrencyRepositoryImpl$private suspend fun findNearestLocalFxRate: Double?</ID>
+    <ID>ReturnCount:DynamicShortcutManager.kt:DynamicShortcutManager$fun requestPinAddExpenseShortcut: Boolean</ID>
     <ID>ReturnCount:ExpenseRepositoryImpl.kt:ExpenseRepositoryImpl$override suspend fun getExpenseById: Expense?</ID>
     <ID>ReturnCount:GetDashboardSummaryUseCase.kt:GetDashboardSummaryUseCase$fun convertToBase: Long</ID>
     <ID>ReturnCount:GetEmergencyFundStressTestUseCase.kt:GetEmergencyFundStressTestUseCase$fun convertToBase: Long</ID>
@@ -1192,7 +1301,6 @@
     <ID>ReturnCount:PortfolioRepositoryImpl.kt:PortfolioRepositoryImpl$private suspend fun resolveExistingAccountId: Long?</ID>
     <ID>ReturnCount:RecurringOccurrenceCalculator.kt:RecurringOccurrenceCalculator$fun calculateNextDueDate: Long?</ID>
     <ID>ReturnCount:RecurringOccurrenceCalculator.kt:RecurringOccurrenceCalculator$fun calculateOccurrences: List&lt;RecurringOccurrence&gt;</ID>
-    <ID>ReturnCount:SecureAiSettingsRepository.kt:SecureAiSettingsRepository.CryptoManager$fun decrypt: String</ID>
     <ID>ReturnCount:ValuatePortfolioUseCase.kt:ValuatePortfolioUseCase$private suspend fun fallbackConversion: Double</ID>
     <ID>ReturnCount:XirrCalculator.kt:XirrCalculator$fun calculate: Double</ID>
     <ID>SwallowedException:AddTransactionViewModel.kt:AddTransactionViewModel$e: Exception</ID>
@@ -1241,9 +1349,6 @@
     <ID>TooGenericExceptionCaught:SettingsViewModel.kt:SettingsViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SpendingRecapWorker.kt:SpendingRecapWorker$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SyncExchangeRatesWorker.kt:SyncExchangeRatesWorker$e: Exception</ID>
-    <ID>TooGenericExceptionThrown:CloudStorageSyncer.kt:CloudStorageSyncer$throw Exception("GCS Download Failed")</ID>
-    <ID>TooGenericExceptionThrown:CloudStorageSyncer.kt:CloudStorageSyncer$throw Exception("GCS Token Failed")</ID>
-    <ID>TooGenericExceptionThrown:CloudStorageSyncer.kt:CloudStorageSyncer$throw Exception("GCS Upload Failed: ${conn.responseCode}")</ID>
     <ID>TooGenericExceptionThrown:CloudStorageSyncer.kt:CloudStorageSyncer$throw Exception("R2 Download Failed")</ID>
     <ID>TooGenericExceptionThrown:CloudStorageSyncer.kt:CloudStorageSyncer$throw Exception("R2 Download Failed: HTTP ${conn.responseCode}")</ID>
     <ID>TooGenericExceptionThrown:CloudStorageSyncer.kt:CloudStorageSyncer$throw Exception("R2 upload to $objectKey failed: HTTP ${conn.responseCode}")</ID>
@@ -1275,6 +1380,7 @@
     <ID>TooManyFunctions:InstallmentDao.kt:InstallmentDao</ID>
     <ID>TooManyFunctions:InstallmentRepository.kt:InstallmentRepository</ID>
     <ID>TooManyFunctions:InstallmentRepositoryImpl.kt:InstallmentRepositoryImpl : InstallmentRepository</ID>
+    <ID>TooManyFunctions:OpenRouterChatProvider.kt:OpenRouterChatProvider : AiProvider</ID>
     <ID>TooManyFunctions:PortfolioDao.kt:PortfolioDao</ID>
     <ID>TooManyFunctions:PortfolioRepository.kt:PortfolioRepository</ID>
     <ID>TooManyFunctions:PortfolioRepositoryImpl.kt:PortfolioRepositoryImpl : PortfolioRepository</ID>
@@ -1285,6 +1391,7 @@
     <ID>TooManyFunctions:TransactionStatsScreen.kt:com.sans.finance.presentation.transaction_stats.TransactionStatsScreen.kt</ID>
     <ID>TooManyFunctions:TransactionStatsViewModel.kt:TransactionStatsViewModel : ViewModel</ID>
     <ID>TooManyFunctions:UserPreferencesRepository.kt:UserPreferencesRepository</ID>
+    <ID>UnusedParameter:AssetClassTargetBottomSheet.kt:assetColor: Color</ID>
     <ID>UnusedParameter:CloudStorageSyncer.kt:CloudStorageSyncer$context: Context</ID>
     <ID>UnusedParameter:DashboardItems.kt:currencyCode: String</ID>
     <ID>UnusedParameter:DividendYieldView.kt:isPrivacyModeEnabled: Boolean</ID>

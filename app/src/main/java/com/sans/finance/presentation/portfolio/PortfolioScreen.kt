@@ -267,7 +267,7 @@ fun PortfolioScreen(
                                 text = { Text("Sync from Cloud") },
                                 onClick = {
                                     showMenu = false
-                                    viewModel.syncFromGcs()
+                                    viewModel.syncFromCloud()
                                 },
                                 leadingIcon = {
                                     Icon(Icons.Default.Sync, contentDescription = null)
@@ -370,7 +370,7 @@ fun PortfolioScreen(
                         Spacer(Modifier.height(20.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Button(
-                                onClick = { viewModel.syncFromGcs() },
+                                onClick = { viewModel.syncFromCloud() },
                                 shape = MaterialTheme.shapes.medium
                             ) {
                                 Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))

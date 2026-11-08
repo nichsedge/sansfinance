@@ -13,8 +13,6 @@ SANS_FINANCE_DIR = os.path.dirname(SCRIPT_DIR)
 PROJECTS_DIR = os.path.dirname(SANS_FINANCE_DIR)
 
 DEFAULT_DB_PATH = os.path.join(SANS_FINANCE_DIR, "sans_finance_db")
-DEFAULT_GCS_BUCKET = os.getenv("PORTFOLIO_GCS_BUCKET", "ichsanul-portfolio-snapshots")
-
 DATA_DIR = os.getenv("PORTFOLIO_DATA_DIR")
 if not DATA_DIR:
     standard_path = os.path.join(PROJECTS_DIR, "ierp", "data", "portfolio")
@@ -24,100 +22,6 @@ if not DATA_DIR:
         DATA_DIR = "./portfolio_data"
 
 SNAPSHOT_FILENAME_REGEX = re.compile(r"^(\d{4}-\d{2}-\d{2})_snapshot\.json$")
-
-
-def get_gcs_client():
-    """Initializes Google Cloud Storage client using service account or ADC."""
-    try:
-        from google.cloud import storage
-    except ImportError:
-        print("❌ Error: 'google-cloud-storage' package is not installed.")
-        print("💡 Install it via: pip install google-cloud-storage")
-        return None
-
-    creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    if not creds_path:
-        candidate_paths = [
-            os.path.join(SANS_FINANCE_DIR, "..", "creds", "gcp", "SA_cred_general.json"),
-            os.path.join(SANS_FINANCE_DIR, "..", "creds", "gcp", "bq.json"),
-            os.path.join(PROJECTS_DIR, "creds", "gcp", "SA_cred_general.json"),
-            os.path.join(PROJECTS_DIR, "creds", "gcp", "bq.json"),
-        ]
-        for cp in candidate_paths:
-            if os.path.exists(cp):
-                creds_path = cp
-                break
-
-    if creds_path and os.path.exists(creds_path):
-        print(f"🔑 Using GCS credentials: {creds_path}")
-        return storage.Client.from_service_account_json(creds_path)
-    else:
-        print("ℹ️ Using Application Default Credentials (ADC)")
-        return storage.Client()
-
-
-def prune_gcs_snapshots(bucket_name, dry_run=True):
-    """Deletes non-latest snapshot JSON and portfolio CSV files for each month in GCS bucket."""
-    print(f"\n☁️ --- GCS Monthly Pruning (Bucket: '{bucket_name}') ---")
-    client = get_gcs_client()
-    if not client:
-        return
-
-    try:
-        bucket = client.bucket(bucket_name)
-        blobs = list(bucket.list_blobs())
-    except Exception as e:
-        print(f"❌ Failed to list GCS bucket: {e}")
-        return
-
-    gcs_date_regex = re.compile(r"^(?:snapshots|portfolios)/(\d{4}-\d{2}-\d{2})_")
-
-    month_to_blobs = {}
-    for blob in blobs:
-        match = gcs_date_regex.match(blob.name)
-        if match:
-            date_str = match.group(1) # YYYY-MM-DD
-            month_str = date_str[:7]   # YYYY-MM
-            if month_str not in month_to_blobs:
-                month_to_blobs[month_str] = {}
-            if date_str not in month_to_blobs[month_str]:
-                month_to_blobs[month_str][date_str] = []
-            month_to_blobs[month_str][date_str].append(blob)
-
-    to_keep_blobs = []
-    to_delete = []
-
-    for month_str, date_dict in sorted(month_to_blobs.items()):
-        sorted_dates = sorted(date_dict.keys())
-        latest_date = sorted_dates[-1]
-        to_keep_blobs.extend(date_dict[latest_date])
-
-        for d in sorted_dates[:-1]:
-            for blob in date_dict[d]:
-                to_delete.append((month_str, d, blob))
-
-    print(f"📊 Found GCS files spanning {len(month_to_blobs)} month(s).")
-    print(f"✅ GCS files to KEEP (for latest date of each month): {len(to_keep_blobs)}")
-    print(f"🗑️ GCS files to DELETE (earlier dates in month): {len(to_delete)}")
-
-    if to_delete:
-        print("\nItems marked for deletion:")
-        for month_str, date_str, blob in to_delete:
-            print(f"  - [{month_str}] {blob.name} (Date: {date_str})")
-
-    if dry_run:
-        print("\n🔍 [DRY RUN] No GCS blobs were deleted.")
-    else:
-        print("\n🔥 Deleting non-latest GCS blobs...")
-        deleted_count = 0
-        for month_str, date_str, blob in to_delete:
-            try:
-                blob.delete()
-                print(f"  Deleted: {blob.name}")
-                deleted_count += 1
-            except Exception as e:
-                print(f"  ❌ Failed to delete {blob.name}: {e}")
-        print(f"✅ Successfully deleted {deleted_count} GCS blob(s).")
 
 
 def prune_sqlite_database(db_path, dry_run=True):
@@ -353,9 +257,7 @@ def main():
     parser = argparse.ArgumentParser(description="Prune portfolio snapshot data to persist only the latest snapshot date for each month.")
     parser.add_argument("--apply", action="store_true", help="Execute deletion. If not set, runs in --dry-run mode.")
     parser.add_argument("--db-path", default=DEFAULT_DB_PATH, help=f"Path to SQLite database file (default: {DEFAULT_DB_PATH})")
-    parser.add_argument("--gcs-bucket", default=DEFAULT_GCS_BUCKET, help=f"GCS bucket name (default: {DEFAULT_GCS_BUCKET})")
     parser.add_argument("--data-dir", default=DATA_DIR, help=f"Local snapshot directory (default: {DATA_DIR})")
-    parser.add_argument("--skip-gcs", action="store_true", help="Skip GCS bucket pruning")
     parser.add_argument("--skip-db", action="store_true", help="Skip SQLite DB pruning")
     parser.add_argument("--skip-local", action="store_true", help="Skip local file pruning")
 
@@ -369,9 +271,6 @@ def main():
 
     if not args.skip_db:
         prune_sqlite_database(args.db_path, dry_run=dry_run)
-
-    if not args.skip_gcs and args.gcs_bucket:
-        prune_gcs_snapshots(args.gcs_bucket, dry_run=dry_run)
 
     if not args.skip_local and args.data_dir:
         prune_local_files(args.data_dir, dry_run=dry_run)

@@ -11,12 +11,8 @@ import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.security.KeyFactory
 import java.security.MessageDigest
-import java.security.Signature
-import java.security.spec.PKCS8EncodedKeySpec
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -26,8 +22,7 @@ import javax.crypto.spec.SecretKeySpec
 
 enum class CloudStorageProvider(val label: String) {
     GATEWAY("Cloud Sync Gateway (Cloud Run & R2)"),
-    CLOUDFLARE_R2("Cloudflare R2 (Legacy Direct S3)"),
-    GCS("Google Cloud Storage (GCS)")
+    CLOUDFLARE_R2("Cloudflare R2 (Legacy Direct S3)")
 }
 
 data class InboxExpense(
@@ -54,8 +49,6 @@ data class CloudflareR2Config(
 }
 
 object CloudStorageSyncer {
-
-    private const val GCS_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
     fun isDatabasePopulated(dbFile: File): Boolean {
         if (!dbFile.exists() || dbFile.length() < 1024L) return false
@@ -86,7 +79,6 @@ object CloudStorageSyncer {
         when (provider) {
             CloudStorageProvider.GATEWAY -> uploadDatabaseBackupToGateway(dbFile, prefs)
             CloudStorageProvider.CLOUDFLARE_R2 -> uploadDatabaseBackupToR2(context, dbFile, prefs)
-            CloudStorageProvider.GCS -> uploadDatabaseBackupToGcs(context, dbFile, prefs)
         }
     }
 
@@ -99,7 +91,6 @@ object CloudStorageSyncer {
         when (provider) {
             CloudStorageProvider.GATEWAY -> downloadDatabaseBackupFromGateway(destFile, prefs)
             CloudStorageProvider.CLOUDFLARE_R2 -> downloadDatabaseBackupFromR2(destFile, prefs)
-            CloudStorageProvider.GCS -> Result.failure(Exception("GCS backup download not supported"))
         }
     }
 
@@ -107,18 +98,12 @@ object CloudStorageSyncer {
         context: Context,
         prefs: UserPreferences
     ): SnapshotImportResult = withContext(Dispatchers.IO) {
-        val provider = getActiveProvider(prefs)
-        when (provider) {
-            CloudStorageProvider.GATEWAY,
-            CloudStorageProvider.CLOUDFLARE_R2 -> downloadLatestSnapshotFromR2(prefs)
-            CloudStorageProvider.GCS -> downloadLatestSnapshotFromGcs(context, prefs)
-        }
+        downloadLatestSnapshotFromR2(prefs)
     }
 
     fun getActiveProvider(prefs: UserPreferences): CloudStorageProvider {
         val key = prefs.cloudBackupProvider
         return when {
-            key.equals("GCS", ignoreCase = true) || key.equals("GOOGLE_CLOUD_STORAGE", ignoreCase = true) -> CloudStorageProvider.GCS
             key.equals("CLOUDFLARE_R2", ignoreCase = true) || key.equals("R2", ignoreCase = true) -> CloudStorageProvider.CLOUDFLARE_R2
             else -> CloudStorageProvider.GATEWAY
         }
@@ -542,79 +527,5 @@ object CloudStorageSyncer {
             hexChars[i * 2 + 1] = hexDigits[v and 0x0F]
         }
         return String(hexChars)
-    }
-
-    private fun loadGcsCredentials(context: Context): JSONObject {
-        val jsonString = context.assets.open("SA_cred_general.json").use { it.bufferedReader().use { r -> r.readText() } }
-        return JSONObject(jsonString)
-    }
-
-    private fun generateGcsJwt(clientEmail: String, privateKeyPem: String): String {
-        val iat = System.currentTimeMillis() / 1000
-        val exp = iat + 3600
-        val header = JSONObject().apply { put("alg", "RS256"); put("typ", "JWT") }
-        val claims = JSONObject().apply {
-            put("iss", clientEmail)
-            put("scope", "https://www.googleapis.com/auth/devstorage.read_write")
-            put("aud", GCS_OAUTH_TOKEN_URL)
-            put("exp", exp)
-            put("iat", iat)
-        }
-        val headerBase64 = base64UrlEncode(header.toString().toByteArray(Charsets.UTF_8))
-        val claimsBase64 = base64UrlEncode(claims.toString().toByteArray(Charsets.UTF_8))
-        val stringToSign = "$headerBase64.$claimsBase64"
-        val privateKey = parseRsaPrivateKey(privateKeyPem)
-        val signature = Signature.getInstance("SHA256withRSA").apply { initSign(privateKey); update(stringToSign.toByteArray(Charsets.UTF_8)) }
-        return "$stringToSign.${base64UrlEncode(signature.sign())}"
-    }
-
-    private fun base64UrlEncode(input: ByteArray): String = Base64.encodeToString(input, Base64.NO_WRAP or Base64.NO_PADDING or Base64.URL_SAFE).trim()
-
-    private fun parseRsaPrivateKey(pem: String): java.security.PrivateKey {
-        val der = pem.replace("-----BEGIN PRIVATE KEY-----", "").replace("-----END PRIVATE KEY-----", "").replace("\\s".toRegex(), "")
-        return KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(Base64.decode(der, Base64.DEFAULT)))
-    }
-
-    private suspend fun getGcsAccessToken(context: Context): String = withContext(Dispatchers.IO) {
-        retryWithExponentialBackoff {
-            val creds = loadGcsCredentials(context)
-            val assertion = generateGcsJwt(creds.getString("client_email"), creds.getString("private_key"))
-            val params = "grant_type=" + URLEncoder.encode("urn:ietf:params:oauth:grant-type:jwt-bearer", "UTF-8") + "&assertion=" + URLEncoder.encode(assertion, "UTF-8")
-            val conn = (URL(GCS_OAUTH_TOKEN_URL).openConnection() as HttpURLConnection).apply { requestMethod = "POST"; doOutput = true; setRequestProperty("Content-Type", "application/x-www-form-urlencoded") }
-            conn.outputStream.use { it.write(params.toByteArray(Charsets.UTF_8)) }
-            if (conn.responseCode != 200) throw Exception("GCS Token Failed")
-            JSONObject(conn.inputStream.bufferedReader().use { it.readText() }).getString("access_token")
-        }
-    }
-
-    private suspend fun downloadLatestSnapshotFromGcs(
-        context: Context,
-        prefs: UserPreferences
-    ): SnapshotImportResult = withContext(Dispatchers.IO) {
-        val bucketName = prefs.gcsBucketName.ifBlank { "ichsanul-portfolio-snapshots" }
-        val token = getGcsAccessToken(context)
-        retryWithExponentialBackoff {
-            val conn = (URL("https://storage.googleapis.com/storage/v1/b/$bucketName/o/portfolio%2Flatest_snapshot.json?alt=media").openConnection() as HttpURLConnection).apply { setRequestProperty("Authorization", "Bearer $token") }
-            if (conn.responseCode != 200) throw Exception("GCS Download Failed")
-            PortfolioJsonImporter.parseContent(conn.inputStream.bufferedReader().use { it.readText() })
-        }
-    }
-
-    private suspend fun uploadDatabaseBackupToGcs(
-        context: Context,
-        dbFile: File,
-        prefs: UserPreferences
-    ): Result<String> = withContext(Dispatchers.IO) {
-        try {
-            val bucketName = prefs.gcsBucketName.ifBlank { "ichsanul-portfolio-snapshots" }
-            val token = getGcsAccessToken(context)
-            val url = URL("https://storage.googleapis.com/upload/storage/v1/b/$bucketName/o?uploadType=media&name=" + URLEncoder.encode("db/sans_finance_latest.sqlite", "UTF-8"))
-            retryWithExponentialBackoff {
-                val conn = (url.openConnection() as HttpURLConnection).apply { requestMethod = "POST"; doOutput = true; setRequestProperty("Authorization", "Bearer $token"); setRequestProperty("Content-Type", "application/x-sqlite3"); setFixedLengthStreamingMode(dbFile.length()) }
-                dbFile.inputStream().use { it.copyTo(conn.outputStream) }
-                if (conn.responseCode in 200..299) Result.success("GCS Backup Successful")
-                else throw Exception("GCS Upload Failed: ${conn.responseCode}")
-            }
-        } catch (e: Exception) { Result.failure(e) }
     }
 }

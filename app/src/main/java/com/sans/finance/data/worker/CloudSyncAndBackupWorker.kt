@@ -30,7 +30,7 @@ class CloudSyncAndBackupWorker @AssistedInject constructor(
         var syncSuccess = false
         val prefs = userPreferencesRepository.userPreferences.first()
 
-        // 1. Upload SQLite Database Backup to Cloud (GCS or Cloudflare R2)
+        // 1. Upload SQLite Database Backup to Cloud (Gateway or Cloudflare R2)
         val snapshotFile = java.io.File(context.cacheDir, "sans_finance_backup.sqlite")
         try {
             db.createBackupSnapshot(snapshotFile)
@@ -59,7 +59,7 @@ class CloudSyncAndBackupWorker @AssistedInject constructor(
             }
         }
 
-        // 2. Download and Import Latest Portfolio Snapshot from Cloud (GCS or Cloudflare R2)
+        // 2. Download and Import Latest Portfolio Snapshot from Cloud (Gateway or Cloudflare R2)
         try {
             val (date, items, exchangeRate) = com.sans.finance.data.util.CloudStorageSyncer.downloadLatestSnapshot(context, prefs)
             if (items.isNotEmpty()) {

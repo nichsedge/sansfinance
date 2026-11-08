@@ -18,6 +18,5 @@ data class UserPreferences(
     val r2AccountId: String = "",
     val r2AccessKeyId: String = "",
     val r2SecretAccessKey: String = "",
-    val r2BucketName: String = "ichsanul-dev",
-    val gcsBucketName: String = "ichsanul-portfolio-snapshots"
+    val r2BucketName: String = "ichsanul-dev"
 )
