@@ -179,7 +179,8 @@ fun SettingsScreen(
             onRequiresChargingToggle = { viewModel.setBackupRequiresCharging(it, context) },
             onBackupNow = { viewModel.uploadBackupToCloud(context) },
             onRestoreFromCloud = { showRestoreCloudConfirmDialog = true },
-            onSyncEmailInbox = { viewModel.syncEmailExpenses() }
+            onSyncEmailInbox = { viewModel.syncEmailExpenses() },
+            isSyncingInbox = viewModel.isSyncingInbox.value
         )
     }
 
@@ -348,7 +349,8 @@ fun SettingsContent(
     onRequiresChargingToggle: (Boolean) -> Unit,
     onBackupNow: () -> Unit,
     onRestoreFromCloud: () -> Unit,
-    onSyncEmailInbox: () -> Unit = {}
+    onSyncEmailInbox: () -> Unit = {},
+    isSyncingInbox: Boolean = false
 ) {
     val context = LocalContext.current
 
@@ -524,7 +526,8 @@ fun SettingsContent(
                 onRequiresChargingToggle = onRequiresChargingToggle,
                 onBackupNow = onBackupNow,
                 onRestoreFromCloud = onRestoreFromCloud,
-                onSyncEmailInbox = onSyncEmailInbox
+                onSyncEmailInbox = onSyncEmailInbox,
+                isSyncingInbox = isSyncingInbox
             )
         }
 
@@ -1109,7 +1112,8 @@ private fun WhatsAppBackupSettingsCard(
     onRequiresChargingToggle: (Boolean) -> Unit,
     onBackupNow: () -> Unit,
     onRestoreFromCloud: () -> Unit,
-    onSyncEmailInbox: () -> Unit = {}
+    onSyncEmailInbox: () -> Unit = {},
+    isSyncingInbox: Boolean = false
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1252,11 +1256,19 @@ private fun WhatsAppBackupSettingsCard(
                 }
                 Button(
                     onClick = onSyncEmailInbox,
-                    enabled = !isLoading,
+                    enabled = !isSyncingInbox,
                     shape = MaterialTheme.shapes.medium,
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Text("Sync Inbox", style = MaterialTheme.typography.labelMedium)
+                    if (isSyncingInbox) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Sync Inbox", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
             }
 

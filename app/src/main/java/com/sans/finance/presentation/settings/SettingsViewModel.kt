@@ -34,6 +34,9 @@ class SettingsViewModel @Inject constructor(
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
 
+    private val _isSyncingInbox = mutableStateOf(false)
+    val isSyncingInbox: State<Boolean> = _isSyncingInbox
+
     private val _error = mutableStateOf<String?>(null)
     val error: State<String?> = _error
 
@@ -256,7 +259,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun syncEmailExpenses() {
-        _isLoading.value = true
+        _isSyncingInbox.value = true
         _error.value = null
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
@@ -266,14 +269,15 @@ class SettingsViewModel @Inject constructor(
                     onSuccess = { items ->
                         if (items.isEmpty()) {
                             _syncMessage.value = "Staging inbox kosong (tidak ada transaksi baru)."
-                            _isLoading.value = false
+                            _isSyncingInbox.value = false
                             return@fold
                         }
 
                         // Load existing categories & accounts to map correctly
                         val categories = db.categoryDao.getAllCategoriesSync()
                         val accounts = db.accountDao.getAllAccountsOnce()
-                        val defaultAccount = accounts.firstOrNull { it.name.contains("cash", ignoreCase = true) }
+                        val cashAccount = accounts.firstOrNull { it.type.equals("CASH", ignoreCase = true) }
+                            ?: accounts.firstOrNull { it.name.contains("cash", ignoreCase = true) || it.name.contains("wallet", ignoreCase = true) }
                             ?: accounts.firstOrNull()
 
                         // Load all existing expense entities for deduplication
@@ -317,10 +321,15 @@ class SettingsViewModel @Inject constructor(
                                     ?: categories.firstOrNull { it.type == txType }
                                     ?: categories.firstOrNull()
 
-                                // Match account or fallback to default
-                                val matchedAcc = accounts.firstOrNull { acc ->
-                                    item.paymentMethod.contains(acc.name, ignoreCase = true) || acc.name.contains(item.paymentMethod, ignoreCase = true)
-                                } ?: defaultAccount
+                                // Match account:
+                                // For INCOME, always direct to the single Cash (Wallet) account to keep it 100% predictable
+                                val matchedAcc = if (txType == "INCOME") {
+                                    cashAccount
+                                } else {
+                                    accounts.firstOrNull { acc ->
+                                        item.paymentMethod.contains(acc.name, ignoreCase = true) || acc.name.contains(item.paymentMethod, ignoreCase = true)
+                                    } ?: cashAccount
+                                }
 
                                 val entity = com.sans.finance.data.local.entity.ExpenseEntity(
                                     date = itemTime,
@@ -354,7 +363,7 @@ class SettingsViewModel @Inject constructor(
             } catch (e: Exception) {
                 _error.value = e.message ?: "Terjadi kesalahan saat sync"
             } finally {
-                _isLoading.value = false
+                _isSyncingInbox.value = false
             }
         }
     }
