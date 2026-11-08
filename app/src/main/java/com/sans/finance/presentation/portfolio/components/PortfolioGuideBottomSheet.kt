@@ -451,10 +451,10 @@ private fun ExpertGuideSection(
     onCopyCommand: (String, String) -> Unit
 ) {
     val quickStartCommand = remember {
-        """git clone https://github.com/nichsedge/portfolio-integration.git
-cd portfolio-integration
-uv sync
-uv run run-all"""
+        """git clone https://github.com/nichsedge/ierp.git
+cd ierp
+go build -o bin/ierp ./cmd/ierp
+./bin/ierp portfolio run"""
     }
 
     val envTemplate = remember {
@@ -495,14 +495,14 @@ R2_BUCKET_NAME=your_r2_bucket_name"""
                 Icon(Icons.Default.Terminal, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "Arsitektur portfolio-integration",
+                    text = "Arsitektur iERP Portfolio (SSOT)",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Text(
-                text = "portfolio-integration adalah Go engine yang berfungsi sebagai Canonical ETL Engine. Engine ini menarik data secara paralel dari KSEI, DeBank, Binance, Alchemy, dan Sans Finance, menyelaraskan yield, membuat SQLite SSOT, dan mengunggah portfolio/latest_snapshot.json ke Cloudflare R2.",
+                text = "iERP Portfolio adalah Go engine yang berfungsi sebagai Canonical ETL Engine. Engine ini menarik data secara paralel dari KSEI, DeBank, Binance, Alchemy, dan Sans Finance, menyelaraskan yield, membuat SQLite SSOT, dan mengunggah portfolio/latest_snapshot.json ke Cloudflare R2.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 18.sp
