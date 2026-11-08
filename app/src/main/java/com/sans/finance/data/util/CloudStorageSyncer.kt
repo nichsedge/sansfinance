@@ -39,7 +39,8 @@ data class InboxExpense(
     val currency: String,
     val category: String,
     val paymentMethod: String,
-    val receivedAt: String
+    val receivedAt: String,
+    val type: String = "EXPENSE"
 )
 
 data class CloudflareR2Config(
@@ -158,7 +159,8 @@ object CloudStorageSyncer {
                         currency = obj.optString("currency", "IDR"),
                         category = obj.optString("category", "Misc"),
                         paymentMethod = obj.optString("payment_method", "Unknown"),
-                        receivedAt = obj.optString("received_at")
+                        receivedAt = obj.optString("received_at"),
+                        type = obj.optString("type", "EXPENSE")
                     )
                 )
             }

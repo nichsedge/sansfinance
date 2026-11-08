@@ -296,18 +296,25 @@ class SettingsViewModel @Inject constructor(
                                 java.time.OffsetDateTime.parse(item.receivedAt, java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli()
                             }.getOrDefault(now)
 
-                            // Deduplication: same amount in cents within 24h window (86_400_000 ms)
+                            val txType = if (item.type.equals("INCOME", ignoreCase = true)) "INCOME" else "EXPENSE"
+
+                            // Deduplication: same amount in cents AND same type within 24h window (86_400_000 ms)
                             val isDuplicate = existingExpenses.any { existing ->
-                                existing.amount == amountCents && kotlin.math.abs(existing.date - itemTime) < 86_400_000L
+                                existing.amount == amountCents &&
+                                    existing.type.equals(txType, ignoreCase = true) &&
+                                    kotlin.math.abs(existing.date - itemTime) < 86_400_000L
                             }
 
                             if (isDuplicate) {
                                 duplicateCount++
                                 toAck.add(item.id)
                             } else {
-                                // Match category or fallback to Misc
-                                val matchedCat = categories.firstOrNull { it.name.equals(item.category, ignoreCase = true) }
-                                    ?: categories.firstOrNull { it.name.equals("Misc", ignoreCase = true) }
+                                // Match category respecting transaction type:
+                                val matchedCat = categories.firstOrNull { it.type == txType && it.name.equals(item.category, ignoreCase = true) }
+                                    ?: categories.firstOrNull { it.name.equals(item.category, ignoreCase = true) }
+                                    ?: categories.firstOrNull { it.type == txType && it.name.equals("Investments", ignoreCase = true) }
+                                    ?: categories.firstOrNull { it.type == txType && it.name.equals("Misc", ignoreCase = true) }
+                                    ?: categories.firstOrNull { it.type == txType }
                                     ?: categories.firstOrNull()
 
                                 // Match account or fallback to default
@@ -322,7 +329,7 @@ class SettingsViewModel @Inject constructor(
                                     amount = amountCents,
                                     categoryId = matchedCat?.id ?: 1L,
                                     accountId = matchedAcc?.id ?: 1L,
-                                    type = "EXPENSE",
+                                    type = txType,
                                     currency = item.currency,
                                     status = "COMPLETED",
                                     isRecurring = false
