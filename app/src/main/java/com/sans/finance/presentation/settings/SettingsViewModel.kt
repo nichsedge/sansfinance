@@ -302,11 +302,12 @@ class SettingsViewModel @Inject constructor(
 
                             val txType = if (item.type.equals("INCOME", ignoreCase = true)) "INCOME" else "EXPENSE"
 
-                            // Deduplication: same amount in cents AND same type within 24h window (86_400_000 ms)
+                            // Deduplication: same amount in cents AND same type within 15-minute window (900_000 ms)
+                            // A tight 15m window avoids false duplicates for recurring daily expenses (e.g. eating at the same merchant daily).
                             val isDuplicate = existingExpenses.any { existing ->
                                 existing.amount == amountCents &&
                                     existing.type.equals(txType, ignoreCase = true) &&
-                                    kotlin.math.abs(existing.date - itemTime) < 86_400_000L
+                                    kotlin.math.abs(existing.date - itemTime) < 15 * 60 * 1000L
                             }
 
                             if (isDuplicate) {
