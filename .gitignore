@@ -39,7 +39,9 @@ sans_finance_db*
 *.sqlite-wal
 app/src/main/assets/seed_transactions.csv
 SA_cred_general.json
-r2_cred.json
+# Data archives and loose dumps
+data/
+*.json
 backup.sh.bak
 restore.sh.bak
 sync.sh.bak
