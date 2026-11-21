@@ -2,12 +2,10 @@ package com.sans.finance.data.repository
 
 import androidx.room.withTransaction
 import com.sans.finance.domain.model.AccountSyncDryRunResult
-import com.sans.finance.domain.model.Category
 import com.sans.finance.domain.model.CategorySpent
 import com.sans.finance.domain.model.DaySpent
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.model.ReSyncMode
-import com.sans.finance.domain.model.Tag
 import com.sans.finance.domain.repository.ExpenseRepository
 import com.sans.finance.presentation.widget.FinancialSummaryWidgetProvider
 import com.sans.finance.presentation.widget.QuickAddWidgetProvider

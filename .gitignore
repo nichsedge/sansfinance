@@ -40,7 +40,7 @@ sans_finance_db*
 app/src/main/assets/seed_transactions.csv
 SA_cred_general.json
 # Data archives and loose dumps
-data/
+/data/
 *.json
 backup.sh.bak
 restore.sh.bak

@@ -31,8 +31,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                this@android.getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
             )
             // Use debug signing for release for now if no release key is provided,
             // or just let it fail if the user wants to set it up properly.
@@ -43,11 +43,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
-    }
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
-        }
     }
     buildFeatures {
         compose = true
@@ -60,7 +55,13 @@ android {
 }
 
 composeCompiler {
-    stabilityConfigurationFiles.add(project.layout.projectDirectory.file("compose_compiler_config.conf"))
+    stabilityConfigurationFiles.add(layout.projectDirectory.file("compose_compiler_config.conf"))
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+    }
 }
 
 dependencies {
@@ -114,17 +115,20 @@ dependencies {
     testImplementation(libs.mockk)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
 tasks.register("unitTestClasses") {
+    description = "Compiles unit test sources."
+    group = "verification"
     dependsOn("compileDebugUnitTestSources")
 }
 
 tasks.register("androidTestClasses") {
+    description = "Compiles Android instrumentation test sources."
+    group = "verification"
     dependsOn("compileDebugAndroidTestSources")
 }
 
