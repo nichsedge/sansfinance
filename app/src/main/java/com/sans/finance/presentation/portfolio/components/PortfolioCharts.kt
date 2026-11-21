@@ -46,8 +46,6 @@ import androidx.compose.ui.unit.dp
 import com.sans.finance.core.util.CurrencyFormatter
 import com.sans.finance.data.local.dao.CategoryTotal
 import com.sans.finance.data.local.dao.SnapshotTotal
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 

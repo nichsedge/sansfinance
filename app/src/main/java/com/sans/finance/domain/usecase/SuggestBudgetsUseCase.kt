@@ -1,13 +1,9 @@
 package com.sans.finance.domain.usecase
 
 import com.sans.finance.core.util.CalendarUtils
-import com.sans.finance.domain.model.CategorySpent
 import com.sans.finance.domain.repository.CategoryRepository
 import com.sans.finance.domain.repository.ExpenseRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import java.util.Calendar
 import javax.inject.Inject
 

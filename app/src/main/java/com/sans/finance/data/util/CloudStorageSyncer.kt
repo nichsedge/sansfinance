@@ -1,9 +1,7 @@
 package com.sans.finance.data.util
 
 import android.content.Context
-import android.util.Base64
 import android.util.Log
-import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import com.sans.finance.domain.model.UserPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

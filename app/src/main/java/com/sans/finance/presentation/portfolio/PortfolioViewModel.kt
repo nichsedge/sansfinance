@@ -11,7 +11,6 @@ import com.sans.finance.data.local.dao.SnapshotTotal
 import com.sans.finance.data.local.entity.PortfolioHoldingEntity
 import com.sans.finance.data.util.LocaleManager
 import com.sans.finance.data.util.PortfolioJsonExporter
-import com.sans.finance.data.util.PortfolioJsonImporter
 import com.sans.finance.domain.model.AssetClassHealth
 import com.sans.finance.domain.repository.AccountRepository
 import com.sans.finance.domain.repository.AccountTypeRepository
@@ -817,7 +816,7 @@ class PortfolioViewModel @Inject constructor(
         val marketHoldingsIdr = marketHoldings.sumOf { it.valueIdr }
         val netWorthIdr = marketHoldingsIdr + bankCashIdr
 
-        val marketDryPowderIdr = marketHoldings.filter { 
+        val marketDryPowderIdr = marketHoldings.filter {
             it.category.contains("Stablecoin", ignoreCase = true) || it.assetClass == "Cash & Equivalents"
         }.sumOf { it.valueIdr }
         val dryPowderIdr = bankCashIdr + marketDryPowderIdr
@@ -834,10 +833,10 @@ class PortfolioViewModel @Inject constructor(
         val runwayMonths = if (monthlyBurn > 0) (dryPowderIdr / monthlyBurn) else 999.0
 
         // 1. Autonomous Vault vs Actionable Wealth
-        val lockedHoldings = marketHoldings.filter { 
-            it.category.contains("SBN", ignoreCase = true) || 
-            it.asset.contains("Sukuk", ignoreCase = true) || 
-            it.asset.contains("ST0", ignoreCase = true) || 
+        val lockedHoldings = marketHoldings.filter {
+            it.category.contains("SBN", ignoreCase = true) ||
+            it.asset.contains("Sukuk", ignoreCase = true) ||
+            it.asset.contains("ST0", ignoreCase = true) ||
             it.asset.contains("SR0", ignoreCase = true) ||
             it.category.contains("Bond", ignoreCase = true)
         }
@@ -897,7 +896,7 @@ class PortfolioViewModel @Inject constructor(
         }
 
         // 3. ADHD Clutter & Dust Sweeper
-        val dustHoldings = marketHoldings.filter { 
+        val dustHoldings = marketHoldings.filter {
             it.valueIdr > 0 && (it.valueIdr < 3_000_000.0 || (netWorthIdr > 0 && it.valueIdr / netWorthIdr < 0.01))
         }
         val dustTotalIdr = dustHoldings.sumOf { it.valueIdr }
@@ -953,7 +952,7 @@ class PortfolioViewModel @Inject constructor(
         )
 
         // 5. Equities verdicts from Room holdings
-        val stockHoldings = holdings.filter { 
+        val stockHoldings = holdings.filter {
             it.category.contains("Stock", ignoreCase = true) || (it.assetClass == "Equities" && it.asset.length == 4)
         }
         val stockVerdicts = stockHoldings.map { stock ->

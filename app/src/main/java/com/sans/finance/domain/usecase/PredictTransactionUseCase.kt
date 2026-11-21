@@ -1,6 +1,5 @@
 package com.sans.finance.domain.usecase
 
-import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.repository.ExpenseRepository
 import javax.inject.Inject
 

@@ -3,7 +3,6 @@ package com.sans.finance.data.ai
 import com.sans.finance.domain.model.AccountSummary
 import com.sans.finance.domain.model.CategorySummary
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 

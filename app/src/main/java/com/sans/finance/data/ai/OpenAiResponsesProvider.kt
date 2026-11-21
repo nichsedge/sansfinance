@@ -2,7 +2,6 @@ package com.sans.finance.data.ai
 
 import com.sans.finance.domain.model.AccountSummary
 import com.sans.finance.domain.model.AiAssistantResponse
-import com.sans.finance.domain.model.AiTransactionProposal
 import com.sans.finance.domain.model.CategorySummary
 import com.sans.finance.domain.model.ChatMessage
 import com.sans.finance.domain.model.FinancialContextSnapshot
@@ -10,19 +9,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.add
-import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-
 import java.util.concurrent.TimeUnit
 
 class OpenAiResponsesProvider(
@@ -147,7 +140,7 @@ class OpenAiResponsesProvider(
                 "instructions",
                 JsonPrimitive(
                     """
-                    You are an expert wealth management advisor. 
+                    You are an expert wealth management advisor.
                     Analyze the user's portfolio and return a concise JSON object.
                     Schema: { "summary": string, "insights": [{ "title": string, "observation": string, "suggestion": string, "importance": "LOW"|"MEDIUM"|"HIGH" }] }
                     """.trimIndent()

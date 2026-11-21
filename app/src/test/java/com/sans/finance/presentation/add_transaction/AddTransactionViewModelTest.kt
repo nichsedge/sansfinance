@@ -17,8 +17,8 @@ import com.sans.finance.domain.usecase.CreateInstallmentPlanUseCase
 import com.sans.finance.domain.usecase.DeleteExpenseUseCase
 import com.sans.finance.domain.usecase.GetCategoriesUseCase
 import com.sans.finance.domain.usecase.GetDetailsSuggestionsUseCase
-import com.sans.finance.domain.usecase.GetFrequencyBasedSuggestionsUseCase
 import com.sans.finance.domain.usecase.GetExpenseByIdUseCase
+import com.sans.finance.domain.usecase.GetFrequencyBasedSuggestionsUseCase
 import com.sans.finance.domain.usecase.GetTitleSuggestionsUseCase
 import com.sans.finance.domain.usecase.PredictTransactionUseCase
 import com.sans.finance.domain.usecase.UpdateExpenseUseCase

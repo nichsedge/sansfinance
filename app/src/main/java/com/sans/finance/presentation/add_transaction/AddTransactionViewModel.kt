@@ -14,7 +14,6 @@ import com.sans.finance.core.util.CurrencyFormatter
 import com.sans.finance.data.local.dao.CurrencyDao
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.repository.BudgetRepository
-import com.sans.finance.domain.repository.CategoryRepository
 import com.sans.finance.domain.repository.TagRepository
 import com.sans.finance.domain.usecase.AddTransactionUseCase
 import com.sans.finance.domain.usecase.CheckDuplicateExpenseUseCase

@@ -5,7 +5,6 @@ import com.sans.finance.data.local.entity.InstallmentEntity
 import com.sans.finance.domain.model.Installment
 import com.sans.finance.domain.repository.InstallmentRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map

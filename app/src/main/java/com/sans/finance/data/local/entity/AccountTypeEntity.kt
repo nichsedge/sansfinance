@@ -1,8 +1,8 @@
 package com.sans.finance.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import androidx.room.ColumnInfo
 
 @Entity(tableName = "account_types")
 data class AccountTypeEntity(

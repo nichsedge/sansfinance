@@ -1,5 +1,6 @@
 package com.sans.finance.presentation.dashboard
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.data.local.dao.SnapshotTotal
@@ -17,7 +18,6 @@ import com.sans.finance.domain.usecase.GetNetWorthTrendUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
-import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn

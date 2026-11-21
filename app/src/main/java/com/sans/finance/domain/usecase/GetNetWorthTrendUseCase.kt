@@ -1,12 +1,11 @@
 package com.sans.finance.domain.usecase
 
-import com.sans.finance.data.local.dao.SnapshotTotal
-import com.sans.finance.domain.repository.PortfolioRepository
-import com.sans.finance.data.util.LocaleManager
 import com.sans.finance.data.local.dao.CurrencyDao
+import com.sans.finance.data.local.dao.SnapshotTotal
+import com.sans.finance.data.util.LocaleManager
+import com.sans.finance.domain.repository.PortfolioRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class GetNetWorthTrendUseCase @Inject constructor(

@@ -1,11 +1,11 @@
 package com.sans.finance.presentation.wealth
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,13 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.semantics.Role
-import com.sans.finance.ui.theme.ExpenseRed
-import com.sans.finance.ui.theme.IncomeGreen
-import com.sans.finance.ui.theme.TransferBlue
-import com.sans.finance.ui.theme.WarningAmber
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.ShowChart
@@ -42,13 +35,11 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -73,15 +64,12 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sans.finance.core.util.CurrencyFormatter
-import androidx.compose.foundation.layout.BoxWithConstraints
-import com.sans.finance.presentation.wealth.components.SavingsVelocityCard
-import com.sans.finance.presentation.wealth.components.FiStressTestBottomSheet
 import com.sans.finance.domain.model.EmergencyFundStressTest
 import com.sans.finance.domain.model.StressTestScenarioType
 import com.sans.finance.domain.model.WealthDistributionTab
@@ -89,6 +77,12 @@ import com.sans.finance.presentation.components.AppTopBar
 import com.sans.finance.presentation.components.GlassCard
 import com.sans.finance.presentation.components.PrivacyText
 import com.sans.finance.presentation.dashboard.SectionHeader
+import com.sans.finance.presentation.wealth.components.FiStressTestBottomSheet
+import com.sans.finance.presentation.wealth.components.SavingsVelocityCard
+import com.sans.finance.ui.theme.ExpenseRed
+import com.sans.finance.ui.theme.IncomeGreen
+import com.sans.finance.ui.theme.TransferBlue
+import com.sans.finance.ui.theme.WarningAmber
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)

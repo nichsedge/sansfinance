@@ -1,5 +1,6 @@
 package com.sans.finance.domain.usecase
 
+import app.cash.turbine.test
 import com.sans.finance.data.local.dao.SnapshotTotal
 import com.sans.finance.data.local.entity.AccountEntity
 import com.sans.finance.data.local.entity.AccountTypeEntity
@@ -10,7 +11,6 @@ import com.sans.finance.domain.repository.AccountTypeRepository
 import com.sans.finance.domain.repository.BudgetRepository
 import com.sans.finance.domain.repository.ExpenseRepository
 import com.sans.finance.domain.repository.PortfolioRepository
-import app.cash.turbine.test
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf

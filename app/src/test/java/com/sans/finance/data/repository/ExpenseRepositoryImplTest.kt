@@ -7,12 +7,12 @@ import com.sans.finance.data.local.dao.CategoryDao
 import com.sans.finance.data.local.dao.ExpenseDao
 import com.sans.finance.data.local.dao.InstallmentDao
 import com.sans.finance.data.local.dao.TagDao
-import com.sans.finance.data.local.entity.ExpenseEntity
-import com.sans.finance.data.local.entity.ExpenseWithTags
-import com.sans.finance.data.local.entity.InstallmentItemEntity
 import com.sans.finance.data.local.entity.AccountEntity
 import com.sans.finance.data.local.entity.CategoryEntity
+import com.sans.finance.data.local.entity.ExpenseEntity
 import com.sans.finance.data.local.entity.ExpenseTagCrossRef
+import com.sans.finance.data.local.entity.ExpenseWithTags
+import com.sans.finance.data.local.entity.InstallmentItemEntity
 import com.sans.finance.data.local.entity.TagEntity
 import com.sans.finance.domain.model.ReSyncMode
 import io.mockk.coEvery

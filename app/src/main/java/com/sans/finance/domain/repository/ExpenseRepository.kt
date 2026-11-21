@@ -1,6 +1,10 @@
 package com.sans.finance.domain.repository
 
-import com.sans.finance.domain.model.*
+import com.sans.finance.domain.model.AccountSyncDryRunResult
+import com.sans.finance.domain.model.CategorySpent
+import com.sans.finance.domain.model.DaySpent
+import com.sans.finance.domain.model.Expense
+import com.sans.finance.domain.model.ReSyncMode
 import kotlinx.coroutines.flow.Flow
 
 interface ExpenseRepository {

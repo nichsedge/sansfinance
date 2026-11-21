@@ -50,10 +50,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sans.finance.core.util.CurrencyFormatter
 import com.sans.finance.domain.model.MomentumTrend
 import com.sans.finance.domain.model.SavingsRateVelocitySummary
 import com.sans.finance.presentation.components.PrivacyText

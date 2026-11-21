@@ -3,7 +3,6 @@ package com.sans.finance.domain.usecase
 import app.cash.turbine.test
 import com.sans.finance.data.local.dao.CurrencyDao
 import com.sans.finance.data.local.dao.SnapshotTotal
-import com.sans.finance.data.local.entity.ExchangeRateEntity
 import com.sans.finance.data.util.LocaleManager
 import com.sans.finance.domain.repository.PortfolioRepository
 import io.mockk.every

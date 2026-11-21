@@ -1,6 +1,5 @@
 package com.sans.finance.data.ai
 
-import android.util.Log
 import com.sans.finance.domain.model.AccountSummary
 import com.sans.finance.domain.model.AiAssistantResponse
 import com.sans.finance.domain.model.AiTransactionProposal
