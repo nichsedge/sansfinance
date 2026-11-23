@@ -114,7 +114,8 @@ class ExpenseListViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val getCategoriesUseCase: com.sans.finance.domain.usecase.GetCategoriesUseCase,
     private val budgetRepository: BudgetRepository,
-    private val localeManager: com.sans.finance.data.util.LocaleManager
+    private val localeManager: com.sans.finance.data.util.LocaleManager,
+    private val savedStateHandle: androidx.lifecycle.SavedStateHandle
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ExpenseListState())
@@ -125,13 +126,16 @@ class ExpenseListViewModel @Inject constructor(
     init {
         val initialCurrency = localeManager.getCurrency()
         val initialRange = calculateDateRange(DateRangeFilter.THIS_MONTH)
+        val filterAccId = savedStateHandle.get<Long>("filterAccountId") ?: -1L
+        val initialAccounts = if (filterAccId > 0) setOf(filterAccId) else emptySet()
 
         _state.update {
             it.copy(
                 currentCurrency = initialCurrency,
                 startDate = initialRange.first,
                 endDate = initialRange.second,
-                activeDateFilter = DateRangeFilter.THIS_MONTH
+                activeDateFilter = DateRangeFilter.THIS_MONTH,
+                selectedAccountIds = initialAccounts
             )
         }
 

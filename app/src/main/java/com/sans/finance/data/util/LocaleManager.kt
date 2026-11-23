@@ -79,7 +79,7 @@ class LocaleManager @Inject constructor(
     }
 
     fun setCurrency(currency: String) {
-        prefs.edit().putString("currency", currency).apply()
+        prefs.edit().putString("currency", currency).commit()
     }
 
     fun getCurrency(): String {
@@ -93,6 +93,6 @@ class LocaleManager @Inject constructor(
     }
 
     fun setEnabledCurrencies(currencies: List<String>) {
-        prefs.edit().putString("enabled_currencies", currencies.joinToString(",")).apply()
+        prefs.edit().putString("enabled_currencies", currencies.joinToString(",")).commit()
     }
 }

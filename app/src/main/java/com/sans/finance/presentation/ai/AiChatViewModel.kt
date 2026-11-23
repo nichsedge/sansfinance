@@ -11,6 +11,7 @@ import com.sans.finance.data.ai.AiJsonParser
 import com.sans.finance.data.ai.AiProviderFactory
 import com.sans.finance.data.ai.AiSettingsRepository
 import com.sans.finance.data.local.dao.CurrencyDao
+import com.sans.finance.core.util.CurrencyFormatter
 import com.sans.finance.domain.model.AccountSummary
 import com.sans.finance.domain.model.AiTransactionProposal
 import com.sans.finance.domain.model.CategorySummary
@@ -737,11 +738,25 @@ class AiChatViewModel @Inject constructor(
 
         val liquidAccounts = rawAccounts
             .filter { it.type !in liabilityTypeNames && it.type !in investmentTypeNames }
-            .map { "${it.name} (${it.type})" to convertToBase(it.balance, it.currency) }
+            .map {
+                val label = if (it.currency != baseCurrency) {
+                    "${it.name} (${it.type}, ${CurrencyFormatter.formatAmount(it.balance, it.currency)})"
+                } else {
+                    "${it.name} (${it.type})"
+                }
+                label to convertToBase(it.balance, it.currency)
+            }
 
         val liabilityAccounts = rawAccounts
             .filter { it.type in liabilityTypeNames }
-            .map { "${it.name} (${it.type})" to convertToBase(it.balance, it.currency) }
+            .map {
+                val label = if (it.currency != baseCurrency) {
+                    "${it.name} (${it.type}, ${CurrencyFormatter.formatAmount(it.balance, it.currency)})"
+                } else {
+                    "${it.name} (${it.type})"
+                }
+                label to convertToBase(it.balance, it.currency)
+            }
 
         val investmentAccountAssets = rawAccounts
             .filter { it.type in investmentTypeNames }

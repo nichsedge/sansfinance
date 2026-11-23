@@ -20,10 +20,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "user_preferences",
-    produceMigrations = { context ->
-        listOf(SharedPreferencesMigration(context, "app_prefs"))
-    }
+    name = "user_preferences"
 )
 
 @Singleton
@@ -33,6 +30,8 @@ class DataStoreUserPreferencesRepository @Inject constructor(
 
     private object PreferencesKeys {
         val PRIVACY_MODE = booleanPreferencesKey("privacy_mode")
+        val BASE_CURRENCY = stringPreferencesKey("currency")
+        val ENABLED_CURRENCIES = stringPreferencesKey("enabled_currencies")
         val FIRE_MANUAL_ENABLED = booleanPreferencesKey("fire_manual_enabled")
         val MANUAL_FIRE_ANNUAL_EXPENSE = longPreferencesKey("fire_manual_annual_expense")
         val BACKUP_FREQUENCY = stringPreferencesKey("backup_frequency")
@@ -50,8 +49,16 @@ class DataStoreUserPreferencesRepository @Inject constructor(
     }
 
     override val userPreferences: Flow<UserPreferences> = context.dataStore.data.map { preferences ->
+        val rawCurrencies = preferences[PreferencesKeys.ENABLED_CURRENCIES]
+        val enabledList = if (!rawCurrencies.isNullOrBlank()) {
+            rawCurrencies.split(",").filter { it.isNotBlank() }
+        } else {
+            com.sans.finance.data.util.LocaleManager.COMMON_CURRENCIES.take(6)
+        }
         UserPreferences(
             isPrivacyModeEnabled = preferences[PreferencesKeys.PRIVACY_MODE] ?: false,
+            baseCurrency = preferences[PreferencesKeys.BASE_CURRENCY] ?: "IDR",
+            enabledCurrencies = enabledList,
             fireManualEnabled = preferences[PreferencesKeys.FIRE_MANUAL_ENABLED] ?: false,
             manualFireAnnualExpense = preferences[PreferencesKeys.MANUAL_FIRE_ANNUAL_EXPENSE] ?: 0L,
             backupFrequency = preferences[PreferencesKeys.BACKUP_FREQUENCY] ?: "WEEKLY",
@@ -72,6 +79,18 @@ class DataStoreUserPreferencesRepository @Inject constructor(
     override suspend fun setPrivacyModeEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.PRIVACY_MODE] = enabled
+        }
+    }
+
+    override suspend fun setBaseCurrency(currency: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.BASE_CURRENCY] = currency
+        }
+    }
+
+    override suspend fun setEnabledCurrencies(currencies: List<String>) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.ENABLED_CURRENCIES] = currencies.joinToString(",")
         }
     }
 
@@ -154,6 +173,8 @@ class DataStoreUserPreferencesRepository @Inject constructor(
         val prefs = this.json.decodeFromString<UserPreferences>(json)
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.PRIVACY_MODE] = prefs.isPrivacyModeEnabled
+            preferences[PreferencesKeys.BASE_CURRENCY] = prefs.baseCurrency
+            preferences[PreferencesKeys.ENABLED_CURRENCIES] = prefs.enabledCurrencies.joinToString(",")
             preferences[PreferencesKeys.FIRE_MANUAL_ENABLED] = prefs.fireManualEnabled
             preferences[PreferencesKeys.MANUAL_FIRE_ANNUAL_EXPENSE] = prefs.manualFireAnnualExpense
             preferences[PreferencesKeys.BACKUP_FREQUENCY] = prefs.backupFrequency

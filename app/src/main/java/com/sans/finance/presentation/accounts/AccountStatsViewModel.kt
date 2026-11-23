@@ -31,6 +31,7 @@ class AccountStatsViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val expenseRepository: ExpenseRepository,
     private val accountTypeRepository: com.sans.finance.domain.repository.AccountTypeRepository,
+    private val currencyDao: com.sans.finance.data.local.dao.CurrencyDao,
     private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
@@ -40,13 +41,26 @@ class AccountStatsViewModel @Inject constructor(
         _selectedDate,
         accountRepository.getAllAccounts(),
         expenseRepository.getExpensesBetween(0, Long.MAX_VALUE),
-        accountTypeRepository.getAllAccountTypes()
-    ) { date, accounts, transactions, types ->
+        accountTypeRepository.getAllAccountTypes(),
+        currencyDao.getAllRates()
+    ) { date, accounts, transactions, types, rates ->
+        val baseCurrency = localeManager.getCurrency()
+        val ratesMap = rates.associate { it.code to it.rateToIdr }
+        val baseRate = if (baseCurrency == "IDR") 1.0 else (ratesMap[baseCurrency] ?: 1.0)
+
+        fun convertToBase(amount: Long, from: String): Long {
+            if (from == baseCurrency) return amount
+            val fromRate = if (from == "IDR") 1.0 else (ratesMap[from] ?: 1.0)
+            val toRate = baseRate
+            if (toRate == 0.0) return amount
+            return ((amount * fromRate) / toRate).toLong()
+        }
+
         val liabilityTypeNames = types.filter { it.isLiability }.map { it.name }.toSet()
         val currentAssets =
-            accounts.filter { it.type !in liabilityTypeNames }.sumOf { it.balance }
+            accounts.filter { it.type !in liabilityTypeNames }.sumOf { convertToBase(it.balance, it.currency) }
         val currentLiabilities =
-            accounts.filter { it.type in liabilityTypeNames }.sumOf { it.balance }
+            accounts.filter { it.type in liabilityTypeNames }.sumOf { convertToBase(it.balance, it.currency) }
         val currentTotal = currentAssets - currentLiabilities
 
         val balanceHistory = mutableListOf<Pair<String, Long>>()
@@ -86,7 +100,7 @@ class AccountStatsViewModel @Inject constructor(
             val txns =
                 transactions.filter { it.date in start..end && (!it.isInstallment || it.isInstallmentPayment) }
             val netFlow = txns.filter { it.type == "INCOME" }
-                .sumOf { it.amount } - txns.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+                .sumOf { convertToBase(it.amount, it.currency) } - txns.filter { it.type == "EXPENSE" }.sumOf { convertToBase(it.amount, it.currency) }
 
             simulatedBalanceAtSelectedDate -= netFlow
             tempCal.add(Calendar.MONTH, -1)
@@ -106,8 +120,8 @@ class AccountStatsViewModel @Inject constructor(
 
             val txns =
                 transactions.filter { it.date in start..end && (!it.isInstallment || it.isInstallmentPayment) }
-            val income = txns.filter { it.type == "INCOME" }.sumOf { it.amount }
-            val expense = txns.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+            val income = txns.filter { it.type == "INCOME" }.sumOf { convertToBase(it.amount, it.currency) }
+            val expense = txns.filter { it.type == "EXPENSE" }.sumOf { convertToBase(it.amount, it.currency) }
 
             balanceHistory.add(0, Pair(monthFormat.format(historyCal.time), historyBalance))
             incomeExpenseHistory.add(
@@ -125,7 +139,7 @@ class AccountStatsViewModel @Inject constructor(
             totalBalance = simulatedBalanceAtSelectedDate,
             balanceHistory = balanceHistory,
             incomeExpenseHistory = incomeExpenseHistory,
-            currentCurrency = localeManager.getCurrency(),
+            currentCurrency = baseCurrency,
             isLoading = false
         )
     }.stateIn(

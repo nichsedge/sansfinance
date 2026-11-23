@@ -96,7 +96,37 @@ object CloudStorageSyncer {
         context: Context,
         prefs: UserPreferences
     ): SnapshotImportResult = withContext(Dispatchers.IO) {
-        downloadLatestSnapshotFromR2(prefs)
+        val provider = getActiveProvider(prefs)
+        when (provider) {
+            CloudStorageProvider.GATEWAY -> downloadLatestSnapshotFromGateway(prefs)
+            CloudStorageProvider.CLOUDFLARE_R2 -> downloadLatestSnapshotFromR2(prefs)
+        }
+    }
+
+    private suspend fun downloadLatestSnapshotFromGateway(
+        prefs: UserPreferences
+    ): SnapshotImportResult = withContext(Dispatchers.IO) {
+        val baseUrl = prefs.syncGatewayUrl.trimEnd('/')
+        val token = prefs.syncGatewayToken.trim()
+        if (token.isBlank()) {
+            throw Exception("Sync Auth Token is not configured. Please set your token in Settings.")
+        }
+        val url = URL("$baseUrl/api/portfolio/snapshot")
+        val conn = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            setRequestProperty("Authorization", "Bearer $token")
+            setRequestProperty("X-Sync-Token", token)
+            connectTimeout = 15000
+            readTimeout = 45000
+        }
+        val code = conn.responseCode
+        if (code == 200) {
+            val jsonText = conn.inputStream.bufferedReader().use { it.readText() }
+            PortfolioJsonImporter.parseContent(jsonText)
+        } else {
+            val err = conn.errorStream?.bufferedReader()?.readText() ?: "HTTP $code"
+            throw Exception("Gateway portfolio download failed ($code): $err")
+        }
     }
 
     fun getActiveProvider(prefs: UserPreferences): CloudStorageProvider {
@@ -430,6 +460,9 @@ object CloudStorageSyncer {
         prefs: UserPreferences
     ): SnapshotImportResult = withContext(Dispatchers.IO) {
         val r2Config = loadR2Config(prefs)
+        if (!r2Config.isValid) {
+            throw Exception("Cloudflare R2 is not configured. Please set your credentials in Settings.")
+        }
         val objectKey = "portfolio/latest_snapshot.json"
         val host = "${r2Config.accountId}.r2.cloudflarestorage.com"
         val canonicalUri = "/${r2Config.bucketName}/$objectKey"

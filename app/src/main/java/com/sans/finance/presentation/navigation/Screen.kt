@@ -11,7 +11,11 @@ sealed class Screen {
     object Dashboard : Screen()
 
     @Serializable
-    object ExpenseList : Screen()
+    data class ExpenseList(val filterAccountId: Long = -1L) : Screen() {
+        companion object {
+            operator fun invoke(): ExpenseList = ExpenseList(-1L)
+        }
+    }
 
     @Serializable
     data class AddTransaction(

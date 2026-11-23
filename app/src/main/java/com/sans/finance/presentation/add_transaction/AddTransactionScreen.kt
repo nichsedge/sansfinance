@@ -35,6 +35,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
@@ -433,100 +435,160 @@ fun AddTransactionScreen(
 
 
             if (viewModel.transactionType == "TRANSFER") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Source Account Dropdown
-                    Box(modifier = Modifier.weight(1f)) {
-                        @OptIn(ExperimentalMaterial3Api::class)
-                        ExposedDropdownMenuBox(
-                            expanded = accountExpanded,
-                            onExpandedChange = { accountExpanded = !accountExpanded }
-                        ) {
-                            val selectedAccount = accounts.find { it.id == viewModel.accountId }
-                            OutlinedTextField(
-                                value = selectedAccount?.name ?: "Source",
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("From", fontSize = 12.sp) },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 48.dp)
-                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                                shape = MaterialTheme.shapes.small,
-                                textStyle = MaterialTheme.typography.bodyMedium
-                            )
-                            ExposedDropdownMenu(
+                val transferFx by viewModel.transferFxInfo.collectAsStateWithLifecycle()
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Source Account Dropdown
+                        Box(modifier = Modifier.weight(1f)) {
+                            @OptIn(ExperimentalMaterial3Api::class)
+                            ExposedDropdownMenuBox(
                                 expanded = accountExpanded,
-                                onDismissRequest = { accountExpanded = false }
+                                onExpandedChange = { accountExpanded = !accountExpanded }
                             ) {
-                                accounts.forEach { account ->
-                                    DropdownMenuItem(
-                                        text = { Text(account.name) },
-                                        onClick = {
-                                            viewModel.accountId = account.id
-                                            accountExpanded = false
-                                        }
-                                    )
+                                val selectedAccount = accounts.find { it.id == viewModel.accountId }
+                                OutlinedTextField(
+                                    value = selectedAccount?.let { "${it.name} (${it.currency})" } ?: "Source",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("From", fontSize = 12.sp) },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 48.dp)
+                                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                                    shape = MaterialTheme.shapes.small,
+                                    textStyle = MaterialTheme.typography.bodyMedium
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = accountExpanded,
+                                    onDismissRequest = { accountExpanded = false }
+                                ) {
+                                    accounts.forEach { account ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(account.name)
+                                                    Text(
+                                                        account.currency,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            },
+                                            onClick = {
+                                                viewModel.onAccountSelected(account)
+                                                accountExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        IconButton(
+                            onClick = {
+                                val temp = viewModel.accountId
+                                viewModel.accountId = viewModel.toAccountId
+                                viewModel.toAccountId = temp
+                            },
+                            modifier = Modifier
+                                .padding(top = 4.dp)
+                                .size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.CompareArrows,
+                                contentDescription = "Swap Accounts",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        // Destination Account Dropdown
+                        Box(modifier = Modifier.weight(1f)) {
+                            @OptIn(ExperimentalMaterial3Api::class)
+                            ExposedDropdownMenuBox(
+                                expanded = toAccountExpanded,
+                                onExpandedChange = { toAccountExpanded = !toAccountExpanded }
+                            ) {
+                                val selectedToAccount = accounts.find { it.id == viewModel.toAccountId }
+                                OutlinedTextField(
+                                    value = selectedToAccount?.let { "${it.name} (${it.currency})" } ?: "Destination",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("To", fontSize = 12.sp) },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = toAccountExpanded) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 48.dp)
+                                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                                    shape = MaterialTheme.shapes.small,
+                                    textStyle = MaterialTheme.typography.bodyMedium
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = toAccountExpanded,
+                                    onDismissRequest = { toAccountExpanded = false }
+                                ) {
+                                    accounts.forEach { account ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(account.name)
+                                                    Text(
+                                                        account.currency,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.secondary,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            },
+                                            onClick = {
+                                                viewModel.toAccountId = account.id
+                                                toAccountExpanded = false
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
 
-                    IconButton(
-                        onClick = {
-                            val temp = viewModel.accountId
-                            viewModel.accountId = viewModel.toAccountId
-                            viewModel.toAccountId = temp
-                        },
-                        modifier = Modifier
-                            .padding(top = 4.dp)
-                            .size(36.dp)
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.CompareArrows,
-                            contentDescription = "Swap Accounts",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-
-                    // Destination Account Dropdown
-                    Box(modifier = Modifier.weight(1f)) {
-                        @OptIn(ExperimentalMaterial3Api::class)
-                        ExposedDropdownMenuBox(
-                            expanded = toAccountExpanded,
-                            onExpandedChange = { toAccountExpanded = !toAccountExpanded }
+                    if (transferFx.isForeign) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
+                            shape = MaterialTheme.shapes.small
                         ) {
-                            val selectedToAccount = accounts.find { it.id == viewModel.toAccountId }
-                            OutlinedTextField(
-                                value = selectedToAccount?.name ?: "Destination",
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("To", fontSize = 12.sp) },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = toAccountExpanded) },
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(min = 48.dp)
-                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                                shape = MaterialTheme.shapes.small,
-                                textStyle = MaterialTheme.typography.bodyMedium
-                            )
-                            ExposedDropdownMenu(
-                                expanded = toAccountExpanded,
-                                onDismissRequest = { toAccountExpanded = false }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                accounts.forEach { account ->
-                                    DropdownMenuItem(
-                                        text = { Text(account.name) },
-                                        onClick = {
-                                            viewModel.toAccountId = account.id
-                                            toAccountExpanded = false
-                                        }
-                                    )
-                                }
+                                Text(
+                                    transferFx.rateFormatted,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                Text(
+                                    transferFx.convertedAmountFormatted,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
                             }
                         }
                     }
@@ -540,7 +602,7 @@ fun AddTransactionScreen(
                 ) {
                     val selectedAccount = accounts.find { it.id == viewModel.accountId }
                     OutlinedTextField(
-                        value = selectedAccount?.name ?: "Unknown Account",
+                        value = selectedAccount?.let { "${it.name} (${it.currency})" } ?: "Unknown Account",
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Account", fontSize = 12.sp) },
@@ -558,9 +620,23 @@ fun AddTransactionScreen(
                     ) {
                         accounts.forEach { account ->
                             DropdownMenuItem(
-                                text = { Text(account.name) },
+                                text = {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(account.name)
+                                        Text(
+                                            account.currency,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                },
                                 onClick = {
-                                    viewModel.accountId = account.id
+                                    viewModel.onAccountSelected(account)
                                     accountExpanded = false
                                 }
                             )

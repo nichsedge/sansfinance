@@ -323,7 +323,7 @@ fun BottomNavigationBar(navController: NavHostController) {
 
 private fun getNavItems() = listOf(
     Triple(Screen.Dashboard, "Home", Icons.Default.Dashboard),
-    Triple(Screen.ExpenseList, "Transactions", Icons.AutoMirrored.Filled.CompareArrows),
+    Triple(Screen.ExpenseList(), "Transactions", Icons.AutoMirrored.Filled.CompareArrows),
     Triple(Screen.Wealth, "Wealth", Icons.Default.AccountBalanceWallet),
     Triple(Screen.Settings, "Settings", Icons.Default.Settings)
 )

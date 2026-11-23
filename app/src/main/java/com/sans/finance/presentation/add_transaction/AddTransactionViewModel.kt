@@ -185,6 +185,48 @@ class AddTransactionViewModel @Inject constructor(
         initialValue = FxConversionInfo()
     )
 
+    private data class TransferFxInput(
+        val fromId: Long,
+        val toId: Long,
+        val amtStr: String,
+        val curr: String
+    )
+
+    val transferFxInfo = combine(
+        currencyDao.getAllRates(),
+        accountRepository.getAllAccounts(),
+        snapshotFlow { TransferFxInput(accountId, toAccountId, amount, currency) }
+    ) { rates, accList, input ->
+        val fromAcc = accList.find { it.id == input.fromId }
+        val toAcc = accList.find { it.id == input.toId }
+        if (fromAcc == null || toAcc == null || fromAcc.currency == toAcc.currency || input.amtStr.isBlank()) {
+            FxConversionInfo(isForeign = false)
+        } else {
+            val ratesMap = rates.associate { it.code to it.rateToIdr }
+            val rateFromToIdr = if (input.curr == "IDR") 1.0 else (ratesMap[input.curr] ?: 1.0)
+            val rateToToIdr = if (toAcc.currency == "IDR") 1.0 else (ratesMap[toAcc.currency] ?: 1.0)
+            val multiplier = if (rateToToIdr > 0) rateFromToIdr / rateToToIdr else 1.0
+
+            val parsedAmount = input.amtStr.replace(",", "").toDoubleOrNull() ?: 0.0
+            val convertedCents = (parsedAmount * 100 * multiplier).toLong()
+            val convertedFormatted = CurrencyFormatter.formatAmount(convertedCents, toAcc.currency)
+            val rateFmt = if (multiplier >= 100) {
+                String.format(java.util.Locale.US, "%,.0f", multiplier)
+            } else {
+                String.format(java.util.Locale.US, "%,.2f", multiplier)
+            }
+            FxConversionInfo(
+                isForeign = true,
+                rateFormatted = "1 ${input.curr} ≈ $rateFmt ${toAcc.currency}",
+                convertedAmountFormatted = "Destination receives ≈ $convertedFormatted"
+            )
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = FxConversionInfo()
+    )
+
     val categoryBudgetStatus = combine(
         budgetRepository.getAllBudgets(),
         expenseRepository.getAllExpenses(),
@@ -363,6 +405,13 @@ class AddTransactionViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
+    }
+
+    fun onAccountSelected(account: com.sans.finance.data.local.entity.AccountEntity) {
+        accountId = account.id
+        if (!isEditMode) {
+            currency = account.currency
+        }
     }
 
     fun toggleTag(tagName: String) {

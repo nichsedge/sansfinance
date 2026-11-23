@@ -9,8 +9,10 @@ import com.sans.finance.domain.model.Goal
 import com.sans.finance.domain.model.UserPreferences
 import com.sans.finance.domain.repository.ExpenseRepository
 import com.sans.finance.domain.repository.GoalRepository
+import com.sans.finance.domain.repository.InstallmentRepository
 import com.sans.finance.domain.repository.PortfolioRepository
 import com.sans.finance.domain.repository.UserPreferencesRepository
+import com.sans.finance.domain.usecase.AddTransactionUseCase
 import com.sans.finance.domain.usecase.GetDashboardSummaryUseCase
 import com.sans.finance.domain.usecase.GetNetWorthTrendUseCase
 import io.mockk.coVerify
@@ -40,6 +42,8 @@ class DashboardViewModelTest {
     private lateinit var goalRepository: GoalRepository
     private lateinit var portfolioRepository: PortfolioRepository
     private lateinit var userPreferencesRepository: UserPreferencesRepository
+    private lateinit var installmentRepository: InstallmentRepository
+    private lateinit var addTransactionUseCase: AddTransactionUseCase
     private lateinit var getDashboardSummaryUseCase: GetDashboardSummaryUseCase
     private lateinit var getNetWorthTrendUseCase: GetNetWorthTrendUseCase
 
@@ -101,6 +105,9 @@ class DashboardViewModelTest {
         userPreferencesRepository = mockk(relaxed = true)
         every { userPreferencesRepository.userPreferences } returns prefsFlow
 
+        installmentRepository = mockk(relaxed = true)
+        addTransactionUseCase = mockk(relaxed = true)
+
         getDashboardSummaryUseCase = mockk()
         every { getDashboardSummaryUseCase.invoke() } returns summaryFlow
 
@@ -118,6 +125,8 @@ class DashboardViewModelTest {
         goalRepository = goalRepository,
         portfolioRepository = portfolioRepository,
         userPreferencesRepository = userPreferencesRepository,
+        installmentRepository = installmentRepository,
+        addTransactionUseCase = addTransactionUseCase,
         getDashboardSummaryUseCase = getDashboardSummaryUseCase,
         getNetWorthTrendUseCase = getNetWorthTrendUseCase
     )

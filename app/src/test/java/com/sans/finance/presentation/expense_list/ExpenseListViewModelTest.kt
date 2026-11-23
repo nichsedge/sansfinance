@@ -1,5 +1,6 @@
 package com.sans.finance.presentation.expense_list
 
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.sans.finance.data.util.LocaleManager
 import com.sans.finance.domain.model.Category
@@ -89,6 +90,7 @@ class ExpenseListViewModelTest {
     }
 
     private fun createViewModel() = ExpenseListViewModel(
+        savedStateHandle = SavedStateHandle(),
         observeFilteredExpensesUseCase = observeFilteredExpensesUseCase,
         repository = expenseRepository,
         accountRepository = accountRepository,

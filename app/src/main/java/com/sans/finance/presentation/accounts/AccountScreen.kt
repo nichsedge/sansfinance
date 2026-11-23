@@ -75,6 +75,7 @@ data class AccountUpdateParams(
     val name: String,
     val type: String,
     val balance: Long,
+    val currency: String,
     val interestRate: Double,
     val minPayment: Long
 )
@@ -85,11 +86,13 @@ fun AccountScreen(
     onStatsClick: () -> Unit,
     onDebtStrategistClick: () -> Unit = {},
     onBack: () -> Unit = {},
+    onViewLedger: (Long) -> Unit = {},
     viewModel: AccountViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var accountToEdit by remember { mutableStateOf<AccountEntity?>(null) }
+    var selectedAccountForAction by remember { mutableStateOf<AccountEntity?>(null) }
     var showMenu by remember { mutableStateOf(false) }
     var showAdjustmentDialog by remember { mutableStateOf(false) }
     var pendingUpdateData by remember { mutableStateOf<AccountUpdateParams?>(null) }
@@ -196,8 +199,9 @@ fun AccountScreen(
                             type = accountType.name,
                             accounts = accounts,
                             currentCurrency = state.currentCurrency,
+                            ratesMap = state.ratesMap,
                             isPrivacyModeEnabled = state.isPrivacyModeEnabled,
-                            onAccountClick = { accountToEdit = it },
+                            onAccountClick = { selectedAccountForAction = it },
                             onMoveAccountUp = viewModel::moveAccountUp,
                             onMoveAccountDown = viewModel::moveAccountDown,
                             isReorderMode = isReorderMode,
@@ -215,8 +219,9 @@ fun AccountScreen(
                             type = type,
                             accounts = accounts,
                             currentCurrency = state.currentCurrency,
+                            ratesMap = state.ratesMap,
                             isPrivacyModeEnabled = state.isPrivacyModeEnabled,
-                            onAccountClick = { accountToEdit = it },
+                            onAccountClick = { selectedAccountForAction = it },
                             onMoveAccountUp = viewModel::moveAccountUp,
                             onMoveAccountDown = viewModel::moveAccountDown,
                             isReorderMode = isReorderMode,
@@ -235,6 +240,9 @@ fun AccountScreen(
             var type by remember(accountToEdit, state.accountTypes) {
                 mutableStateOf(accountToEdit?.type ?: state.accountTypes.firstOrNull()?.name ?: "")
             }
+            var currency by remember(accountToEdit, state.currentCurrency) {
+                mutableStateOf(accountToEdit?.currency ?: state.currentCurrency)
+            }
             var balance by remember(accountToEdit) {
                 mutableStateOf(accountToEdit?.balance?.let { (it / 100).toString() } ?: "")
             }
@@ -245,6 +253,7 @@ fun AccountScreen(
                 mutableStateOf(accountToEdit?.minPayment?.let { (it / 100).toString() } ?: "0")
             }
             var expanded by remember { mutableStateOf(false) }
+            var currencyExpanded by remember { mutableStateOf(false) }
 
             AlertDialog(
                 onDismissRequest = {
@@ -267,47 +276,92 @@ fun AccountScreen(
                             shape = MaterialTheme.shapes.large
                         )
 
-                        ExposedDropdownMenuBox(
-                            expanded = expanded,
-                            onExpandedChange = { expanded = !expanded }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            OutlinedTextField(
-                                value = type,
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Type") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                modifier = Modifier
-                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                                    .fillMaxWidth(),
-                                shape = MaterialTheme.shapes.large
-                            )
-                            ExposedDropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }
-                            ) {
-                                state.accountTypes.forEach { accountType ->
-                                    val accountIcon = when (accountType.icon) {
-                                        "AccountBalanceWallet" -> Icons.Default.AccountBalanceWallet
-                                        "AccountBalance" -> Icons.Default.AccountBalance
-                                        "CreditCard" -> Icons.Default.CreditCard
-                                        "Payments" -> Icons.Default.Payments
-                                        else -> Icons.Default.AccountBalance
-                                    }
-                                    DropdownMenuItem(
-                                        text = { Text(accountType.name) },
-                                        leadingIcon = {
-                                            Icon(
-                                                imageVector = accountIcon,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        },
-                                        onClick = {
-                                            type = accountType.name
-                                            expanded = false
-                                        }
+                            Box(modifier = Modifier.weight(1.2f)) {
+                                ExposedDropdownMenuBox(
+                                    expanded = expanded,
+                                    onExpandedChange = { expanded = !expanded }
+                                ) {
+                                    OutlinedTextField(
+                                        value = type,
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text("Type") },
+                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                        modifier = Modifier
+                                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                                            .fillMaxWidth(),
+                                        shape = MaterialTheme.shapes.large
                                     )
+                                    ExposedDropdownMenu(
+                                        expanded = expanded,
+                                        onDismissRequest = { expanded = false }
+                                    ) {
+                                        state.accountTypes.forEach { accountType ->
+                                            val accountIcon = when (accountType.icon) {
+                                                "AccountBalanceWallet" -> Icons.Default.AccountBalanceWallet
+                                                "AccountBalance" -> Icons.Default.AccountBalance
+                                                "CreditCard" -> Icons.Default.CreditCard
+                                                "Payments" -> Icons.Default.Payments
+                                                else -> Icons.Default.AccountBalance
+                                            }
+                                            DropdownMenuItem(
+                                                text = { Text(accountType.name) },
+                                                leadingIcon = {
+                                                    Icon(
+                                                        imageVector = accountIcon,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                },
+                                                onClick = {
+                                                    type = accountType.name
+                                                    expanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            Box(modifier = Modifier.weight(0.9f)) {
+                                ExposedDropdownMenuBox(
+                                    expanded = currencyExpanded,
+                                    onExpandedChange = { currencyExpanded = !currencyExpanded }
+                                ) {
+                                    OutlinedTextField(
+                                        value = currency,
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text("Currency") },
+                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = currencyExpanded) },
+                                        modifier = Modifier
+                                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                                            .fillMaxWidth(),
+                                        shape = MaterialTheme.shapes.large
+                                    )
+                                    ExposedDropdownMenu(
+                                        expanded = currencyExpanded,
+                                        onDismissRequest = { currencyExpanded = false }
+                                    ) {
+                                        val currencies = if (state.enabledCurrencies.isNotEmpty()) {
+                                            state.enabledCurrencies
+                                        } else {
+                                            com.sans.finance.data.util.LocaleManager.COMMON_CURRENCIES
+                                        }
+                                        currencies.forEach { curr ->
+                                            DropdownMenuItem(
+                                                text = { Text(curr) },
+                                                onClick = {
+                                                    currency = curr
+                                                    currencyExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -317,7 +371,7 @@ fun AccountScreen(
                             onValueChange = {
                                 balance = it.filter { char -> char.isDigit() || char == '-' }
                             },
-                            label = { Text("Current Balance") },
+                            label = { Text("Current Balance ($currency)") },
                             visualTransformation = com.sans.finance.core.util.ThousandsSeparatorVisualTransformation(),
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
@@ -369,26 +423,28 @@ fun AccountScreen(
                                         name = name,
                                         type = type,
                                         balance = parsedBalance,
+                                        currency = currency,
                                         interestRate = parsedInterest,
                                         minPayment = parsedMinPayment
                                     )
                                     showAdjustmentDialog = true
                                 } else {
                                     viewModel.updateAccount(
-                                        accountToEdit!!,
-                                        name,
-                                        type,
-                                        parsedBalance,
+                                        account = accountToEdit!!,
+                                        newName = name,
+                                        newType = type,
+                                        newBalance = parsedBalance,
+                                        newCurrency = currency,
                                         interestRate = parsedInterest,
                                         minPayment = parsedMinPayment
                                     )
                                 }
                             } else {
                                 viewModel.addAccount(
-                                    name,
-                                    type,
-                                    parsedBalance,
-                                    state.currentCurrency,
+                                    name = name,
+                                    type = type,
+                                    initialBalance = parsedBalance,
+                                    currency = currency,
                                     interestRate = parsedInterest,
                                     minPayment = parsedMinPayment
                                 )
@@ -448,7 +504,7 @@ fun AccountScreen(
                             "Difference: ${if (isIncrease) "+" else "-"}${
                                 com.sans.finance.core.util.CurrencyFormatter.formatAmount(
                                     absDiff,
-                                    data.account.currency
+                                    data.currency
                                 )
                             }",
                             fontWeight = FontWeight.Bold,
@@ -462,10 +518,11 @@ fun AccountScreen(
                     Button(
                         onClick = {
                             viewModel.updateAccount(
-                                data.account,
-                                data.name,
-                                data.type,
-                                data.balance,
+                                account = data.account,
+                                newName = data.name,
+                                newType = data.type,
+                                newBalance = data.balance,
+                                newCurrency = data.currency,
                                 recordAdjustment = true,
                                 interestRate = data.interestRate,
                                 minPayment = data.minPayment
@@ -481,10 +538,11 @@ fun AccountScreen(
                     TextButton(
                         onClick = {
                             viewModel.updateAccount(
-                                data.account,
-                                data.name,
-                                data.type,
-                                data.balance,
+                                account = data.account,
+                                newName = data.name,
+                                newType = data.type,
+                                newBalance = data.balance,
+                                newCurrency = data.currency,
                                 recordAdjustment = false,
                                 interestRate = data.interestRate,
                                 minPayment = data.minPayment
@@ -498,6 +556,90 @@ fun AccountScreen(
                 }
             )
         }
+
+        if (selectedAccountForAction != null) {
+            val account = selectedAccountForAction!!
+            val converted = if (account.currency != state.currentCurrency) {
+                val fromRate = if (account.currency == "IDR") 1.0 else (state.ratesMap[account.currency] ?: 1.0)
+                val toRate = if (state.currentCurrency == "IDR") 1.0 else (state.ratesMap[state.currentCurrency] ?: 1.0)
+                if (toRate > 0) ((account.balance * fromRate) / toRate).toLong() else account.balance
+            } else null
+
+            androidx.compose.material3.ModalBottomSheet(
+                onDismissRequest = { selectedAccountForAction = null }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = account.name,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Black
+                            )
+                            Text(
+                                text = "${account.type} • ${account.currency}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            PrivacyText(
+                                amount = account.balance,
+                                currencyCode = account.currency,
+                                isVisible = !state.isPrivacyModeEnabled,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (converted != null) {
+                                Text(
+                                    text = "≈ ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(converted, state.currentCurrency)}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("View Ledger") },
+                        supportingContent = { Text("Open transactions filtered to this account") },
+                        leadingContent = {
+                            Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        },
+                        modifier = Modifier.clickable {
+                            val id = account.id
+                            selectedAccountForAction = null
+                            onViewLedger(id)
+                        }
+                    )
+
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("Edit Account") },
+                        supportingContent = { Text("Change name, type, or currency") },
+                        leadingContent = {
+                            Icon(Icons.Default.CreditCard, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+                        },
+                        modifier = Modifier.clickable {
+                            accountToEdit = account
+                            selectedAccountForAction = null
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+        }
     }
 }
 
@@ -506,6 +648,7 @@ fun AccountGroupCard(
     type: String,
     accounts: List<AccountEntity>,
     currentCurrency: String,
+    ratesMap: Map<String, Double> = emptyMap(),
     isPrivacyModeEnabled: Boolean,
     onAccountClick: (AccountEntity) -> Unit,
     onMoveAccountUp: (AccountEntity) -> Unit = {},
@@ -515,8 +658,19 @@ fun AccountGroupCard(
 ) {
     val typeObj = accountTypes.find { it.name == type }
     val isLiability = typeObj?.isLiability == true
-    val groupTotal =
-        accounts.sumOf { if (isLiability) -it.balance else it.balance }
+
+    fun convertToBase(amount: Long, from: String): Long {
+        if (from == currentCurrency) return amount
+        val fromRate = if (from == "IDR") 1.0 else (ratesMap[from] ?: 1.0)
+        val toRate = if (currentCurrency == "IDR") 1.0 else (ratesMap[currentCurrency] ?: 1.0)
+        if (toRate == 0.0) return amount
+        return ((amount * fromRate) / toRate).toLong()
+    }
+
+    val groupTotal = accounts.sumOf {
+        val converted = convertToBase(it.balance, it.currency)
+        if (isLiability) -converted else converted
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -582,8 +736,14 @@ fun AccountGroupCard(
             }
 
             accounts.forEachIndexed { index, account ->
+                val convertedBalance = if (account.currency != currentCurrency) {
+                    convertToBase(account.balance, account.currency)
+                } else null
+
                 AccountRowItem(
                     account = account,
+                    currentCurrency = currentCurrency,
+                    convertedBalance = convertedBalance,
                     isPrivacyModeEnabled = isPrivacyModeEnabled,
                     onClick = { onAccountClick(account) },
                     onMoveUp = { onMoveAccountUp(account) },
@@ -605,6 +765,8 @@ fun AccountGroupCard(
 @Composable
 fun AccountRowItem(
     account: AccountEntity,
+    currentCurrency: String,
+    convertedBalance: Long? = null,
     isPrivacyModeEnabled: Boolean,
     onClick: () -> Unit,
     onMoveUp: () -> Unit,
@@ -648,14 +810,23 @@ fun AccountRowItem(
             }
         }
 
-        PrivacyText(
-            amount = account.balance,
-            currencyCode = account.currency,
-            isVisible = !isPrivacyModeEnabled,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Black,
-            color = if (isLiability) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-        )
+        Column(horizontalAlignment = Alignment.End) {
+            PrivacyText(
+                amount = account.balance,
+                currencyCode = account.currency,
+                isVisible = !isPrivacyModeEnabled,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Black,
+                color = if (isLiability) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+            )
+            if (account.currency != currentCurrency && convertedBalance != null) {
+                Text(
+                    text = if (isPrivacyModeEnabled) "••••••" else "≈ ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(convertedBalance, currentCurrency)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 

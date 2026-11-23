@@ -61,10 +61,24 @@ class SettingsViewModel @Inject constructor(
         initialValue = UserPreferences()
     )
 
+    val exchangeRates = db.currencyDao.getAllRates().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
     init {
         viewModelScope.launch {
             userPreferences.collect { prefs ->
                 _isPrivacyModeEnabled.value = prefs.isPrivacyModeEnabled
+                if (prefs.enabledCurrencies.isNotEmpty()) {
+                    _enabledCurrencies.value = prefs.enabledCurrencies
+                    localeManager.setEnabledCurrencies(prefs.enabledCurrencies)
+                }
+                if (prefs.baseCurrency.isNotBlank() && prefs.baseCurrency != _currentCurrency.value) {
+                    _currentCurrency.value = prefs.baseCurrency
+                    localeManager.setCurrency(prefs.baseCurrency)
+                }
             }
         }
     }
@@ -81,6 +95,9 @@ class SettingsViewModel @Inject constructor(
     fun setCurrency(currency: String) {
         localeManager.setCurrency(currency)
         _currentCurrency.value = currency
+        viewModelScope.launch {
+            userPreferencesRepository.setBaseCurrency(currency)
+        }
     }
 
     fun toggleCurrency() {
@@ -110,6 +127,9 @@ class SettingsViewModel @Inject constructor(
         }
         localeManager.setEnabledCurrencies(currentList)
         _enabledCurrencies.value = currentList
+        viewModelScope.launch {
+            userPreferencesRepository.setEnabledCurrencies(currentList)
+        }
     }
 
     fun togglePrivacyMode() {
@@ -485,5 +505,66 @@ class SettingsViewModel @Inject constructor(
     fun clearMessages() {
         _error.value = null
         _syncMessage.value = null
+    }
+
+    fun refreshExchangeRates(context: android.content.Context) {
+        val request = androidx.work.OneTimeWorkRequestBuilder<com.sans.finance.data.worker.SyncExchangeRatesWorker>().build()
+        androidx.work.WorkManager.getInstance(context).enqueue(request)
+        _syncMessage.value = "Exchange rates refresh triggered"
+    }
+
+    fun exportTransactionsCsv(context: android.content.Context) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val expenses = repository.getAllExpenses().first()
+                val accounts = db.accountDao.getAllAccountsOnce().associateBy { it.id }
+                val rates = db.currencyDao.getAllRates().first().associate { it.code to it.rateToIdr }
+                val baseCurr = localeManager.getCurrency()
+                val baseRate = if (baseCurr == "IDR") 1.0 else (rates[baseCurr] ?: 1.0)
+
+                val csvBuilder = StringBuilder()
+                csvBuilder.appendLine("ID,Date,Title,Type,Amount,Currency,Account,Converted_Amount,Base_Currency,Details")
+
+                val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+
+                expenses.forEach { exp ->
+                    val accName = accounts[exp.accountId]?.name ?: "Account ${exp.accountId}"
+                    val fromRate = if (exp.currency == "IDR") 1.0 else (rates[exp.currency] ?: 1.0)
+                    val convertedCents = if (baseRate > 0) ((exp.amount * fromRate) / baseRate).toLong() else exp.amount
+                    val formattedDate = dateFormat.format(java.util.Date(exp.date))
+                    val titleEscaped = "\"" + exp.title.replace("\"", "\"\"") + "\""
+                    val detailsEscaped = "\"" + (exp.details ?: "").replace("\"", "\"\"") + "\""
+
+                    csvBuilder.appendLine(
+                        "${exp.id},$formattedDate,$titleEscaped,${exp.type},${exp.amount / 100.0},${exp.currency},\"$accName\",${convertedCents / 100.0},$baseCurr,$detailsEscaped"
+                    )
+                }
+
+                val exportFile = java.io.File(context.cacheDir, "sans_finance_transactions.csv")
+                exportFile.writeText(csvBuilder.toString())
+
+                val uri = androidx.core.content.FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.provider",
+                    exportFile
+                )
+
+                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "text/csv"
+                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Sans Finance Transactions Export")
+                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+
+                context.startActivity(android.content.Intent.createChooser(intent, "Export Transactions CSV").apply {
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                })
+
+                _syncMessage.value = "Exported ${expenses.size} transactions to CSV"
+            } catch (e: Exception) {
+                _error.value = "Failed to export CSV: ${e.message}"
+            }
+        }
     }
 }

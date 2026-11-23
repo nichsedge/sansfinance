@@ -175,7 +175,8 @@ fun DashboardScreen(
                         currencyCode = state.currentCurrency,
                         isPrivacyModeEnabled = state.isPrivacyModeEnabled,
                         onRecurringExpensesClick = onRecurringExpensesClick,
-                        onInstallmentsClick = onInstallmentsClick
+                        onInstallmentsClick = onInstallmentsClick,
+                        onPayBill = viewModel::payUpcomingBill
                     )
                 }
             }

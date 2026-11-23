@@ -2,6 +2,7 @@ package com.sans.finance.presentation.settings
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,10 +30,13 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -117,6 +121,7 @@ fun SettingsScreen(
     var showBackupFrequencyDialog by remember { mutableStateOf(false) }
     var showCloudProviderDialog by remember { mutableStateOf(false) }
     var showSyncGatewayConfigDialog by remember { mutableStateOf(false) }
+    var showR2ConfigDialog by remember { mutableStateOf(false) }
     var showRestoreCloudConfirmDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.syncMessage.value) {
@@ -173,7 +178,14 @@ fun SettingsScreen(
             cloudBackupProvider = cloudBackupProvider,
             onFrequencyClick = { showBackupFrequencyDialog = true },
             onProviderClick = { showCloudProviderDialog = true },
-            onConfigureR2Click = { showSyncGatewayConfigDialog = true },
+            onConfigureR2Click = {
+                val isR2 = cloudBackupProvider.equals("CLOUDFLARE_R2", ignoreCase = true) || cloudBackupProvider.equals("R2", ignoreCase = true)
+                if (isR2) {
+                    showR2ConfigDialog = true
+                } else {
+                    showSyncGatewayConfigDialog = true
+                }
+            },
             onWifiOnlyToggle = { viewModel.setBackupWifiOnly(it, context) },
             onRequiresChargingToggle = { viewModel.setBackupRequiresCharging(it, context) },
             onBackupNow = { viewModel.uploadBackupToCloud(context) },
@@ -217,13 +229,32 @@ fun SettingsScreen(
         )
     }
 
+    if (showR2ConfigDialog) {
+        R2ConfigDialog(
+            currentAccountId = viewModel.getR2AccountId(),
+            currentAccessKeyId = viewModel.getR2AccessKeyId(),
+            currentSecretAccessKey = viewModel.getR2SecretAccessKey(),
+            currentBucketName = viewModel.getR2BucketName(),
+            onDismiss = { showR2ConfigDialog = false },
+            onSave = { accountId, accessKeyId, secretAccessKey, bucketName ->
+                viewModel.saveR2Config(accountId, accessKeyId, secretAccessKey, bucketName)
+                showR2ConfigDialog = false
+            }
+        )
+    }
+
     if (showRestoreCloudConfirmDialog) {
+        val providerTitle = if (cloudBackupProvider.equals("CLOUDFLARE_R2", ignoreCase = true) || cloudBackupProvider.equals("R2", ignoreCase = true)) {
+            "Cloudflare R2"
+        } else {
+            "Cloud Sync Gateway"
+        }
         AlertDialog(
             onDismissRequest = { showRestoreCloudConfirmDialog = false },
             title = { Text("Restore from Cloud Backup") },
             text = {
                 Text(
-                    "This will download the latest verified backup from Cloudflare R2 and replace your local database. The app will restart automatically after restore.\n\nAre you sure you want to proceed?"
+                    "This will download the latest verified backup from $providerTitle and replace your local database. The app will restart automatically after restore.\n\nAre you sure you want to proceed?"
                 )
             },
             confirmButton = {
@@ -431,6 +462,69 @@ fun SettingsContent(
                     }
                 )
             }
+
+            Spacer(Modifier.height(8.dp))
+            val rates by viewModel.exchangeRates.collectAsStateWithLifecycle()
+            val baseCurrency = viewModel.currentCurrency.value
+            val baseRate = rates.find { it.code == baseCurrency }?.rateToIdr ?: (if (baseCurrency == "IDR") 1.0 else 1.0)
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                            Text("Live FX Conversion Rates", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        }
+                        IconButton(
+                            onClick = { viewModel.refreshExchangeRates(context) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh Rates", modifier = Modifier.size(16.dp))
+                        }
+                    }
+
+                    if (rates.isEmpty()) {
+                        Text("No exchange rates loaded yet. Tap refresh to sync live rates.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        val displayCurrencies = listOf("USD", "SGD", "EUR", "JPY", "CNY", "GBP", "IDR").filter { it != baseCurrency }
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            displayCurrencies.forEach { code ->
+                                val r = rates.find { it.code == code }
+                                if (r != null) {
+                                    val multiplier = if (baseRate > 0) r.rateToIdr / baseRate else 1.0
+                                    val fmt = if (multiplier >= 100) String.format(java.util.Locale.US, "%,.0f", multiplier) else String.format(java.util.Locale.US, "%,.2f", multiplier)
+                                    Box(
+                                        modifier = Modifier
+                                            .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.small)
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            "1 $code = $fmt $baseCurrency",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         item {
@@ -536,6 +630,16 @@ fun SettingsContent(
                 icon = Icons.Default.FileUpload,
                 title = "Import & Export (CSV / JSON)",
                 subtitle = "Custom files, spreadsheet transfer, and restores"
+            )
+        }
+
+        item {
+            SettingsClickableCard(
+                onClick = { viewModel.exportTransactionsCsv(context) },
+                icon = Icons.Default.Share,
+                title = "Export Transactions to CSV",
+                subtitle = "Share multi-currency ledger with converted valuations",
+                isLoading = isLoading
             )
         }
 

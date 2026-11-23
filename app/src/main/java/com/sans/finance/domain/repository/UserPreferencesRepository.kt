@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.Flow
 interface UserPreferencesRepository {
     val userPreferences: Flow<UserPreferences>
 
+    suspend fun setBaseCurrency(currency: String)
+    suspend fun setEnabledCurrencies(currencies: List<String>)
     suspend fun setPrivacyModeEnabled(enabled: Boolean)
     suspend fun setFireManualEnabled(enabled: Boolean)
     suspend fun setManualFireAnnualExpense(amount: Long)

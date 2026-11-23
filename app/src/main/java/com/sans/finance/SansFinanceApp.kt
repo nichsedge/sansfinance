@@ -44,6 +44,12 @@ class SansFinanceApp : Application(), Configuration.Provider {
         scheduleDailyRecap()
         applicationScope.launch {
             val prefs = userPreferencesRepository.userPreferences.first()
+            if (prefs.enabledCurrencies.isNotEmpty()) {
+                localeManager.setEnabledCurrencies(prefs.enabledCurrencies)
+            }
+            if (prefs.baseCurrency.isNotBlank()) {
+                localeManager.setCurrency(prefs.baseCurrency)
+            }
             rescheduleBackupWork(this@SansFinanceApp, localeManager, userPreferencesRepository)
         }
     }

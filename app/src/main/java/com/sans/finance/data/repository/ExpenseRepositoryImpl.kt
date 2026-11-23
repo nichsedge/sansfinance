@@ -407,21 +407,44 @@ class ExpenseRepositoryImpl(
 
     override suspend fun getReSyncBalancesDryRun(): List<AccountSyncDryRunResult> {
         val accounts = accountDao.getAllAccounts().first()
+        val accountsMap = accounts.associateBy { it.id }
+        val rates = try {
+            db.currencyDao.getAllRates().first()
+        } catch (e: Exception) {
+            emptyList()
+        }
+        val ratesMap = rates.associate { it.code to it.rateToIdr }
+
+        fun convert(amount: Long, from: String, to: String): Long {
+            if (from == to) return amount
+            val fromRate = if (from == "IDR") 1.0 else (ratesMap[from] ?: 1.0)
+            val toRate = if (to == "IDR") 1.0 else (ratesMap[to] ?: 1.0)
+            if (toRate == 0.0) return amount
+            return ((amount * fromRate) / toRate).toLong()
+        }
+
         val balances = mutableMapOf<Long, Long>()
         accounts.forEach { balances[it.id] = 0L }
 
         val expenses = dao.getAllExpenseEntities()
         expenses.forEach { exp ->
+            val fromAcc = accountsMap[exp.accountId]
+            val fromCurr = fromAcc?.currency ?: exp.currency
+            val fromAmt = convert(exp.amount, exp.currency, fromCurr)
+
             if (exp.type == "TRANSFER") {
-                balances[exp.accountId] = (balances[exp.accountId] ?: 0L) - exp.amount
+                balances[exp.accountId] = (balances[exp.accountId] ?: 0L) - fromAmt
                 val toId = exp.toAccountId
                 if (toId != null) {
-                    balances[toId] = (balances[toId] ?: 0L) + exp.amount
+                    val toAcc = accountsMap[toId]
+                    val toCurr = toAcc?.currency ?: exp.currency
+                    val toAmt = convert(exp.amount, exp.currency, toCurr)
+                    balances[toId] = (balances[toId] ?: 0L) + toAmt
                 }
             } else if (exp.type == "INCOME") {
-                balances[exp.accountId] = (balances[exp.accountId] ?: 0L) + exp.amount
+                balances[exp.accountId] = (balances[exp.accountId] ?: 0L) + fromAmt
             } else {
-                balances[exp.accountId] = (balances[exp.accountId] ?: 0L) - exp.amount
+                balances[exp.accountId] = (balances[exp.accountId] ?: 0L) - fromAmt
             }
         }
 
@@ -430,7 +453,10 @@ class ExpenseRepositoryImpl(
             installmentDao.getInstallmentPaymentsBetween(0, Long.MAX_VALUE).first()
         installmentItems.forEach { item ->
             if (item.status == "Paid") {
-                balances[item.accountId] = (balances[item.accountId] ?: 0L) - item.amount
+                val acc = accountsMap[item.accountId]
+                val accCurr = acc?.currency ?: item.currency
+                val itemAmt = convert(item.amount, item.currency, accCurr)
+                balances[item.accountId] = (balances[item.accountId] ?: 0L) - itemAmt
             }
         }
 

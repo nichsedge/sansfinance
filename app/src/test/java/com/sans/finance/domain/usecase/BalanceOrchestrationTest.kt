@@ -1,5 +1,6 @@
 package com.sans.finance.domain.usecase
 
+import com.sans.finance.data.local.entity.AccountEntity
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.repository.AccountRepository
 import com.sans.finance.domain.repository.ExpenseRepository
@@ -19,6 +20,7 @@ class BalanceOrchestrationTest {
     private lateinit var installmentRepository: InstallmentRepository
     private lateinit var tagRepository: TagRepository
     private lateinit var createInstallmentPlanUseCase: CreateInstallmentPlanUseCase
+    private lateinit var convertCurrencyUseCase: ConvertCurrencyUseCase
 
     private lateinit var addTransactionUseCase: AddTransactionUseCase
     private lateinit var updateExpenseUseCase: UpdateExpenseUseCase
@@ -34,23 +36,27 @@ class BalanceOrchestrationTest {
         installmentRepository = mockk(relaxed = true)
         tagRepository = mockk(relaxed = true)
         createInstallmentPlanUseCase = mockk(relaxed = true)
+        convertCurrencyUseCase = mockk(relaxed = true)
 
         addTransactionUseCase = AddTransactionUseCase(
             expenseRepository,
             tagRepository,
-            accountRepository
+            accountRepository,
+            convertCurrencyUseCase
         )
         updateExpenseUseCase = UpdateExpenseUseCase(
             expenseRepository,
             installmentRepository,
             accountRepository,
             tagRepository,
-            createInstallmentPlanUseCase
+            createInstallmentPlanUseCase,
+            convertCurrencyUseCase
         )
         deleteExpenseUseCase = DeleteExpenseUseCase(
             expenseRepository,
             installmentRepository,
-            accountRepository
+            accountRepository,
+            convertCurrencyUseCase
         )
     }
 
@@ -158,5 +164,32 @@ class BalanceOrchestrationTest {
         deleteExpenseUseCase(installmentPayment)
 
         coVerify(exactly = 0) { accountRepository.updateBalance(any(), any()) }
+    }
+
+    @Test
+    fun `AddTransactionUseCase converts foreign currency expense to account currency`() = runBlocking {
+        val usdAccount = AccountEntity(id = cashAccountId, name = "USD Cash", type = "Cash", balance = 100_00L, currency = "USD")
+        coEvery { accountRepository.getAccountById(cashAccountId) } returns usdAccount
+        coEvery { convertCurrencyUseCase(15_000L, "IDR", "USD", any()) } returns 1_00L
+
+        val tx = expense(amount = 15_000L).copy(currency = "IDR")
+        addTransactionUseCase(tx)
+
+        coVerify { accountRepository.updateBalance(cashAccountId, -1_00L) }
+    }
+
+    @Test
+    fun `AddTransactionUseCase converts currencies on transfer between different currency accounts`() = runBlocking {
+        val usdAccount = AccountEntity(id = cashAccountId, name = "USD Cash", type = "Cash", balance = 100_00L, currency = "USD")
+        val idrAccount = AccountEntity(id = bankAccountId, name = "IDR Bank", type = "Bank", balance = 1_000_000_00L, currency = "IDR")
+        coEvery { accountRepository.getAccountById(cashAccountId) } returns usdAccount
+        coEvery { accountRepository.getAccountById(bankAccountId) } returns idrAccount
+        coEvery { convertCurrencyUseCase(10_00L, "USD", "IDR", any()) } returns 160_000_00L
+
+        val tx = expense(amount = 10_00L, type = "TRANSFER", toAccountId = bankAccountId).copy(currency = "USD")
+        addTransactionUseCase(tx)
+
+        coVerify { accountRepository.updateBalance(cashAccountId, -10_00L) }
+        coVerify { accountRepository.updateBalance(bankAccountId, 160_000_00L) }
     }
 }

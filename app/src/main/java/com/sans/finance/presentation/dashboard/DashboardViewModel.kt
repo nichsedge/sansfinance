@@ -63,7 +63,9 @@ class DashboardViewModel @Inject constructor(
     private val portfolioRepository: PortfolioRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val getDashboardSummaryUseCase: GetDashboardSummaryUseCase,
-    private val getNetWorthTrendUseCase: GetNetWorthTrendUseCase
+    private val getNetWorthTrendUseCase: GetNetWorthTrendUseCase,
+    private val installmentRepository: com.sans.finance.domain.repository.InstallmentRepository,
+    private val addTransactionUseCase: com.sans.finance.domain.usecase.AddTransactionUseCase
 ) : ViewModel() {
 
     private val summaryFlow = getDashboardSummaryUseCase()
@@ -148,6 +150,27 @@ class DashboardViewModel @Inject constructor(
     fun togglePrivacyMode() {
         viewModelScope.launch {
             userPreferencesRepository.setPrivacyModeEnabled(!state.value.isPrivacyModeEnabled)
+        }
+    }
+
+    fun payUpcomingBill(bill: Expense) {
+        viewModelScope.launch {
+            if (bill.isInstallmentPayment) {
+                installmentRepository.updateInstallmentItemStatus(bill.id, "Paid")
+            } else {
+                addTransactionUseCase(
+                    Expense(
+                        date = System.currentTimeMillis(),
+                        title = bill.title,
+                        amount = bill.amount,
+                        categoryId = bill.categoryId,
+                        accountId = bill.accountId,
+                        type = bill.type,
+                        currency = bill.currency,
+                        details = "Logged from upcoming obligations"
+                    )
+                )
+            }
         }
     }
 }

@@ -15,12 +15,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -50,6 +52,7 @@ fun UpcomingBillsCard(
     isPrivacyModeEnabled: Boolean,
     onRecurringExpensesClick: () -> Unit,
     onInstallmentsClick: () -> Unit,
+    onPayBill: (Expense) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (bills.isEmpty()) return
@@ -145,7 +148,8 @@ fun UpcomingBillsCard(
                     DashboardBillRowItem(
                         bill = bill,
                         currencyCode = currencyCode,
-                        isPrivacyModeEnabled = isPrivacyModeEnabled
+                        isPrivacyModeEnabled = isPrivacyModeEnabled,
+                        onPay = { onPayBill(bill) }
                     )
                     if (index < bills.size - 1) {
                         HorizontalDivider(
@@ -163,7 +167,8 @@ fun UpcomingBillsCard(
 private fun DashboardBillRowItem(
     bill: Expense,
     currencyCode: String,
-    isPrivacyModeEnabled: Boolean
+    isPrivacyModeEnabled: Boolean,
+    onPay: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -215,6 +220,18 @@ private fun DashboardBillRowItem(
             fontWeight = FontWeight.Black,
             color = MaterialTheme.colorScheme.error
         )
+
+        IconButton(
+            onClick = onPay,
+            modifier = Modifier.size(32.dp)
+        ) {
+            Icon(
+                Icons.Default.CheckCircle,
+                contentDescription = "Log as Paid",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 

@@ -109,6 +109,10 @@ Room database is at **version 41**. It includes:
 - Typed `yield_rate` column on `portfolio_holdings` for real-world forward yield (APY / Dividend Yield) ingestion from upstream R2 snapshots without hardcoded fallbacks.
 - Typed `cost_basis` column on `portfolio_holdings` for deterministic unrealized capital gain tracking without string parsing.
 - Typed `is_investment` classification on `account_types` for first-class XIRR cashflow attribution without hardcoded broker names.
+- **Local Database:** [Room](https://developer.android.com/training/data-storage/room) (SQLite) — Schema Version 41
+- Multi-currency accounts: first-class per-account currency support with dynamic currency selection during account creation and editing, real-time base currency conversion valuations on account cards/rows, multi-currency account group summaries, dedicated account ledger deep filtering via `Screen.ExpenseList(filterAccountId)`, cross-currency transfer previews and deterministic balance conversions in `AddTransactionUseCase`, `UpdateExpenseUseCase`, `DeleteExpenseUseCase`, and `ExpenseRepositoryImpl.getReSyncBalancesDryRun()`.
+- One-tap bill settlement: Instant recurring bill and installment logging from `UpcomingBillsCard` via `DashboardViewModel.payUpcomingBill()`.
+- On-demand Live FX rates hub and multi-currency CSV transaction statement export in Settings.
 - Recurring expense projection with end conditions (`recurrence_end_type`, `recurrence_end_date`, `recurrence_total_occurrences`, `recurrence_interval_multiplier`, `recurrence_status`)
 - Compound indices on `installment_items` (`due_date`, `status`) and `expenses` (`is_recurring`, `date`)
 - Multi-currency valuation with historical FX rates (`fx_rates` table via `FxRateEntity`)
@@ -125,7 +129,7 @@ Reference snapshot: `sans_finance_db_snapshot.sqlite`.
 
 ## Cloud Sync, Backup & Disaster Recovery
 
-- **Cloudflare R2 (SSOT)**: Pure Kotlin AWS SigV4 signed requests for S3-compatible cloud snapshot downloads and SQLite database backups.
+- **Cloudflare R2 (SSOT) & Cloud Run Gateway**: Dual-mode sync architecture supporting direct pure Kotlin AWS SigV4 S3 requests or authenticated Cloud Run Gateway (`/api/backup`, `/api/portfolio/snapshot`, `/api/inbox`).
 - **Zero Data-Loss Safeguard**: `CloudStorageSyncer` strictly inspects database contents prior to upload and refuses to overwrite backups if the `expenses` count is 0.
 - **Dual-Destination Archiving**: Every backup operation writes to both `db/sans_finance_latest.sqlite` and an immutable timestamped key `db/archive/sans_finance_yyyyMMdd_HHmmss.sqlite`.
 - **In-App Cloud Restore**: Settings screen provides a one-tap `[Restore]` button that verifies SQLite integrity before replacing local files and cleanly restarting the app.

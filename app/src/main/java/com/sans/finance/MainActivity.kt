@@ -65,7 +65,7 @@ class MainActivity : ComponentActivity() {
                 navEventChannel.trySend(Screen.AddTransaction(categoryId, transactionType))
             }
             ACTION_VIEW_TRANSACTIONS -> {
-                navEventChannel.trySend(Screen.ExpenseList)
+                navEventChannel.trySend(Screen.ExpenseList())
             }
             ACTION_VIEW_BUDGETS -> {
                 navEventChannel.trySend(Screen.Budgets)
@@ -237,7 +237,8 @@ fun AppNavigation(
         composable<Screen.Accounts> {
             com.sans.finance.presentation.accounts.AccountScreen(
                 onStatsClick = { navController.navigate(Screen.AccountStats) },
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onViewLedger = { accountId -> navController.navigate(Screen.ExpenseList(filterAccountId = accountId)) }
             )
         }
         composable<Screen.Portfolio> {

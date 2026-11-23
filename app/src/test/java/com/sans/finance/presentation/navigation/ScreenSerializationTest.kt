@@ -49,7 +49,7 @@ class ScreenSerializationTest {
     private fun getTestScreens(): List<Screen> = listOf(
         Screen.Main,
         Screen.Dashboard,
-        Screen.ExpenseList,
+        Screen.ExpenseList(),
         Screen.AddTransaction(),
         Screen.EditExpense(expenseId = 78L),
         Screen.Installments,

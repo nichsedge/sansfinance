@@ -23,6 +23,8 @@ data class AccountScreenState(
     val accountsByType: Map<String, List<AccountEntity>> = emptyMap(),
     val accountTypes: List<com.sans.finance.data.local.entity.AccountTypeEntity> = emptyList(),
     val currentCurrency: String = "USD",
+    val ratesMap: Map<String, Double> = emptyMap(),
+    val enabledCurrencies: List<String> = emptyList(),
     val isLoading: Boolean = true,
     val isPrivacyModeEnabled: Boolean = false
 )
@@ -74,6 +76,8 @@ class AccountViewModel @Inject constructor(
             accountsByType = grouped,
             accountTypes = accountTypesList,
             currentCurrency = baseCurrency,
+            ratesMap = ratesMap,
+            enabledCurrencies = localeManager.getEnabledCurrencies(),
             isLoading = false,
             isPrivacyModeEnabled = privacyMode
         )
@@ -112,6 +116,7 @@ class AccountViewModel @Inject constructor(
         newName: String,
         newType: String,
         newBalance: Long,
+        newCurrency: String = account.currency,
         recordAdjustment: Boolean = false,
         interestRate: Double = 0.0,
         minPayment: Long = 0
@@ -131,20 +136,16 @@ class AccountViewModel @Inject constructor(
                         categoryId = 1L, // Default category
                         accountId = account.id,
                         type = type,
-                        currency = account.currency,
+                        currency = newCurrency,
                         details = "Manual balance adjustment for ${account.name}"
                     )
                 )
-                // Note: AddTransactionUseCase already updates the account balance!
-                // So we only update OTHER details here, and NOT the balance,
-                // OR we update balance here and use a separate insert method.
-                // To keep it simple and follow the new pattern, I'll update the account details
-                // but keep the new balance.
                 accountRepository.updateAccount(
                     account.copy(
                         name = newName,
                         type = newType,
-                        balance = newBalance, // Already adjusted by UseCase, but we re-apply to be sure of final state
+                        balance = newBalance,
+                        currency = newCurrency,
                         interestRate = interestRate,
                         minPayment = minPayment,
                         updatedAt = System.currentTimeMillis()
@@ -156,6 +157,7 @@ class AccountViewModel @Inject constructor(
                         name = newName,
                         type = newType,
                         balance = newBalance,
+                        currency = newCurrency,
                         interestRate = interestRate,
                         minPayment = minPayment,
                         updatedAt = System.currentTimeMillis()

@@ -12,7 +12,8 @@ import javax.inject.Inject
 class GetCashFlowPacingUseCase @Inject constructor(
     private val getDashboardSummaryUseCase: GetDashboardSummaryUseCase,
     private val installmentDao: InstallmentDao,
-    private val expenseRepository: ExpenseRepository
+    private val expenseRepository: ExpenseRepository,
+    private val currencyDao: com.sans.finance.data.local.dao.CurrencyDao
 ) {
     operator fun invoke(): Flow<DailySafeToSpend> {
         val cal = Calendar.getInstance()
@@ -30,9 +31,21 @@ class GetCashFlowPacingUseCase @Inject constructor(
         return combine(
             getDashboardSummaryUseCase(),
             installmentDao.getAllPendingItems(),
-            expenseRepository.getRecurringExpenses()
-        ) { summary, pendingItems, recurringList ->
+            expenseRepository.getRecurringExpenses(),
+            currencyDao.getAllRates()
+        ) { summary, pendingItems, recurringList, rates ->
             val remainingBudget = (summary.globalBudget - summary.globalSpent).coerceAtLeast(0L)
+            val baseCurrency = summary.currentCurrency
+            val ratesMap = rates.associate { it.code to it.rateToIdr }
+            val baseRate = if (baseCurrency == "IDR") 1.0 else (ratesMap[baseCurrency] ?: 1.0)
+
+            fun convertToBase(amount: Long, from: String?): Long {
+                if (from.isNullOrBlank() || from == baseCurrency) return amount
+                val fromRate = if (from == "IDR") 1.0 else (ratesMap[from] ?: 1.0)
+                val toRate = baseRate
+                if (toRate == 0.0) return amount
+                return ((amount * fromRate) / toRate).toLong()
+            }
 
             // Find pending installment items due before cycleEndMs
             val committedInstallments = pendingItems
@@ -54,7 +67,8 @@ class GetCashFlowPacingUseCase @Inject constructor(
                         since = now,
                         until = cycleEndMs + 1
                     )
-                    occurrences.size.toLong() * rule.amount
+                    val ruleTotal = occurrences.size.toLong() * rule.amount
+                    convertToBase(ruleTotal, rule.currency)
                 }
 
             val committedBills = committedInstallments + committedRecurring

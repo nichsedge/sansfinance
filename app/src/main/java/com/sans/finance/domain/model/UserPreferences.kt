@@ -5,6 +5,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class UserPreferences(
     val isPrivacyModeEnabled: Boolean = false,
+    val baseCurrency: String = "IDR",
+    val enabledCurrencies: List<String> = listOf("USD", "IDR", "CNY", "EUR", "GBP", "JPY"),
     val fireManualEnabled: Boolean = false,
     val manualFireAnnualExpense: Long = 0L,
     val backupFrequency: String = "WEEKLY",
