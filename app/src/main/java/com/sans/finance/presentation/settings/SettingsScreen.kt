@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,20 +24,25 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -58,6 +65,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -109,7 +118,11 @@ fun SettingsScreen(
     val backupRequiresCharging by viewModel.backupRequiresCharging.collectAsStateWithLifecycle()
     val lastBackupTime by viewModel.lastBackupTime.collectAsStateWithLifecycle()
     val lastBackupSizeBytes by viewModel.lastBackupSizeBytes.collectAsStateWithLifecycle()
-    val cloudBackupProvider by viewModel.cloudBackupProvider.collectAsStateWithLifecycle()
+    val emailSyncEnabled by viewModel.emailSyncEnabled.collectAsStateWithLifecycle()
+    val emailSyncHour by viewModel.emailSyncHour.collectAsStateWithLifecycle()
+    val emailSyncMinute by viewModel.emailSyncMinute.collectAsStateWithLifecycle()
+    val emailSyncWifiOnly by viewModel.emailSyncWifiOnly.collectAsStateWithLifecycle()
+    val lastEmailSyncTime by viewModel.lastEmailSyncTime.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
 
@@ -119,10 +132,11 @@ fun SettingsScreen(
     var showRestartDialog by remember { mutableStateOf(false) }
     var showAllCurrenciesDialog by remember { mutableStateOf(false) }
     var showBackupFrequencyDialog by remember { mutableStateOf(false) }
-    var showCloudProviderDialog by remember { mutableStateOf(false) }
     var showSyncGatewayConfigDialog by remember { mutableStateOf(false) }
-    var showR2ConfigDialog by remember { mutableStateOf(false) }
     var showRestoreCloudConfirmDialog by remember { mutableStateOf(false) }
+    var showEmailSyncTimeDialog by remember { mutableStateOf(false) }
+    var showEmailSyncGuideDialog by remember { mutableStateOf(false) }
+    var showFxRatesDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.syncMessage.value) {
         viewModel.syncMessage.value?.let {
@@ -175,23 +189,46 @@ fun SettingsScreen(
             backupRequiresCharging = backupRequiresCharging,
             lastBackupTime = lastBackupTime,
             lastBackupSizeBytes = lastBackupSizeBytes,
-            cloudBackupProvider = cloudBackupProvider,
             onFrequencyClick = { showBackupFrequencyDialog = true },
-            onProviderClick = { showCloudProviderDialog = true },
-            onConfigureR2Click = {
-                val isR2 = cloudBackupProvider.equals("CLOUDFLARE_R2", ignoreCase = true) || cloudBackupProvider.equals("R2", ignoreCase = true)
-                if (isR2) {
-                    showR2ConfigDialog = true
-                } else {
-                    showSyncGatewayConfigDialog = true
-                }
-            },
+            onConfigureGatewayClick = { showSyncGatewayConfigDialog = true },
+            onShowFxRates = { showFxRatesDialog = true },
             onWifiOnlyToggle = { viewModel.setBackupWifiOnly(it, context) },
             onRequiresChargingToggle = { viewModel.setBackupRequiresCharging(it, context) },
             onBackupNow = { viewModel.uploadBackupToCloud(context) },
             onRestoreFromCloud = { showRestoreCloudConfirmDialog = true },
             onSyncEmailInbox = { viewModel.syncEmailExpenses() },
-            isSyncingInbox = viewModel.isSyncingInbox.value
+            isSyncingInbox = viewModel.isSyncingInbox.value,
+            emailSyncEnabled = emailSyncEnabled,
+            emailSyncHour = emailSyncHour,
+            emailSyncMinute = emailSyncMinute,
+            emailSyncWifiOnly = emailSyncWifiOnly,
+            lastEmailSyncTime = lastEmailSyncTime,
+            onEmailSyncEnabledToggle = { viewModel.setEmailSyncEnabled(it, context) },
+            onEmailSyncTimeClick = { showEmailSyncTimeDialog = true },
+            onEmailSyncWifiOnlyToggle = { viewModel.setEmailSyncWifiOnly(it, context) },
+            onEmailSyncGuideClick = { showEmailSyncGuideDialog = true }
+        )
+    }
+
+    if (showEmailSyncGuideDialog) {
+        AutoDetectExpensesGuideDialog(
+            onDismiss = { showEmailSyncGuideDialog = false },
+            onOpenGatewayConfig = {
+                showEmailSyncGuideDialog = false
+                showSyncGatewayConfigDialog = true
+            }
+        )
+    }
+
+    if (showEmailSyncTimeDialog) {
+        EmailSyncTimeDialog(
+            initialHour = emailSyncHour,
+            initialMinute = emailSyncMinute,
+            onDismiss = { showEmailSyncTimeDialog = false },
+            onConfirm = { hour, minute ->
+                viewModel.setEmailSyncTime(hour, minute, context)
+                showEmailSyncTimeDialog = false
+            }
         )
     }
 
@@ -202,17 +239,6 @@ fun SettingsScreen(
             onSelect = { freq ->
                 viewModel.setBackupFrequency(freq, context)
                 showBackupFrequencyDialog = false
-            }
-        )
-    }
-
-    if (showCloudProviderDialog) {
-        CloudProviderDialog(
-            currentProvider = cloudBackupProvider,
-            onDismiss = { showCloudProviderDialog = false },
-            onSelect = { provider ->
-                viewModel.setCloudBackupProvider(provider)
-                showCloudProviderDialog = false
             }
         )
     }
@@ -229,32 +255,26 @@ fun SettingsScreen(
         )
     }
 
-    if (showR2ConfigDialog) {
-        R2ConfigDialog(
-            currentAccountId = viewModel.getR2AccountId(),
-            currentAccessKeyId = viewModel.getR2AccessKeyId(),
-            currentSecretAccessKey = viewModel.getR2SecretAccessKey(),
-            currentBucketName = viewModel.getR2BucketName(),
-            onDismiss = { showR2ConfigDialog = false },
-            onSave = { accountId, accessKeyId, secretAccessKey, bucketName ->
-                viewModel.saveR2Config(accountId, accessKeyId, secretAccessKey, bucketName)
-                showR2ConfigDialog = false
-            }
+    if (showFxRatesDialog) {
+        val rates by viewModel.exchangeRates.collectAsStateWithLifecycle()
+        val baseCurrency = viewModel.currentCurrency.value
+        val baseRate = rates.find { it.code == baseCurrency }?.rateToIdr ?: 1.0
+        FxRatesDialog(
+            baseCurrency = baseCurrency,
+            baseRate = baseRate,
+            rates = rates,
+            onRefresh = { viewModel.refreshExchangeRates(context) },
+            onDismiss = { showFxRatesDialog = false }
         )
     }
 
     if (showRestoreCloudConfirmDialog) {
-        val providerTitle = if (cloudBackupProvider.equals("CLOUDFLARE_R2", ignoreCase = true) || cloudBackupProvider.equals("R2", ignoreCase = true)) {
-            "Cloudflare R2"
-        } else {
-            "Cloud Sync Gateway"
-        }
         AlertDialog(
             onDismissRequest = { showRestoreCloudConfirmDialog = false },
             title = { Text("Restore from Cloud Backup") },
             text = {
                 Text(
-                    "This will download the latest verified backup from $providerTitle and replace your local database. The app will restart automatically after restore.\n\nAre you sure you want to proceed?"
+                    "This will download the latest verified backup from Cloud Sync Gateway and replace your local database. The app will restart automatically after restore.\n\nAre you sure you want to proceed?"
                 )
             },
             confirmButton = {
@@ -371,16 +391,24 @@ fun SettingsContent(
     backupRequiresCharging: Boolean,
     lastBackupTime: Long,
     lastBackupSizeBytes: Long,
-    cloudBackupProvider: String,
     onFrequencyClick: () -> Unit,
-    onProviderClick: () -> Unit,
-    onConfigureR2Click: () -> Unit,
+    onConfigureGatewayClick: () -> Unit,
+    onShowFxRates: () -> Unit,
     onWifiOnlyToggle: (Boolean) -> Unit,
     onRequiresChargingToggle: (Boolean) -> Unit,
     onBackupNow: () -> Unit,
     onRestoreFromCloud: () -> Unit,
     onSyncEmailInbox: () -> Unit = {},
-    isSyncingInbox: Boolean = false
+    isSyncingInbox: Boolean = false,
+    emailSyncEnabled: Boolean = true,
+    emailSyncHour: Int = 20,
+    emailSyncMinute: Int = 0,
+    emailSyncWifiOnly: Boolean = false,
+    lastEmailSyncTime: Long = 0L,
+    onEmailSyncEnabledToggle: (Boolean) -> Unit = {},
+    onEmailSyncTimeClick: () -> Unit = {},
+    onEmailSyncWifiOnlyToggle: (Boolean) -> Unit = {},
+    onEmailSyncGuideClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -389,289 +417,329 @@ fun SettingsContent(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues),
-        contentPadding = PaddingValues(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Language Section
+        // 1. General (Language, Currency, FX, Privacy, AI)
         item {
-            SettingsSectionTitle(stringResource(R.string.language))
-            SettingsClickableCard(
-                onClick = onLanguageToggle,
-                icon = Icons.Default.Translate,
-                title = supportedLanguages.find { it.first == currentLanguage.take(2) }?.second
-                    ?: supportedLanguages.find { it.first == "en" }?.second
-                    ?: currentLanguage
-            )
+            SettingsSectionTitle("General")
+            val rates by viewModel.exchangeRates.collectAsStateWithLifecycle()
+            val baseRate = rates.find { it.code == currentCurrency }?.rateToIdr ?: 1.0
+            val usdRate = rates.find { it.code == "USD" }
+            val fxSubtitle = if (usdRate != null && currentCurrency != "USD" && baseRate > 0) {
+                val mult = usdRate.rateToIdr / baseRate
+                val fmt = if (mult >= 100) String.format(java.util.Locale.US, "%,.0f", mult) else String.format(java.util.Locale.US, "%,.2f", mult)
+                "1 USD = $fmt $currentCurrency · Tap for all"
+            } else if (rates.isEmpty()) {
+                "Tap refresh to sync live rates"
+            } else {
+                "${rates.size} currencies loaded · Tap to view"
+            }
+
+            val languageLabel = supportedLanguages.find { it.first == currentLanguage.take(2) }?.second
+                ?: supportedLanguages.find { it.first == "en" }?.second
+                ?: currentLanguage
+
+            val currencyLabel = try {
+                val curr = java.util.Currency.getInstance(currentCurrency)
+                "${curr.displayName} (${curr.currencyCode})"
+            } catch (e: Exception) {
+                currentCurrency
+            }
+
+            SettingsGroupCard {
+                SettingsRowItem(
+                    icon = Icons.Default.Translate,
+                    title = stringResource(R.string.language),
+                    subtitle = languageLabel,
+                    onClick = onLanguageToggle
+                )
+                SettingsRowDivider()
+                SettingsRowItem(
+                    icon = Icons.Default.ShoppingCart,
+                    title = "Base Currency",
+                    subtitle = currencyLabel,
+                    onClick = onCurrencyToggle
+                )
+                SettingsRowDivider()
+                SettingsRowItem(
+                    icon = Icons.Default.Edit,
+                    title = "Active Currencies",
+                    subtitle = enabledCurrencies.joinToString(", ").ifBlank { "None" },
+                    onClick = onShowAllCurrencies
+                )
+                SettingsRowDivider()
+                SettingsRowItem(
+                    icon = Icons.AutoMirrored.Filled.TrendingUp,
+                    title = "Live Exchange Rates",
+                    subtitle = fxSubtitle,
+                    onClick = onShowFxRates,
+                    trailingContent = {
+                        IconButton(
+                            onClick = { viewModel.refreshExchangeRates(context) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = "Refresh Rates",
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                )
+                SettingsRowDivider()
+                SettingsToggleRowItem(
+                    title = "Privacy Mode",
+                    subtitle = if (isPrivacyModeEnabled) "Hiding sensitive balances" else "Showing all balances",
+                    checked = isPrivacyModeEnabled,
+                    onCheckedChange = { onTogglePrivacyMode() }
+                )
+                SettingsRowDivider()
+                SettingsRowItem(
+                    icon = Icons.Default.SmartToy,
+                    title = "AI Copilot (BYOK)",
+                    subtitle = "API key, model & monthly insights",
+                    onClick = onNavigateToAiSettings
+                )
+            }
         }
 
-        // Currency Section
+        // 2. Organization & Shortcuts
         item {
-            SettingsSectionTitle("Currency")
-            SettingsClickableCard(
-                onClick = onCurrencyToggle,
-                icon = Icons.Default.ShoppingCart,
-                title = try {
-                    val curr = java.util.Currency.getInstance(currentCurrency)
-                    "${curr.displayName} (${curr.currencyCode})"
-                } catch (e: Exception) {
-                    currentCurrency
-                }
-            )
-
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "Quick Selection Options",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.padding(start = 8.dp)
-            )
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                commonCurrencies.forEach { curr ->
-                    val isEnabled = enabledCurrencies.contains(curr)
-                    FilterChip(
-                        selected = isEnabled,
-                        onClick = { onToggleEnabledCurrency(curr) },
-                        label = { Text(curr, style = MaterialTheme.typography.labelSmall) },
-                        leadingIcon = if (isEnabled) {
-                            {
-                                Icon(
-                                    imageVector = Icons.Default.Flag,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        } else null
-                    )
-                }
-
-                FilterChip(
-                    selected = false,
-                    onClick = onShowAllCurrencies,
-                    label = { Text("More...", style = MaterialTheme.typography.labelSmall) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp)
-                        )
+            SettingsSectionTitle("Organization & Shortcuts")
+            SettingsGroupCard {
+                SettingsRowItem(
+                    icon = Icons.Default.Flag,
+                    title = stringResource(R.string.categories),
+                    subtitle = "Expense & income categories",
+                    onClick = onNavigateToCategories
+                )
+                SettingsRowDivider()
+                SettingsRowItem(
+                    icon = Icons.Default.Edit,
+                    title = stringResource(R.string.tags),
+                    subtitle = "Custom tags & transaction labels",
+                    onClick = onNavigateToTags
+                )
+                SettingsRowDivider()
+                SettingsRowItem(
+                    icon = Icons.Default.AccountBalance,
+                    title = "Account Types",
+                    subtitle = "Manage account groups & liability types",
+                    onClick = onNavigateToAccountTypes
+                )
+                SettingsRowDivider()
+                SettingsRowItem(
+                    icon = Icons.Default.AddCircle,
+                    title = "Pin Add Expense Shortcut",
+                    subtitle = "1-tap shortcut on your home screen",
+                    onClick = {
+                        val pinned = com.sans.finance.presentation.util.DynamicShortcutManager.requestPinAddExpenseShortcut(context)
+                        val msg = if (pinned) {
+                            "Shortcut pinned to home screen"
+                        } else {
+                            "Long-press Sans Finance icon on home screen to drag 'Add Expense'"
+                        }
+                        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
                     }
                 )
             }
-
-            Spacer(Modifier.height(8.dp))
-            val rates by viewModel.exchangeRates.collectAsStateWithLifecycle()
-            val baseCurrency = viewModel.currentCurrency.value
-            val baseRate = rates.find { it.code == baseCurrency }?.rateToIdr ?: (if (baseCurrency == "IDR") 1.0 else 1.0)
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 4.dp),
-                shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-            ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                            Text("Live FX Conversion Rates", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                        }
-                        IconButton(
-                            onClick = { viewModel.refreshExchangeRates(context) },
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refresh Rates", modifier = Modifier.size(16.dp))
-                        }
-                    }
-
-                    if (rates.isEmpty()) {
-                        Text("No exchange rates loaded yet. Tap refresh to sync live rates.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else {
-                        val displayCurrencies = listOf("USD", "SGD", "EUR", "JPY", "CNY", "GBP", "IDR").filter { it != baseCurrency }
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            displayCurrencies.forEach { code ->
-                                val r = rates.find { it.code == code }
-                                if (r != null) {
-                                    val multiplier = if (baseRate > 0) r.rateToIdr / baseRate else 1.0
-                                    val fmt = if (multiplier >= 100) String.format(java.util.Locale.US, "%,.0f", multiplier) else String.format(java.util.Locale.US, "%,.2f", multiplier)
-                                    Box(
-                                        modifier = Modifier
-                                            .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.small)
-                                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                                    ) {
-                                        Text(
-                                            "1 $code = $fmt $baseCurrency",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
 
+        // 3. Cloud Backup
         item {
-            SettingsSectionTitle("Organization & Structure")
-            SettingsClickableCard(
-                onClick = onNavigateToCategories,
-                icon = Icons.Default.ChevronRight,
-                title = stringResource(R.string.categories),
-                subtitle = "Expense & income categories"
-            )
-        }
-
-        item {
-            SettingsClickableCard(
-                onClick = onNavigateToTags,
-                icon = Icons.Default.ChevronRight,
-                title = stringResource(R.string.tags),
-                subtitle = "Custom tags & transaction labels"
-            )
-        }
-
-        item {
-            SettingsClickableCard(
-                onClick = onNavigateToAccountTypes,
-                icon = Icons.Default.ChevronRight,
-                title = "Account Types",
-                subtitle = "Manage account groups & liability types"
-            )
-        }
-
-        // Home Screen & Shortcuts Section
-        item {
-            SettingsSectionTitle("Home Screen & Shortcuts")
-            SettingsClickableCard(
-                onClick = {
-                    val pinned = com.sans.finance.presentation.util.DynamicShortcutManager.requestPinAddExpenseShortcut(context)
-                    if (!pinned) {
-                        android.widget.Toast.makeText(
-                            context,
-                            "Long-press Sans Finance icon on home screen to drag 'Add Expense'",
-                            android.widget.Toast.LENGTH_LONG
-                        ).show()
-                    } else {
-                        android.widget.Toast.makeText(
-                            context,
-                            "Shortcut pinned to home screen",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                },
-                icon = Icons.Default.ChevronRight,
-                title = "Add Expense Shortcut",
-                subtitle = "Pin 1-tap shortcut to your home screen"
-            )
-        }
-
-        // Security Section
-        item {
-            SettingsSectionTitle("Security")
-            SettingsToggleCard(
-                checked = isPrivacyModeEnabled,
-                onCheckedChange = { onTogglePrivacyMode() },
-                title = "Privacy Mode",
-                subtitle = if (isPrivacyModeEnabled) "Hiding sensitive balances" else "Showing all balances"
-            )
-        }
-
-        item {
-            SettingsClickableCard(
-                onClick = onNavigateToAiSettings,
-                icon = Icons.Default.SmartToy,
-                title = "AI (Bring Your Own Key)",
-                subtitle = "Optional monthly review & insights"
-            )
-        }
-
-        // Data Management Section
-        item {
-            SettingsSectionTitle(stringResource(R.string.data_management))
-            WhatsAppBackupSettingsCard(
+            SettingsSectionTitle("Cloud Backup")
+            CloudBackupSettingsCard(
                 frequency = backupFrequency,
-                provider = cloudBackupProvider,
                 wifiOnly = backupWifiOnly,
                 requiresCharging = backupRequiresCharging,
                 lastBackupTime = lastBackupTime,
                 lastBackupSizeBytes = lastBackupSizeBytes,
                 isLoading = isLoading,
                 onFrequencyClick = onFrequencyClick,
-                onProviderClick = onProviderClick,
-                onConfigureR2Click = onConfigureR2Click,
+                onConfigureGatewayClick = onConfigureGatewayClick,
                 onWifiOnlyToggle = onWifiOnlyToggle,
                 onRequiresChargingToggle = onRequiresChargingToggle,
                 onBackupNow = onBackupNow,
-                onRestoreFromCloud = onRestoreFromCloud,
+                onRestoreFromCloud = onRestoreFromCloud
+            )
+        }
+
+        // 4. Auto-Detect Expenses
+        item {
+            SettingsSectionTitle("Auto-Detect Expenses")
+            EmailExpensesSettingsCard(
                 onSyncEmailInbox = onSyncEmailInbox,
-                isSyncingInbox = isSyncingInbox
+                isSyncingInbox = isSyncingInbox,
+                emailSyncEnabled = emailSyncEnabled,
+                emailSyncHour = emailSyncHour,
+                emailSyncMinute = emailSyncMinute,
+                emailSyncWifiOnly = emailSyncWifiOnly,
+                lastEmailSyncTime = lastEmailSyncTime,
+                onEmailSyncEnabledToggle = onEmailSyncEnabledToggle,
+                onEmailSyncTimeClick = onEmailSyncTimeClick,
+                onEmailSyncWifiOnlyToggle = onEmailSyncWifiOnlyToggle,
+                onGuideClick = onEmailSyncGuideClick
             )
         }
 
+        // 4. Data & Maintenance
         item {
-            SettingsClickableCard(
-                onClick = onNavigateToDataManagement,
-                icon = Icons.Default.FileUpload,
-                title = "Import & Export (CSV / JSON)",
-                subtitle = "Custom files, spreadsheet transfer, and restores"
-            )
+            SettingsSectionTitle("Data & Maintenance")
+            SettingsGroupCard {
+                SettingsRowItem(
+                    icon = Icons.Default.FileUpload,
+                    title = "Import & Export (CSV / JSON)",
+                    subtitle = "Transactions, assets & portfolio, settings",
+                    onClick = onNavigateToDataManagement
+                )
+                SettingsRowDivider()
+                SettingsRowItem(
+                    icon = Icons.Default.Sync,
+                    title = stringResource(R.string.full_backup),
+                    subtitle = stringResource(R.string.backup_to_downloads),
+                    isLoading = isLoading,
+                    onClick = { exportBackup(context) }
+                )
+                SettingsRowDivider()
+                SettingsRowItem(
+                    icon = Icons.Default.Refresh,
+                    title = "Re-sync Account Balances",
+                    subtitle = "Recalculate from transaction history",
+                    onClick = onReSync
+                )
+                SettingsRowDivider()
+                SettingsRowItem(
+                    icon = Icons.Default.Delete,
+                    title = "Clean Orphaned Tags",
+                    subtitle = "Remove tags not linked to any expense",
+                    onClick = { viewModel.cleanTags() }
+                )
+            }
         }
+    }
+}
 
-        item {
-            SettingsClickableCard(
-                onClick = { viewModel.exportTransactionsCsv(context) },
-                icon = Icons.Default.Share,
-                title = "Export Transactions to CSV",
-                subtitle = "Share multi-currency ledger with converted valuations",
-                isLoading = isLoading
-            )
+@Composable
+private fun SettingsGroupCard(
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            content()
         }
+    }
+}
 
-        item {
-            SettingsClickableCard(
-                onClick = { exportBackup(context) },
-                icon = Icons.Default.Sync,
-                title = stringResource(R.string.full_backup),
-                subtitle = stringResource(R.string.backup_to_downloads),
-                isLoading = isLoading
-            )
-        }
+@Composable
+private fun SettingsRowDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+    )
+}
 
-        // Maintenance Section
-        item {
-            SettingsSectionTitle("Maintenance")
-            SettingsClickableCard(
-                onClick = { viewModel.cleanTags() },
-                icon = Icons.Default.Delete,
-                title = "Clean Orphaned Tags",
-                subtitle = "Remove tags not linked to any expense"
+@Composable
+private fun SettingsRowItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String? = null,
+    isLoading: Boolean = false,
+    onClick: () -> Unit,
+    trailingContent: (@Composable () -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !isLoading, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary
+            )
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
             )
         }
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+        }
+        if (trailingContent != null) {
+            trailingContent()
+        } else {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
 
-        item {
-            SettingsClickableCard(
-                onClick = onReSync,
-                icon = Icons.Default.Sync,
-                title = "Re-sync Account Balances",
-                subtitle = "Recalculate from history (May overwrite)"
+@Composable
+private fun SettingsToggleRowItem(
+    title: String,
+    subtitle: String? = null,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
             )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
     }
 }
 
@@ -1028,17 +1096,25 @@ fun LanguageSelectionDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.language), color = MaterialTheme.colorScheme.onSurface) },
         text = {
-            Column {
-                supportedLanguages.forEach { (code, name) ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 320.dp)
+            ) {
+                items(
+                    items = supportedLanguages,
+                    key = { it.first }
+                ) { (code, name) ->
+                    val isSelected = currentLanguage.take(2).equals(code, ignoreCase = true)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onSelect(code) }
-                            .padding(16.dp),
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
-                            selected = currentLanguage.startsWith(code),
+                            selected = isSelected,
                             onClick = { onSelect(code) }
                         )
                         Spacer(Modifier.width(8.dp))
@@ -1200,23 +1276,19 @@ fun AllCurrenciesDialog(
 }
 
 @Composable
-private fun WhatsAppBackupSettingsCard(
+private fun CloudBackupSettingsCard(
     frequency: String,
-    provider: String,
     wifiOnly: Boolean,
     requiresCharging: Boolean,
     lastBackupTime: Long,
     lastBackupSizeBytes: Long,
     isLoading: Boolean,
     onFrequencyClick: () -> Unit,
-    onProviderClick: () -> Unit,
-    onConfigureR2Click: () -> Unit,
+    onConfigureGatewayClick: () -> Unit,
     onWifiOnlyToggle: (Boolean) -> Unit,
     onRequiresChargingToggle: (Boolean) -> Unit,
     onBackupNow: () -> Unit,
-    onRestoreFromCloud: () -> Unit,
-    onSyncEmailInbox: () -> Unit = {},
-    isSyncingInbox: Boolean = false
+    onRestoreFromCloud: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1295,83 +1367,34 @@ private fun WhatsAppBackupSettingsCard(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             Spacer(Modifier.height(6.dp))
 
-            // Storage Provider row
+            // Sync Gateway Config row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onProviderClick() }
+                    .clickable { onConfigureGatewayClick() }
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "Cloud Storage Provider",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    val providerLabel = when {
-                        provider.equals("CLOUDFLARE_R2", ignoreCase = true) || provider.equals("R2", ignoreCase = true) -> "Cloudflare R2 (Legacy Direct S3)"
-                        else -> "Cloud Run Sync Gateway (Recommended)"
-                    }
-                    Text(
-                        providerLabel,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                TextButton(
-                    onClick = onConfigureR2Click,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text("Settings", style = MaterialTheme.typography.labelSmall)
-                }
-                Icon(
-                    Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
-            }
-
-            // Email Expenses Sync Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        "Email Expenses (Gmail)",
+                        "Cloud Sync Gateway",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        "Tarik struk & transaksi baru dari Turso inbox",
+                        "Configure gateway URL & auth token",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Button(
-                    onClick = onSyncEmailInbox,
-                    enabled = !isSyncingInbox,
-                    shape = MaterialTheme.shapes.medium,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    if (isSyncingInbox) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text("Sync Inbox", style = MaterialTheme.typography.labelMedium)
-                    }
-                }
+                Icon(
+                    Icons.Default.Settings,
+                    contentDescription = "Gateway Settings",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
             }
 
             // Frequency row
@@ -1470,224 +1493,175 @@ private fun WhatsAppBackupSettingsCard(
 }
 
 @Composable
-private fun CloudProviderDialog(
-    currentProvider: String,
-    onDismiss: () -> Unit,
-    onSelect: (String) -> Unit
+private fun EmailExpensesSettingsCard(
+    onSyncEmailInbox: () -> Unit,
+    isSyncingInbox: Boolean,
+    emailSyncEnabled: Boolean,
+    emailSyncHour: Int,
+    emailSyncMinute: Int,
+    emailSyncWifiOnly: Boolean,
+    lastEmailSyncTime: Long,
+    onEmailSyncEnabledToggle: (Boolean) -> Unit,
+    onEmailSyncTimeClick: () -> Unit,
+    onEmailSyncWifiOnlyToggle: (Boolean) -> Unit,
+    onGuideClick: () -> Unit
 ) {
-    val options = listOf(
-        "GATEWAY" to "Cloud Sync Gateway (Cloud Run & R2)",
-        "CLOUDFLARE_R2" to "Cloudflare R2 (Legacy Direct S3)"
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Select Cloud Storage Provider", fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                options.forEach { (key, label) ->
-                    val isSelected = (key == currentProvider || (key == "CLOUDFLARE_R2" && currentProvider == "R2"))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelect(key) }
-                            .padding(vertical = 8.dp, horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = isSelected,
-                            onClick = { onSelect(key) }
-                        )
-                        Spacer(Modifier.width(12.dp))
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Email,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            text = "Email Receipt Sync",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
+                        IconButton(
+                            onClick = onGuideClick,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.HelpOutline,
+                                contentDescription = "Setup Guide",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    val emailSyncLocale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+                    val lastEmailSyncStr = if (lastEmailSyncTime > 0L) {
+                        val sdf = SimpleDateFormat("dd MMM, HH:mm", emailSyncLocale)
+                        "Last synced: ${sdf.format(Date(lastEmailSyncTime))}"
+                    } else {
+                        "Power-user Gmail Pub/Sub worker"
+                    }
+                    Text(
+                        text = lastEmailSyncStr,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Button(
+                    onClick = onSyncEmailInbox,
+                    enabled = !isSyncingInbox,
+                    shape = MaterialTheme.shapes.medium,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    if (isSyncingInbox) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Sync Now", style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
 
-@Composable
-private fun SyncGatewayConfigDialog(
-    currentUrl: String,
-    currentToken: String,
-    onDismiss: () -> Unit,
-    onSave: (url: String, token: String) -> Unit
-) {
-    var url by remember { mutableStateOf(if (currentUrl.isBlank()) "https://gmail-expenses-worker-886416340889.us-central1.run.app" else currentUrl) }
-    var token by remember { mutableStateOf(currentToken) }
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            Spacer(Modifier.height(6.dp))
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Cloud Sync Gateway Configuration", fontWeight = FontWeight.Bold) },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    "Gunakan endpoint Cloud Run pribadi untuk sinkronisasi Gmail Inbox dan R2 Backup tanpa perlu master S3 credentials.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = { url = it },
-                    label = { Text("Gateway URL") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = token,
-                    onValueChange = { token = it },
-                    label = { Text("Sync Auth Token") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Auto-Sync Daily",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        if (emailSyncEnabled) "Runs daily when internet is connected" else "Manual sync only",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = emailSyncEnabled,
+                    onCheckedChange = onEmailSyncEnabledToggle
                 )
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onSave(url.trim(), token.trim()) }
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
 
-@Composable
-private fun R2ConfigDialog(
-    currentAccountId: String,
-    currentAccessKeyId: String,
-    currentSecretAccessKey: String,
-    currentBucketName: String,
-    onDismiss: () -> Unit,
-    onSave: (accountId: String, accessKeyId: String, secretAccessKey: String, bucketName: String) -> Unit
-) {
-    var accountId by remember { mutableStateOf(currentAccountId) }
-    var accessKeyId by remember { mutableStateOf(currentAccessKeyId) }
-    var secretAccessKey by remember { mutableStateOf(currentSecretAccessKey) }
-    var bucketName by remember { mutableStateOf(if (currentBucketName.isBlank()) "ichsanul-dev" else currentBucketName) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Cloudflare R2 Configuration", fontWeight = FontWeight.Bold) },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    "Enter your Cloudflare R2 API credentials.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedTextField(
-                    value = accountId,
-                    onValueChange = { accountId = it },
-                    label = { Text("Account ID") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = bucketName,
-                    onValueChange = { bucketName = it },
-                    label = { Text("Bucket Name (e.g. ichsanul-dev)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = accessKeyId,
-                    onValueChange = { accessKeyId = it },
-                    label = { Text("Access Key ID") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = secretAccessKey,
-                    onValueChange = { secretAccessKey = it },
-                    label = { Text("Secret Access Key") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onSave(accountId, accessKeyId, secretAccessKey, bucketName) }) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-
-@Composable
-private fun BackupFrequencyDialog(
-    currentFrequency: String,
-    onDismiss: () -> Unit,
-    onSelect: (String) -> Unit
-) {
-    val options = listOf(
-        "OFF" to "Never / Off",
-        "MANUAL" to "Only when I tap \"Back up\"",
-        "DAILY" to "Daily",
-        "WEEKLY" to "Weekly (Recommended)",
-        "MONTHLY" to "Monthly"
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Auto-Backup Schedule", fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                options.forEach { (key, label) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelect(key) }
-                            .padding(vertical = 8.dp, horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = (key == currentFrequency),
-                            onClick = { onSelect(key) }
-                        )
-                        Spacer(Modifier.width(12.dp))
+            if (emailSyncEnabled) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onEmailSyncTimeClick() }
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
                         Text(
-                            text = label,
+                            "Daily Sync Time",
                             style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (key == currentFrequency) FontWeight.Bold else FontWeight.Normal,
-                            color = if (key == currentFrequency) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        val formattedTime = String.format(java.util.Locale.US, "%02d:%02d", emailSyncHour, emailSyncMinute)
+                        Text(
+                            "Daily at $formattedTime",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
                         )
                     }
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Sync over Wi-Fi only",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            "Wait for Wi-Fi instead of using cellular data",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = emailSyncWifiOnly,
+                        onCheckedChange = onEmailSyncWifiOnlyToggle
+                    )
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
         }
-    )
+    }
 }
-

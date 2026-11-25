@@ -52,6 +52,10 @@ data class DataManagementState(
 class DataManagementViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val portfolioRepository: PortfolioRepository,
+    private val accountRepository: com.sans.finance.domain.repository.AccountRepository,
+    private val accountTypeRepository: com.sans.finance.domain.repository.AccountTypeRepository,
+    private val currencyDao: com.sans.finance.data.local.dao.CurrencyDao,
+    private val localeManager: com.sans.finance.data.util.LocaleManager,
     private val userPreferencesRepository: com.sans.finance.domain.repository.UserPreferencesRepository,
     private val maintainDatabaseUseCase: com.sans.finance.domain.usecase.MaintainDatabaseUseCase,
     @param:ApplicationContext private val context: Context
@@ -214,36 +218,38 @@ class DataManagementViewModel @Inject constructor(
 
     private suspend fun exportPortfolio(uri: Uri, format: ExportFormat) {
         val allDates = portfolioRepository.getAllSnapshotDates().first()
-        if (allDates.isEmpty()) throw Exception("No portfolio snapshots found")
-
         var exportDate: Long? = null
-        var holdings: List<PortfolioHoldingEntity> = emptyList<PortfolioHoldingEntity>()
+        var holdings: List<PortfolioHoldingEntity> = emptyList()
 
-        // 1. Try to get holdings for the absolute latest date
-        val latestDate = allDates.first()
-        holdings = portfolioRepository.getSnapshotByDateSync(latestDate)
-        exportDate = latestDate
+        if (allDates.isNotEmpty()) {
+            val latestDate = allDates.first()
+            holdings = portfolioRepository.getSnapshotByDateSync(latestDate)
+            exportDate = latestDate
 
-        // 2. If latest is empty, search for any snapshot that has holdings
-        if (holdings.isEmpty()) {
-            for (date in allDates) {
-                val h = portfolioRepository.getSnapshotByDateSync(date)
-                if (h.isNotEmpty()) {
-                    holdings = h
-                    exportDate = date
-                    break
+            if (holdings.isEmpty()) {
+                for (date in allDates) {
+                    val h = portfolioRepository.getSnapshotByDateSync(date)
+                    if (h.isNotEmpty()) {
+                        holdings = h
+                        exportDate = date
+                        break
+                    }
                 }
             }
         }
 
-        if (holdings.isEmpty()) {
-            throw Exception("Found ${allDates.size} snapshots, but all are empty")
+        val accounts = accountRepository.getAllAccounts().first()
+        val accountTypes = accountTypeRepository.getAllAccountTypes().first()
+        val ratesMap = currencyDao.getAllRates().first().associate { it.code to it.rateToIdr }
+
+        if (holdings.isEmpty() && accounts.isEmpty()) {
+            throw Exception("No portfolio holdings or accounts found")
         }
 
-        val finalDate = exportDate ?: latestDate
+        val finalDate = exportDate ?: System.currentTimeMillis()
         val content = when (format) {
-            ExportFormat.CSV -> PortfolioCsvExporter.toCsv(finalDate, holdings)
-            ExportFormat.JSON -> PortfolioJsonExporter.toSnapshotJson(finalDate, holdings)
+            ExportFormat.CSV -> PortfolioCsvExporter.toCsv(finalDate, holdings, accounts, accountTypes, ratesMap)
+            ExportFormat.JSON -> PortfolioJsonExporter.toSnapshotJson(finalDate, holdings, accounts, accountTypes, ratesMap)
         }
 
         if (content.isBlank()) throw Exception("Generated content is empty")
@@ -256,7 +262,9 @@ class DataManagementViewModel @Inject constructor(
                 }
             }
         }
-        _state.value = _state.value.copy(message = "Exported ${holdings.size} holdings as ${format.name}")
+        _state.value = _state.value.copy(
+            message = "Exported ${holdings.size} holdings & ${accounts.size} accounts as ${format.name}"
+        )
     }
 
     private suspend fun importSettings(uri: Uri) {
@@ -274,6 +282,64 @@ class DataManagementViewModel @Inject constructor(
             }
         }
         _state.value = _state.value.copy(message = "Settings exported successfully")
+    }
+
+    fun shareTransactionsStatementCsv(launcherContext: Context) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            _state.value = _state.value.copy(isLoading = true)
+            try {
+                val expenses = expenseRepository.getAllExpenses().first()
+                val accounts = accountRepository.getAllAccounts().first().associateBy { it.id }
+                val rates = currencyDao.getAllRates().first().associate { it.code to it.rateToIdr }
+                val baseCurr = localeManager.getCurrency()
+                val baseRate = if (baseCurr == "IDR") 1.0 else (rates[baseCurr] ?: 1.0)
+
+                val csvBuilder = StringBuilder()
+                csvBuilder.appendLine("ID,Date,Title,Type,Amount,Currency,Account,Converted_Amount,Base_Currency,Details")
+
+                val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+                expenses.forEach { exp ->
+                    val accName = accounts[exp.accountId]?.name ?: "Account ${exp.accountId}"
+                    val fromRate = if (exp.currency == "IDR") 1.0 else (rates[exp.currency] ?: 1.0)
+                    val convertedCents = if (baseRate > 0) ((exp.amount * fromRate) / baseRate).toLong() else exp.amount
+                    val formattedDate = dateFormat.format(java.util.Date(exp.date))
+                    val titleEscaped = "\"" + exp.title.replace("\"", "\"\"") + "\""
+                    val detailsEscaped = "\"" + (exp.details ?: "").replace("\"", "\"\"") + "\""
+
+                    csvBuilder.appendLine(
+                        "${exp.id},$formattedDate,$titleEscaped,${exp.type},${exp.amount / 100.0},${exp.currency},\"$accName\",${convertedCents / 100.0},$baseCurr,$detailsEscaped"
+                    )
+                }
+
+                val exportFile = java.io.File(context.cacheDir, "sans_finance_transactions.csv")
+                exportFile.writeText(csvBuilder.toString())
+
+                val uri = androidx.core.content.FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.provider",
+                    exportFile
+                )
+
+                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "text/csv"
+                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Sans Finance Transactions Statement")
+                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+
+                launcherContext.startActivity(
+                    android.content.Intent.createChooser(intent, "Share Transactions Statement CSV").apply {
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                )
+                _state.value = _state.value.copy(message = "Prepared statement for ${expenses.size} transactions")
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(message = "Failed to share statement: ${e.message}")
+            } finally {
+                _state.value = _state.value.copy(isLoading = false)
+            }
+        }
     }
 
     fun runDatabaseMaintenance() {

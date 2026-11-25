@@ -57,11 +57,11 @@ object NavigationTransitions {
     }
 
     val tabEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-        EnterTransition.None
+        fadeIn(animationSpec = tween(140, easing = FastOutSlowInEasing))
     }
 
     val tabExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-        ExitTransition.None
+        fadeOut(animationSpec = tween(100, easing = FastOutSlowInEasing))
     }
 }
 

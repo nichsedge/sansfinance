@@ -17,13 +17,7 @@ class LocaleManager @Inject constructor(
         val SUPPORTED_LANGUAGES = listOf(
             "en" to "English",
             "id" to "Indonesia",
-            "zh" to "中文 (Chinese)",
-            "ja" to "日本語 (Japanese)",
-            "ko" to "한국어 (Korean)",
-            "fr" to "Français (French)",
-            "de" to "Deutsch (German)",
-            "es" to "Español (Spanish)",
-            "ru" to "Русский (Russian)"
+            "zh" to "中文 (Chinese)"
         )
 
         val COMMON_CURRENCIES = listOf(

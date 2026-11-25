@@ -28,7 +28,8 @@ class SettingsViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val localeManager: com.sans.finance.data.util.LocaleManager,
     private val db: AppDatabase,
-    private val budgetRepository: BudgetRepository
+    private val budgetRepository: BudgetRepository,
+    private val syncEmailExpensesUseCase: com.sans.finance.domain.usecase.SyncEmailExpensesUseCase
 ) : ViewModel() {
 
     private val _isLoading = mutableStateOf(false)
@@ -259,13 +260,31 @@ class SettingsViewModel @Inject constructor(
     val backupRequiresCharging: StateFlow<Boolean> = userPreferences.map { it.backupRequiresCharging }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val lastBackupTime: StateFlow<Long> = userPreferences.map { it.lastBackupTime }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
     val lastBackupSizeBytes: StateFlow<Long> = userPreferences.map { it.lastBackupSizeBytes }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
-    val cloudBackupProvider: StateFlow<String> = userPreferences.map { it.cloudBackupProvider }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "CLOUDFLARE_R2")
 
-    fun getCloudBackupProvider(): String = userPreferences.value.cloudBackupProvider
+    val emailSyncEnabled: StateFlow<Boolean> = userPreferences.map { it.emailSyncEnabled }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val emailSyncHour: StateFlow<Int> = userPreferences.map { it.emailSyncHour }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 20)
+    val emailSyncMinute: StateFlow<Int> = userPreferences.map { it.emailSyncMinute }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    val emailSyncWifiOnly: StateFlow<Boolean> = userPreferences.map { it.emailSyncWifiOnly }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val lastEmailSyncTime: StateFlow<Long> = userPreferences.map { it.lastEmailSyncTime }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
-    fun setCloudBackupProvider(provider: String) {
+    fun setEmailSyncEnabled(enabled: Boolean, context: android.content.Context) {
         viewModelScope.launch {
-            userPreferencesRepository.setCloudBackupProvider(provider)
+            userPreferencesRepository.setEmailSyncEnabled(enabled)
+            com.sans.finance.SansFinanceApp.rescheduleEmailSyncWork(context, userPreferencesRepository, forceUpdate = true)
+        }
+    }
+
+    fun setEmailSyncTime(hour: Int, minute: Int, context: android.content.Context) {
+        viewModelScope.launch {
+            userPreferencesRepository.setEmailSyncTime(hour, minute)
+            com.sans.finance.SansFinanceApp.rescheduleEmailSyncWork(context, userPreferencesRepository, forceUpdate = true)
+        }
+    }
+
+    fun setEmailSyncWifiOnly(wifiOnly: Boolean, context: android.content.Context) {
+        viewModelScope.launch {
+            userPreferencesRepository.setEmailSyncWifiOnly(wifiOnly)
+            com.sans.finance.SansFinanceApp.rescheduleEmailSyncWork(context, userPreferencesRepository, forceUpdate = true)
         }
     }
 
@@ -281,101 +300,15 @@ class SettingsViewModel @Inject constructor(
     fun syncEmailExpenses() {
         _isSyncingInbox.value = true
         _error.value = null
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        viewModelScope.launch {
             try {
-                val prefs = userPreferences.value
-                val fetchResult = com.sans.finance.data.util.CloudStorageSyncer.fetchInboxExpenses(prefs)
-                fetchResult.fold(
-                    onSuccess = { items ->
-                        if (items.isEmpty()) {
-                            _syncMessage.value = "Staging inbox kosong (tidak ada transaksi baru)."
-                            _isSyncingInbox.value = false
-                            return@fold
+                syncEmailExpensesUseCase().fold(
+                    onSuccess = { summary ->
+                        _syncMessage.value = if (summary.wasEmpty) {
+                            "Staging inbox kosong (tidak ada transaksi baru)."
+                        } else {
+                            "Sync Selesai: ${summary.insertedCount} transaksi baru ditambahkan, ${summary.duplicateCount} duplikat dilewati."
                         }
-
-                        // Load existing categories & accounts to map correctly
-                        val categories = db.categoryDao.getAllCategoriesSync()
-                        val accounts = db.accountDao.getAllAccountsOnce()
-                        val cashAccount = accounts.firstOrNull { it.type.equals("CASH", ignoreCase = true) }
-                            ?: accounts.firstOrNull { it.name.contains("cash", ignoreCase = true) || it.name.contains("wallet", ignoreCase = true) }
-                            ?: accounts.firstOrNull()
-
-                        // Load all existing expense entities for deduplication
-                        val existingExpenses = db.expenseDao.getAllExpenseEntities()
-
-                        val toAck = mutableListOf<String>()
-                        var newInsertedCount = 0
-                        var duplicateCount = 0
-
-                        val now = System.currentTimeMillis()
-
-                        for (item in items) {
-                            // Sans Finance stores all amounts internally in cents (multiplied by 100)
-                            val amountCents = java.math.BigDecimal.valueOf(item.amount)
-                                .multiply(java.math.BigDecimal.valueOf(100))
-                                .setScale(0, java.math.RoundingMode.HALF_UP)
-                                .toLong()
-
-                            val itemTime = runCatching {
-                                java.time.OffsetDateTime.parse(item.receivedAt, java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli()
-                            }.getOrDefault(now)
-
-                            val txType = if (item.type.equals("INCOME", ignoreCase = true)) "INCOME" else "EXPENSE"
-
-                            // Deduplication: same amount in cents AND same type within 15-minute window (900_000 ms)
-                            // A tight 15m window avoids false duplicates for recurring daily expenses (e.g. eating at the same merchant daily).
-                            val isDuplicate = existingExpenses.any { existing ->
-                                existing.amount == amountCents &&
-                                    existing.type.equals(txType, ignoreCase = true) &&
-                                    kotlin.math.abs(existing.date - itemTime) < 15 * 60 * 1000L
-                            }
-
-                            if (isDuplicate) {
-                                duplicateCount++
-                                toAck.add(item.id)
-                            } else {
-                                // Match category respecting transaction type:
-                                val matchedCat = categories.firstOrNull { it.type == txType && it.name.equals(item.category, ignoreCase = true) }
-                                    ?: categories.firstOrNull { it.name.equals(item.category, ignoreCase = true) }
-                                    ?: categories.firstOrNull { it.type == txType && it.name.equals("Investments", ignoreCase = true) }
-                                    ?: categories.firstOrNull { it.type == txType && it.name.equals("Misc", ignoreCase = true) }
-                                    ?: categories.firstOrNull { it.type == txType }
-                                    ?: categories.firstOrNull()
-
-                                // Match account:
-                                // For INCOME, always direct to the single Cash (Wallet) account to keep it 100% predictable
-                                val matchedAcc = if (txType == "INCOME") {
-                                    cashAccount
-                                } else {
-                                    accounts.firstOrNull { acc ->
-                                        item.paymentMethod.contains(acc.name, ignoreCase = true) || acc.name.contains(item.paymentMethod, ignoreCase = true)
-                                    } ?: cashAccount
-                                }
-
-                                val entity = com.sans.finance.data.local.entity.ExpenseEntity(
-                                    date = itemTime,
-                                    title = item.merchant,
-                                    details = "Imported from email (${item.paymentMethod})",
-                                    amount = amountCents,
-                                    categoryId = matchedCat?.id ?: 1L,
-                                    accountId = matchedAcc?.id ?: 1L,
-                                    type = txType,
-                                    currency = item.currency,
-                                    status = "COMPLETED",
-                                    isRecurring = false
-                                )
-                                db.expenseDao.insertExpense(entity)
-                                newInsertedCount++
-                                toAck.add(item.id)
-                            }
-                        }
-
-                        // Acknowledge processed IDs to Cloud Run / Turso
-                        if (toAck.isNotEmpty()) {
-                            com.sans.finance.data.util.CloudStorageSyncer.acknowledgeInboxExpenses(toAck, prefs)
-                        }
-
-                        _syncMessage.value = "Sync Selesai: $newInsertedCount transaksi baru ditambahkan, $duplicateCount duplikat dilewati."
                     },
                     onFailure = { err ->
                         _error.value = err.message ?: "Gagal menarik data email expenses"
@@ -386,17 +319,6 @@ class SettingsViewModel @Inject constructor(
             } finally {
                 _isSyncingInbox.value = false
             }
-        }
-    }
-
-    fun getR2AccountId(): String = userPreferences.value.r2AccountId
-    fun getR2AccessKeyId(): String = userPreferences.value.r2AccessKeyId
-    fun getR2SecretAccessKey(): String = userPreferences.value.r2SecretAccessKey
-    fun getR2BucketName(): String = userPreferences.value.r2BucketName
-
-    fun saveR2Config(accountId: String, accessKeyId: String, secretAccessKey: String, bucketName: String) {
-        viewModelScope.launch {
-            userPreferencesRepository.setR2Config(accountId, accessKeyId, secretAccessKey, bucketName)
         }
     }
 
@@ -511,60 +433,5 @@ class SettingsViewModel @Inject constructor(
         val request = androidx.work.OneTimeWorkRequestBuilder<com.sans.finance.data.worker.SyncExchangeRatesWorker>().build()
         androidx.work.WorkManager.getInstance(context).enqueue(request)
         _syncMessage.value = "Exchange rates refresh triggered"
-    }
-
-    fun exportTransactionsCsv(context: android.content.Context) {
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                val expenses = repository.getAllExpenses().first()
-                val accounts = db.accountDao.getAllAccountsOnce().associateBy { it.id }
-                val rates = db.currencyDao.getAllRates().first().associate { it.code to it.rateToIdr }
-                val baseCurr = localeManager.getCurrency()
-                val baseRate = if (baseCurr == "IDR") 1.0 else (rates[baseCurr] ?: 1.0)
-
-                val csvBuilder = StringBuilder()
-                csvBuilder.appendLine("ID,Date,Title,Type,Amount,Currency,Account,Converted_Amount,Base_Currency,Details")
-
-                val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
-
-                expenses.forEach { exp ->
-                    val accName = accounts[exp.accountId]?.name ?: "Account ${exp.accountId}"
-                    val fromRate = if (exp.currency == "IDR") 1.0 else (rates[exp.currency] ?: 1.0)
-                    val convertedCents = if (baseRate > 0) ((exp.amount * fromRate) / baseRate).toLong() else exp.amount
-                    val formattedDate = dateFormat.format(java.util.Date(exp.date))
-                    val titleEscaped = "\"" + exp.title.replace("\"", "\"\"") + "\""
-                    val detailsEscaped = "\"" + (exp.details ?: "").replace("\"", "\"\"") + "\""
-
-                    csvBuilder.appendLine(
-                        "${exp.id},$formattedDate,$titleEscaped,${exp.type},${exp.amount / 100.0},${exp.currency},\"$accName\",${convertedCents / 100.0},$baseCurr,$detailsEscaped"
-                    )
-                }
-
-                val exportFile = java.io.File(context.cacheDir, "sans_finance_transactions.csv")
-                exportFile.writeText(csvBuilder.toString())
-
-                val uri = androidx.core.content.FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.provider",
-                    exportFile
-                )
-
-                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                    type = "text/csv"
-                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Sans Finance Transactions Export")
-                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-
-                context.startActivity(android.content.Intent.createChooser(intent, "Export Transactions CSV").apply {
-                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                })
-
-                _syncMessage.value = "Exported ${expenses.size} transactions to CSV"
-            } catch (e: Exception) {
-                _error.value = "Failed to export CSV: ${e.message}"
-            }
-        }
     }
 }

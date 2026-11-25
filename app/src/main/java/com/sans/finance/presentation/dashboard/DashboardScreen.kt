@@ -153,17 +153,11 @@ fun DashboardScreen(
             // 4. Category Budgets
             if (state.categoryBudgets.isNotEmpty()) {
                 item(key = "category_budgets") {
-                    SectionHeader("CATEGORY BUDGETS")
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        state.categoryBudgets.forEach { budget ->
-                            CategoryBudgetItem(
-                                budget = budget,
-                                currencyCode = state.currentCurrency,
-                                isPrivacyModeEnabled = state.isPrivacyModeEnabled
-                            )
-                        }
-                    }
+                    CategoryBudgetsCard(
+                        budgets = state.categoryBudgets,
+                        currencyCode = state.currentCurrency,
+                        isPrivacyModeEnabled = state.isPrivacyModeEnabled
+                    )
                 }
             }
 

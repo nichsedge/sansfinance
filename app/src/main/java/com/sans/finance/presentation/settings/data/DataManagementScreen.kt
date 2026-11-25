@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -63,6 +64,7 @@ fun DataManagementScreen(
     onBack: () -> Unit,
     viewModel: DataManagementViewModel = hiltViewModel()
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showAutomationHelp by remember { mutableStateOf(false) }
@@ -128,14 +130,15 @@ fun DataManagementScreen(
                     onExportJson = {
                         viewModel.setExportType(ImportExportType.TRANSACTIONS, ExportFormat.JSON)
                         exportJsonLauncher.launch("transactions_${System.currentTimeMillis()}.json")
-                    }
+                    },
+                    onShareStatement = { viewModel.shareTransactionsStatementCsv(context) }
                 )
             }
 
             item {
                 DataSection(
-                    title = "Portfolio",
-                    description = "Manage your investment snapshots and asset holdings.",
+                    title = "Assets & Portfolio",
+                    description = "Import portfolio snapshots or export your complete assets (investments & account balances).",
                     icon = Icons.Default.PieChart,
                     onImport = {
                         viewModel.setImportType(ImportExportType.PORTFOLIO)
@@ -143,11 +146,11 @@ fun DataManagementScreen(
                     },
                     onExportCsv = {
                         viewModel.setExportType(ImportExportType.PORTFOLIO, ExportFormat.CSV)
-                        exportLauncher.launch("portfolio_${System.currentTimeMillis()}.csv")
+                        exportLauncher.launch("assets_${System.currentTimeMillis()}.csv")
                     },
                     onExportJson = {
                         viewModel.setExportType(ImportExportType.PORTFOLIO, ExportFormat.JSON)
-                        exportJsonLauncher.launch("portfolio_${System.currentTimeMillis()}.json")
+                        exportJsonLauncher.launch("assets_${System.currentTimeMillis()}.json")
                     }
                 )
             }
@@ -271,7 +274,8 @@ fun DataSection(
     icon: ImageVector,
     onImport: () -> Unit,
     onExportCsv: (() -> Unit)? = null,
-    onExportJson: (() -> Unit)? = null
+    onExportJson: (() -> Unit)? = null,
+    onShareStatement: (() -> Unit)? = null
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -335,6 +339,17 @@ fun DataSection(
                         Spacer(Modifier.width(8.dp))
                         Text("JSON")
                     }
+                }
+            }
+            if (onShareStatement != null) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onShareStatement,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Share Multi-Currency Statement (CSV)")
                 }
             }
         }

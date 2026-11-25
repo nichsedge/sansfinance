@@ -30,9 +30,12 @@ object PortfolioCsvParser {
                     null
                 } ?: return@forEach // Skip if date is invalid
 
+                val source = values[1]
+                if (source.equals("SansFinance", ignoreCase = true)) return@forEach
+
                 val holding = PortfolioHoldingEntity(
                     snapshotDate = currentLineDate,
-                    source = values[1],
+                    source = source,
                     category = values[2],
                     asset = values[3],
                     currency = values[4],

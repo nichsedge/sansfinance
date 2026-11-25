@@ -6,6 +6,7 @@ import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -39,13 +40,13 @@ class DataStoreUserPreferencesRepository @Inject constructor(
         val BACKUP_REQUIRES_CHARGING = booleanPreferencesKey("backup_requires_charging")
         val LAST_BACKUP_TIME = longPreferencesKey("last_backup_time")
         val LAST_BACKUP_SIZE_BYTES = longPreferencesKey("last_backup_size_bytes")
-        val CLOUD_BACKUP_PROVIDER = stringPreferencesKey("cloud_backup_provider")
         val SYNC_GATEWAY_URL = stringPreferencesKey("sync_gateway_url")
         val SYNC_GATEWAY_TOKEN = stringPreferencesKey("sync_gateway_token")
-        val R2_ACCOUNT_ID = stringPreferencesKey("r2_account_id")
-        val R2_ACCESS_KEY_ID = stringPreferencesKey("r2_access_key_id")
-        val R2_SECRET_ACCESS_KEY = stringPreferencesKey("r2_secret_access_key")
-        val R2_BUCKET_NAME = stringPreferencesKey("r2_bucket_name")
+        val EMAIL_SYNC_ENABLED = booleanPreferencesKey("email_sync_enabled")
+        val EMAIL_SYNC_HOUR = intPreferencesKey("email_sync_hour")
+        val EMAIL_SYNC_MINUTE = intPreferencesKey("email_sync_minute")
+        val EMAIL_SYNC_WIFI_ONLY = booleanPreferencesKey("email_sync_wifi_only")
+        val LAST_EMAIL_SYNC_TIME = longPreferencesKey("last_email_sync_time")
     }
 
     override val userPreferences: Flow<UserPreferences> = context.dataStore.data.map { preferences ->
@@ -66,13 +67,13 @@ class DataStoreUserPreferencesRepository @Inject constructor(
             backupRequiresCharging = preferences[PreferencesKeys.BACKUP_REQUIRES_CHARGING] ?: true,
             lastBackupTime = preferences[PreferencesKeys.LAST_BACKUP_TIME] ?: 0L,
             lastBackupSizeBytes = preferences[PreferencesKeys.LAST_BACKUP_SIZE_BYTES] ?: 0L,
-            cloudBackupProvider = preferences[PreferencesKeys.CLOUD_BACKUP_PROVIDER] ?: "GATEWAY",
             syncGatewayUrl = preferences[PreferencesKeys.SYNC_GATEWAY_URL] ?: "https://gmail-expenses-worker-886416340889.us-central1.run.app",
             syncGatewayToken = preferences[PreferencesKeys.SYNC_GATEWAY_TOKEN] ?: "",
-            r2AccountId = preferences[PreferencesKeys.R2_ACCOUNT_ID] ?: "",
-            r2AccessKeyId = preferences[PreferencesKeys.R2_ACCESS_KEY_ID] ?: "",
-            r2SecretAccessKey = CryptoManager.decrypt(preferences[PreferencesKeys.R2_SECRET_ACCESS_KEY] ?: ""),
-            r2BucketName = preferences[PreferencesKeys.R2_BUCKET_NAME] ?: "ichsanul-dev"
+            emailSyncEnabled = preferences[PreferencesKeys.EMAIL_SYNC_ENABLED] ?: true,
+            emailSyncHour = preferences[PreferencesKeys.EMAIL_SYNC_HOUR] ?: 20,
+            emailSyncMinute = preferences[PreferencesKeys.EMAIL_SYNC_MINUTE] ?: 0,
+            emailSyncWifiOnly = preferences[PreferencesKeys.EMAIL_SYNC_WIFI_ONLY] ?: false,
+            lastEmailSyncTime = preferences[PreferencesKeys.LAST_EMAIL_SYNC_TIME] ?: 0L
         )
     }
 
@@ -136,12 +137,6 @@ class DataStoreUserPreferencesRepository @Inject constructor(
         }
     }
 
-    override suspend fun setCloudBackupProvider(provider: String) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.CLOUD_BACKUP_PROVIDER] = provider
-        }
-    }
-
     override suspend fun setSyncGatewayConfig(url: String, token: String) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.SYNC_GATEWAY_URL] = url
@@ -149,12 +144,28 @@ class DataStoreUserPreferencesRepository @Inject constructor(
         }
     }
 
-    override suspend fun setR2Config(accountId: String, accessKeyId: String, secretAccessKey: String, bucketName: String) {
+    override suspend fun setEmailSyncEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.R2_ACCOUNT_ID] = accountId
-            preferences[PreferencesKeys.R2_ACCESS_KEY_ID] = accessKeyId
-            preferences[PreferencesKeys.R2_SECRET_ACCESS_KEY] = CryptoManager.encrypt(secretAccessKey)
-            preferences[PreferencesKeys.R2_BUCKET_NAME] = bucketName
+            preferences[PreferencesKeys.EMAIL_SYNC_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setEmailSyncTime(hour: Int, minute: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.EMAIL_SYNC_HOUR] = hour.coerceIn(0, 23)
+            preferences[PreferencesKeys.EMAIL_SYNC_MINUTE] = minute.coerceIn(0, 59)
+        }
+    }
+
+    override suspend fun setEmailSyncWifiOnly(wifiOnly: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.EMAIL_SYNC_WIFI_ONLY] = wifiOnly
+        }
+    }
+
+    override suspend fun setLastEmailSyncTime(timestamp: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.LAST_EMAIL_SYNC_TIME] = timestamp
         }
     }
 
@@ -182,13 +193,13 @@ class DataStoreUserPreferencesRepository @Inject constructor(
             preferences[PreferencesKeys.BACKUP_REQUIRES_CHARGING] = prefs.backupRequiresCharging
             preferences[PreferencesKeys.LAST_BACKUP_TIME] = prefs.lastBackupTime
             preferences[PreferencesKeys.LAST_BACKUP_SIZE_BYTES] = prefs.lastBackupSizeBytes
-            preferences[PreferencesKeys.CLOUD_BACKUP_PROVIDER] = prefs.cloudBackupProvider
             preferences[PreferencesKeys.SYNC_GATEWAY_URL] = prefs.syncGatewayUrl
             preferences[PreferencesKeys.SYNC_GATEWAY_TOKEN] = prefs.syncGatewayToken
-            preferences[PreferencesKeys.R2_ACCOUNT_ID] = prefs.r2AccountId
-            preferences[PreferencesKeys.R2_ACCESS_KEY_ID] = prefs.r2AccessKeyId
-            preferences[PreferencesKeys.R2_SECRET_ACCESS_KEY] = CryptoManager.encrypt(prefs.r2SecretAccessKey)
-            preferences[PreferencesKeys.R2_BUCKET_NAME] = prefs.r2BucketName
+            preferences[PreferencesKeys.EMAIL_SYNC_ENABLED] = prefs.emailSyncEnabled
+            preferences[PreferencesKeys.EMAIL_SYNC_HOUR] = prefs.emailSyncHour
+            preferences[PreferencesKeys.EMAIL_SYNC_MINUTE] = prefs.emailSyncMinute
+            preferences[PreferencesKeys.EMAIL_SYNC_WIFI_ONLY] = prefs.emailSyncWifiOnly
+            preferences[PreferencesKeys.LAST_EMAIL_SYNC_TIME] = prefs.lastEmailSyncTime
         }
     }
 }

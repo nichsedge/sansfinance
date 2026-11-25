@@ -528,13 +528,11 @@ class PortfolioViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val prefs = userPreferencesRepository.userPreferences.first()
-                val provider = com.sans.finance.data.util.CloudStorageSyncer.getActiveProvider(prefs)
-                val providerLabel = if (provider == com.sans.finance.data.util.CloudStorageProvider.CLOUDFLARE_R2) "Cloudflare R2" else "Sync Gateway"
-                _importMessage.value = "Connecting to $providerLabel..."
+                _importMessage.value = "Connecting to Sync Gateway..."
                 val (date, items, exchangeRate, advisor) = com.sans.finance.data.util.CloudStorageSyncer.downloadLatestSnapshot(context, prefs)
 
                 if (items.isEmpty()) {
-                    _importMessage.value = "No valid entries found in $providerLabel"
+                    _importMessage.value = "No valid entries found in Sync Gateway"
                     return@launch
                 }
                 repository.importSnapshot(date, items, exchangeRate)
@@ -546,7 +544,7 @@ class PortfolioViewModel @Inject constructor(
                     } catch (_: Exception) {}
                 }
                 _selectedDateIndex.value = 0
-                _importMessage.value = "Synced ${items.size} holdings from $providerLabel"
+                _importMessage.value = "Synced ${items.size} holdings from Sync Gateway"
             } catch (e: Exception) {
                 _importMessage.value = "Sync failed: ${e.message}"
             }
@@ -556,14 +554,27 @@ class PortfolioViewModel @Inject constructor(
     fun exportFile(uri: Uri) {
         viewModelScope.launch {
             try {
-                val selectedDate = state.value.selectedDate ?: return@launch
-                val holdings = repository.getSnapshotByDateSync(selectedDate)
-                val jsonString = PortfolioJsonExporter.toSnapshotJson(selectedDate, holdings)
+                val selectedDate = state.value.selectedDate ?: System.currentTimeMillis()
+                val holdings = if (state.value.selectedDate != null) {
+                    repository.getSnapshotByDateSync(selectedDate)
+                } else {
+                    emptyList()
+                }
+                val accounts = accountRepository.getAllAccounts().first()
+                val accountTypes = accountTypeRepository.getAllAccountTypes().first()
+                val ratesMap = currencyDao.getAllRates().first().associate { it.code to it.rateToIdr }
+                val jsonString = PortfolioJsonExporter.toSnapshotJson(
+                    selectedDate,
+                    holdings,
+                    accounts,
+                    accountTypes,
+                    ratesMap
+                )
 
                 context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                     outputStream.bufferedWriter().use { it.write(jsonString) }
                 }
-                _importMessage.value = "Portfolio exported successfully"
+                _importMessage.value = "Assets exported successfully"
             } catch (e: Exception) {
                 _importMessage.value = "Export failed: ${e.message}"
             }

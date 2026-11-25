@@ -51,6 +51,7 @@ class SansFinanceApp : Application(), Configuration.Provider {
                 localeManager.setCurrency(prefs.baseCurrency)
             }
             rescheduleBackupWork(this@SansFinanceApp, localeManager, userPreferencesRepository)
+            rescheduleEmailSyncWork(this@SansFinanceApp, userPreferencesRepository, forceUpdate = false)
         }
     }
 
@@ -145,6 +146,56 @@ class SansFinanceApp : Application(), Configuration.Provider {
                     "CloudSyncAndBackup",
                     ExistingPeriodicWorkPolicy.UPDATE,
                     cloudSyncRequest
+                )
+            }
+        }
+
+        fun rescheduleEmailSyncWork(
+            context: Context,
+            userPreferencesRepository: UserPreferencesRepository,
+            forceUpdate: Boolean = true
+        ) {
+            val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            applicationScope.launch {
+                val prefs = userPreferencesRepository.userPreferences.first()
+                val workManager = WorkManager.getInstance(context)
+
+                if (!prefs.emailSyncEnabled) {
+                    workManager.cancelUniqueWork("EmailExpensesAutoSync")
+                    return@launch
+                }
+
+                val currentCal = java.util.Calendar.getInstance()
+                val targetCal = java.util.Calendar.getInstance().apply {
+                    set(java.util.Calendar.HOUR_OF_DAY, prefs.emailSyncHour.coerceIn(0, 23))
+                    set(java.util.Calendar.MINUTE, prefs.emailSyncMinute.coerceIn(0, 59))
+                    set(java.util.Calendar.SECOND, 0)
+                    set(java.util.Calendar.MILLISECOND, 0)
+                }
+                if (targetCal.before(currentCal)) {
+                    targetCal.add(java.util.Calendar.DAY_OF_MONTH, 1)
+                }
+                val initialDelayMillis = (targetCal.timeInMillis - currentCal.timeInMillis).coerceAtLeast(0L)
+
+                val constraints = Constraints.Builder()
+                    .setRequiredNetworkType(
+                        if (prefs.emailSyncWifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED
+                    )
+                    .build()
+
+                val emailSyncRequest =
+                    PeriodicWorkRequestBuilder<com.sans.finance.data.worker.EmailExpensesSyncWorker>(
+                        1, TimeUnit.DAYS
+                    )
+                        .setInitialDelay(initialDelayMillis, TimeUnit.MILLISECONDS)
+                        .setConstraints(constraints)
+                        .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
+                        .build()
+
+                workManager.enqueueUniquePeriodicWork(
+                    "EmailExpensesAutoSync",
+                    if (forceUpdate) ExistingPeriodicWorkPolicy.UPDATE else ExistingPeriodicWorkPolicy.KEEP,
+                    emailSyncRequest
                 )
             }
         }

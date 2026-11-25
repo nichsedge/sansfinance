@@ -16,9 +16,11 @@ interface UserPreferencesRepository {
     suspend fun setBackupRequiresCharging(requiresCharging: Boolean)
     suspend fun setLastBackupTime(timestamp: Long)
     suspend fun setLastBackupSizeBytes(bytes: Long)
-    suspend fun setCloudBackupProvider(provider: String)
     suspend fun setSyncGatewayConfig(url: String, token: String)
-    suspend fun setR2Config(accountId: String, accessKeyId: String, secretAccessKey: String, bucketName: String)
+    suspend fun setEmailSyncEnabled(enabled: Boolean)
+    suspend fun setEmailSyncTime(hour: Int, minute: Int)
+    suspend fun setEmailSyncWifiOnly(wifiOnly: Boolean)
+    suspend fun setLastEmailSyncTime(timestamp: Long)
     suspend fun exportJson(): String
     suspend fun importJson(json: String)
 }

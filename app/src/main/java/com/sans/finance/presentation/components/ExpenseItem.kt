@@ -138,6 +138,16 @@ fun ExpenseItem(
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
 
+                    val isFromEmail = expense.details?.startsWith("Imported from email", ignoreCase = true) == true
+                    if (isFromEmail) {
+                        Text(
+                            "• 📧 Email",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = MaterialTheme.colorScheme.tertiary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
                     val interval = expense.recurrenceInterval
                     if (expense.isRecurring && interval != null) {
                         val mult = expense.recurrenceIntervalMultiplier.coerceAtLeast(1)

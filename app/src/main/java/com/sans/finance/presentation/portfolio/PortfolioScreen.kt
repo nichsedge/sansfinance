@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PieChart
@@ -113,6 +114,12 @@ fun PortfolioScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let { viewModel.importFile(it) }
+    }
+
+    val exportAssetsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri?.let { viewModel.exportFile(it) }
     }
 
     var editingTarget by remember { mutableStateOf<com.sans.finance.domain.model.AssetClassHealth?>(null) }
@@ -281,6 +288,16 @@ fun PortfolioScreen(
                                 },
                                 leadingIcon = {
                                     Icon(Icons.Default.FileOpen, contentDescription = null)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Export Assets (JSON)") },
+                                onClick = {
+                                    showMenu = false
+                                    exportAssetsLauncher.launch("assets_${System.currentTimeMillis()}.json")
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.FileDownload, contentDescription = null)
                                 }
                             )
                             DropdownMenuItem(
@@ -722,7 +739,9 @@ fun PortfolioScreen(
                                         else -> androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
                                     }
                                     Card(
-                                        modifier = Modifier.fillMaxWidth(),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .animateItem(),
                                         shape = shape,
                                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                                         border = androidx.compose.foundation.BorderStroke(

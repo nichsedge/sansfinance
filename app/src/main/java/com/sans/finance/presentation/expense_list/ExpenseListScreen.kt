@@ -3,6 +3,7 @@ package com.sans.finance.presentation.expense_list
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
@@ -221,6 +223,7 @@ fun ExpenseListScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 12.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -278,6 +281,29 @@ fun ExpenseListScreen(
                     },
                     shape = CircleShape
                 )
+                FilterChip(
+                    selected = state.activeCommitmentFilter == TimelineCommitmentFilter.FROM_EMAIL,
+                    onClick = {
+                        val next = if (state.activeCommitmentFilter == TimelineCommitmentFilter.FROM_EMAIL) {
+                            TimelineCommitmentFilter.ALL
+                        } else {
+                            TimelineCommitmentFilter.FROM_EMAIL
+                        }
+                        viewModel.setCommitmentFilter(next)
+                    },
+                    label = {
+                        val emailText = if (state.emailExpenseCount > 0) {
+                            "📧 From Email (${state.emailExpenseCount})"
+                        } else {
+                            "📧 From Email"
+                        }
+                        Text(
+                            text = emailText,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    },
+                    shape = CircleShape
+                )
             }
 
             if (state.timelineItems.isEmpty() && !state.isLoading) {
@@ -290,6 +316,7 @@ fun ExpenseListScreen(
                     val emptyMessage = when (state.activeCommitmentFilter) {
                         TimelineCommitmentFilter.INSTALLMENTS -> stringResource(R.string.no_active_installments)
                         TimelineCommitmentFilter.RECURRING -> "No recurring expenses found."
+                        TimelineCommitmentFilter.FROM_EMAIL -> "No email-imported transactions found."
                         TimelineCommitmentFilter.ALL -> stringResource(R.string.no_data_available)
                     }
                     Text(
@@ -331,27 +358,29 @@ fun ExpenseListScreen(
                                     val category = categoriesMap[expense.categoryId]
                                     val fallbackIcon = if (expense.isInstallmentPayment) "💳" else "📁"
                                     val icon = category?.icon ?: expense.categoryIcon ?: fallbackIcon
-                                    ExpenseItem(
-                                        expense = expense,
-                                        categoryName = category?.name ?: expense.categoryName,
-                                        categoryIcon = icon,
-                                        accountName = accountsMap[expense.accountId]?.name,
-                                        isPrivacyModeEnabled = state.isPrivacyModeEnabled,
-                                        onClick = {
-                                            if (expense.isInstallment || expense.isInstallmentPayment) {
-                                                viewModel.openInstallmentDetail(expense)
-                                            } else if (expense.isRecurring) {
-                                                viewModel.openRecurringDetail(expense)
-                                            } else {
-                                                onExpenseClick(expense.id)
+                                    Box(modifier = Modifier.animateItem()) {
+                                        ExpenseItem(
+                                            expense = expense,
+                                            categoryName = category?.name ?: expense.categoryName,
+                                            categoryIcon = icon,
+                                            accountName = accountsMap[expense.accountId]?.name,
+                                            isPrivacyModeEnabled = state.isPrivacyModeEnabled,
+                                            onClick = {
+                                                if (expense.isInstallment || expense.isInstallmentPayment) {
+                                                    viewModel.openInstallmentDetail(expense)
+                                                } else if (expense.isRecurring) {
+                                                    viewModel.openRecurringDetail(expense)
+                                                } else {
+                                                    onExpenseClick(expense.id)
+                                                }
+                                            },
+                                            onLongClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                expenseToDelete = expense
+                                                showDeleteDialog = true
                                             }
-                                        },
-                                        onLongClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            expenseToDelete = expense
-                                            showDeleteDialog = true
-                                        }
-                                    )
+                                        )
+                                    }
                                 }
                             }
                         }

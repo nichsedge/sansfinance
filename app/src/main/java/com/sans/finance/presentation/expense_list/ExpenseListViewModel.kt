@@ -42,7 +42,8 @@ enum class DateRangeFilter {
 enum class TimelineCommitmentFilter {
     ALL,
     INSTALLMENTS,
-    RECURRING
+    RECURRING,
+    FROM_EMAIL
 }
 
 @Immutable
@@ -82,6 +83,7 @@ data class ExpenseListState(
     val activeCommitmentFilter: TimelineCommitmentFilter = TimelineCommitmentFilter.ALL,
     val activeInstallmentCount: Int = 0,
     val recurringExpenseCount: Int = 0,
+    val emailExpenseCount: Int = 0,
     val selectedInstallment: com.sans.finance.domain.model.Installment? = null,
     val selectedInstallmentItems: List<com.sans.finance.domain.model.InstallmentItem> = emptyList(),
     val selectedRecurringExpense: Expense? = null,
@@ -211,14 +213,17 @@ class ExpenseListViewModel @Inject constructor(
 
                     var totalIncome = 0L
                     var totalExpense = 0L
+                    var emailCount = 0
 
                     val validExpenses = ArrayList<Expense>(expenses.size)
                     val displayedExpenses = ArrayList<Expense>(expenses.size)
 
                     for (exp in expenses) {
                         val isValid = !exp.isInstallment || exp.isInstallmentPayment
+                        val isFromEmail = exp.details?.startsWith("Imported from email", ignoreCase = true) == true
                         if (isValid) {
                             validExpenses.add(exp)
+                            if (isFromEmail) emailCount++
                             if (exp.type == "INCOME") totalIncome += exp.amount
                             else if (exp.type == "EXPENSE") totalExpense += exp.amount
                         }
@@ -227,6 +232,7 @@ class ExpenseListViewModel @Inject constructor(
                             TimelineCommitmentFilter.ALL -> isValid
                             TimelineCommitmentFilter.INSTALLMENTS -> isValid && (exp.isInstallment || exp.isInstallmentPayment)
                             TimelineCommitmentFilter.RECURRING -> isValid && exp.isRecurring
+                            TimelineCommitmentFilter.FROM_EMAIL -> isValid && isFromEmail
                         }
                         if (shouldDisplay) {
                             displayedExpenses.add(exp)
@@ -288,7 +294,8 @@ class ExpenseListViewModel @Inject constructor(
                         dailyMap = dailyMap,
                         avgMonthlyExpense = avgMonthlyExpense,
                         installmentCount = installmentCount,
-                        recurringCount = recurringCount
+                        recurringCount = recurringCount,
+                        emailCount = emailCount
                     )
                 }
             }
@@ -306,6 +313,7 @@ class ExpenseListViewModel @Inject constructor(
                         avgMonthlyExpense = processed.avgMonthlyExpense,
                         activeInstallmentCount = processed.installmentCount,
                         recurringExpenseCount = processed.recurringCount,
+                        emailExpenseCount = processed.emailCount,
                         isLoading = false
                     )
                 }
@@ -323,7 +331,8 @@ class ExpenseListViewModel @Inject constructor(
         val dailyMap: Map<Long, Long>,
         val avgMonthlyExpense: Long,
         val installmentCount: Int,
-        val recurringCount: Int
+        val recurringCount: Int,
+        val emailCount: Int
     )
 
     fun updateSearchQuery(query: String) {
