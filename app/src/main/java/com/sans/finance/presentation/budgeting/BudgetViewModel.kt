@@ -3,6 +3,8 @@ package com.sans.finance.presentation.budgeting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.core.util.CalendarUtils
+import com.sans.finance.core.util.CurrencyConverter
+import com.sans.finance.data.local.dao.CurrencyDao
 import com.sans.finance.data.local.entity.BudgetEntity
 import com.sans.finance.domain.model.Category
 import com.sans.finance.domain.repository.BudgetRepository
@@ -46,6 +48,7 @@ class BudgetViewModel @Inject constructor(
     private val suggestBudgetsUseCase: SuggestBudgetsUseCase,
     private val getCashFlowPacingUseCase: com.sans.finance.domain.usecase.GetCashFlowPacingUseCase,
     private val userPreferencesRepository: UserPreferencesRepository,
+    private val currencyDao: CurrencyDao,
     private val localeManager: com.sans.finance.data.util.LocaleManager
 ) : ViewModel() {
 
@@ -68,8 +71,13 @@ class BudgetViewModel @Inject constructor(
         _categories,
         _suggestions,
         getCashFlowPacingUseCase(),
-        userPreferencesRepository.userPreferences.map { it.isPrivacyModeEnabled }
-    ) { budgets, categories, suggestions, pacing, privacyMode ->
+        combine(
+            userPreferencesRepository.userPreferences.map { it.isPrivacyModeEnabled },
+            currencyDao.getAllRates()
+        ) { privacyMode, rates -> Pair(privacyMode, rates) }
+    ) { budgets, categories, suggestions, pacing, (privacyMode, rates) ->
+        val baseCurrency = localeManager.getCurrency()
+        val ratesMap = rates.associate { it.code to it.rateToIdr }
         val calendar = CalendarUtils.getInstance()
         calendar.set(Calendar.DAY_OF_MONTH, 1)
         calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -92,7 +100,8 @@ class BudgetViewModel @Inject constructor(
                 expenseRepository.getTotalSpentBetween(start, end).map { it ?: 0L }
             }
 
-            val spent = spentFlow.first()
+            val spentIdr = spentFlow.first()
+            val spent = CurrencyConverter.convertFromIdr(spentIdr, baseCurrency, ratesMap)
 
             BudgetStatus(
                 budget = budget,
@@ -106,7 +115,7 @@ class BudgetViewModel @Inject constructor(
             categories = categories,
             suggestions = suggestions,
             safeToSpend = pacing,
-            currentCurrency = localeManager.getCurrency(),
+            currentCurrency = baseCurrency,
             isLoading = false,
             isPrivacyModeEnabled = privacyMode
         )

@@ -55,4 +55,11 @@ class CurrencyFormatterTest {
     fun `formatNumberOnly handles zero`() {
         assertEquals("0", CurrencyFormatter.formatNumberOnly(0L))
     }
+
+    @Test
+    fun `formatAmount preserves decimals for USD and SGD`() {
+        assertEquals("$12.50", CurrencyFormatter.formatAmount(1250L, "USD"))
+        assertEquals("$12", CurrencyFormatter.formatAmount(1200L, "USD"))
+        assertEquals("$12.5", CurrencyFormatter.formatAmountCompact(1250L, "USD"))
+    }
 }

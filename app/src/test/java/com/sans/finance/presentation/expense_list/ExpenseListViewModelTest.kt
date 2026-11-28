@@ -2,6 +2,8 @@ package com.sans.finance.presentation.expense_list
 
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
+import com.sans.finance.data.local.dao.CurrencyDao
+import com.sans.finance.data.local.entity.ExchangeRateEntity
 import com.sans.finance.data.util.LocaleManager
 import com.sans.finance.domain.model.Category
 import com.sans.finance.domain.model.DaySpent
@@ -45,11 +47,13 @@ class ExpenseListViewModelTest {
     private lateinit var userPreferencesRepository: UserPreferencesRepository
     private lateinit var getCategoriesUseCase: GetCategoriesUseCase
     private lateinit var budgetRepository: com.sans.finance.domain.repository.BudgetRepository
+    private lateinit var currencyDao: CurrencyDao
     private lateinit var localeManager: LocaleManager
 
     private val filteredResult = MutableStateFlow(
         FilteredExpensesData(expenses = emptyList(), dailySpending = emptyList())
     )
+    private val ratesFlow = MutableStateFlow<List<ExchangeRateEntity>>(emptyList())
 
     @Before
     fun setUp() {
@@ -80,6 +84,9 @@ class ExpenseListViewModelTest {
         budgetRepository = mockk(relaxed = true)
         every { budgetRepository.getAllBudgets() } returns flowOf(emptyList())
 
+        currencyDao = mockk(relaxed = true)
+        every { currencyDao.getAllRates() } returns ratesFlow
+
         localeManager = mockk()
         every { localeManager.getCurrency() } returns "IDR"
     }
@@ -99,6 +106,7 @@ class ExpenseListViewModelTest {
         userPreferencesRepository = userPreferencesRepository,
         getCategoriesUseCase = getCategoriesUseCase,
         budgetRepository = budgetRepository,
+        currencyDao = currencyDao,
         localeManager = localeManager
     ).apply {
         val field = this::class.java.getDeclaredField("workerDispatcher")
@@ -237,5 +245,71 @@ class ExpenseListViewModelTest {
             awaitItem()
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun `multi-currency transactions convert to main currency IDR in period and daily header totals`() = runTest {
+        ratesFlow.value = listOf(
+            ExchangeRateEntity(code = "SGD", rateToIdr = 12_000.0),
+            ExchangeRateEntity(code = "USD", rateToIdr = 16_000.0)
+        )
+        val viewModel = createViewModel()
+        viewModel.state.test {
+            filteredResult.value = FilteredExpensesData(
+                expenses = listOf(
+                    expense(id = 1, amount = 100_000_00L, type = "EXPENSE").copy(currency = "IDR"),
+                    expense(id = 2, amount = 10_00L, type = "EXPENSE").copy(currency = "SGD"),
+                    expense(id = 3, amount = 5_00L, type = "INCOME").copy(currency = "USD")
+                ),
+                dailySpending = emptyList()
+            )
+            var s = awaitItem()
+            while (s.totalFilteredExpense == 0L) {
+                s = awaitItem()
+            }
+            // 100,000 IDR + (10 SGD * 12,000) + 0 = 220,000 IDR (in cents: 22,000,000)
+            assertEquals(22_000_000L, s.totalFilteredExpense)
+            // 5 USD * 16,000 = 80,000 IDR (in cents: 8,000,000)
+            assertEquals(8_000_000L, s.totalFilteredIncome)
+            assertEquals(8_000_000L - 22_000_000L, s.totalFilteredAmount)
+
+            val header = s.timelineItems.filterIsInstance<TimelineItem.Header>().first()
+            assertEquals(22_000_000L, header.expense)
+            assertEquals(8_000_000L, header.income)
+        }
+    }
+
+    @Test
+    fun `filterAccountId for parent account expands to include child subaccounts`() = runTest {
+        val accountsFlow = MutableStateFlow(
+            listOf(
+                com.sans.finance.data.local.entity.AccountEntity(id = 10L, name = "Wise", type = "Bank", balance = 0L),
+                com.sans.finance.data.local.entity.AccountEntity(id = 11L, name = "Wise SGD", type = "Bank", balance = 100L, currency = "SGD", parentAccountId = 10L),
+                com.sans.finance.data.local.entity.AccountEntity(id = 12L, name = "Wise USD", type = "Bank", balance = 200L, currency = "USD", parentAccountId = 10L),
+                com.sans.finance.data.local.entity.AccountEntity(id = 20L, name = "BCA", type = "Bank", balance = 500L)
+            )
+        )
+        every { accountRepository.getAllAccounts() } returns accountsFlow
+
+        val viewModel = ExpenseListViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("filterAccountId" to 10L)),
+            observeFilteredExpensesUseCase = observeFilteredExpensesUseCase,
+            repository = expenseRepository,
+            accountRepository = accountRepository,
+            installmentRepository = installmentRepository,
+            tagRepository = tagRepository,
+            userPreferencesRepository = userPreferencesRepository,
+            getCategoriesUseCase = getCategoriesUseCase,
+            budgetRepository = budgetRepository,
+            currencyDao = currencyDao,
+            localeManager = localeManager
+        ).apply {
+            val field = this::class.java.getDeclaredField("workerDispatcher")
+            field.isAccessible = true
+            field.set(this, testDispatcher)
+        }
+
+        advanceUntilIdle()
+        assertEquals(setOf(10L, 11L, 12L), viewModel.state.value.selectedAccountIds)
     }
 }

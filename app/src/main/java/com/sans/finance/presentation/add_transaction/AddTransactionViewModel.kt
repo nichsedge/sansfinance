@@ -230,10 +230,10 @@ class AddTransactionViewModel @Inject constructor(
     val categoryBudgetStatus = combine(
         budgetRepository.getAllBudgets(),
         expenseRepository.getAllExpenses(),
-        snapshotFlow { categoryId },
-        snapshotFlow { amount },
-        snapshotFlow { selectedDate }
-    ) { budgets, allExpenses, catId, amtStr, dateMillis ->
+        currencyDao.getAllRates(),
+        snapshotFlow { Triple(categoryId, amount, selectedDate) },
+        snapshotFlow { currency }
+    ) { budgets, allExpenses, rates, (catId, amtStr, dateMillis), selectedCurrency ->
         val cal = Calendar.getInstance().apply {
             timeInMillis = dateMillis
             set(Calendar.DAY_OF_MONTH, 1)
@@ -250,13 +250,15 @@ class AddTransactionViewModel @Inject constructor(
         if (matchingBudget == null) {
             CategoryBudgetStatus(hasBudget = false)
         } else {
+            val ratesMap = rates.associate { it.code to it.rateToIdr }
             val spentInMonth = allExpenses
                 .filter { it.categoryId == catId && it.type == "EXPENSE" && !it.isInstallment && it.date in startOfMonth until endOfMonth }
-                .sumOf { it.amount }
+                .sumOf { com.sans.finance.core.util.CurrencyConverter.convert(it.amount, it.currency, baseCurrency, ratesMap) }
             val budgetCents = matchingBudget.amount
             val remainingCents = budgetCents - spentInMonth
-            val parsedAmt = (amtStr.replace(",", "").toDoubleOrNull() ?: 0.0) * 100
-            val willExceed = (spentInMonth + parsedAmt.toLong()) > budgetCents
+            val parsedAmt = ((amtStr.replace(",", "").toDoubleOrNull() ?: 0.0) * 100).toLong()
+            val parsedAmtInBase = com.sans.finance.core.util.CurrencyConverter.convert(parsedAmt, selectedCurrency, baseCurrency, ratesMap)
+            val willExceed = (spentInMonth + parsedAmtInBase) > budgetCents
 
             CategoryBudgetStatus(
                 hasBudget = true,

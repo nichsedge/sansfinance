@@ -3,6 +3,8 @@ package com.sans.finance.presentation.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.core.util.CalendarUtils
+import com.sans.finance.core.util.CurrencyConverter
+import com.sans.finance.data.local.dao.CurrencyDao
 import com.sans.finance.data.util.LocaleManager
 import com.sans.finance.domain.model.Category
 import com.sans.finance.domain.model.Expense
@@ -66,6 +68,7 @@ class SearchViewModel @Inject constructor(
     private val tagRepository: TagRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val getCategoriesUseCase: GetCategoriesUseCase,
+    private val currencyDao: CurrencyDao,
     private val localeManager: LocaleManager
 ) : ViewModel() {
 
@@ -124,23 +127,32 @@ class SearchViewModel @Inject constructor(
             }
             .distinctUntilChanged()
             .flatMapLatest { filter ->
-                repository.getFilteredExpenses(
-                    query = filter.query,
-                    categoryIds = filter.categoryIds.toList(),
-                    accountIds = filter.accountIds.toList(),
-                    since = filter.since,
-                    until = filter.until,
-                    minAmount = filter.minAmount,
-                    maxAmount = filter.maxAmount,
-                    tags = filter.tags.toList(),
-                    types = filter.types.toList()
-                )
+                kotlinx.coroutines.flow.combine(
+                    repository.getFilteredExpenses(
+                        query = filter.query,
+                        categoryIds = filter.categoryIds.toList(),
+                        accountIds = filter.accountIds.toList(),
+                        since = filter.since,
+                        until = filter.until,
+                        minAmount = filter.minAmount,
+                        maxAmount = filter.maxAmount,
+                        tags = filter.tags.toList(),
+                        types = filter.types.toList()
+                    ),
+                    currencyDao.getAllRates()
+                ) { expenses, rates -> Pair(expenses, rates) }
             }
-            .onEach { expenses ->
+            .onEach { (expenses, rates) ->
+                val baseCurrency = localeManager.getCurrency()
+                val ratesMap = rates.associate { it.code to it.rateToIdr }
                 val validExpenses = expenses.filter { !it.isInstallment || it.isInstallmentPayment }
                 val grouped = groupExpensesByDate(validExpenses)
-                val income = validExpenses.filter { it.type == "INCOME" }.sumOf { it.amount }
-                val expense = validExpenses.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+                val income = validExpenses
+                    .filter { it.type == "INCOME" }
+                    .sumOf { CurrencyConverter.convert(it.amount, it.currency, baseCurrency, ratesMap) }
+                val expense = validExpenses
+                    .filter { it.type == "EXPENSE" }
+                    .sumOf { CurrencyConverter.convert(it.amount, it.currency, baseCurrency, ratesMap) }
                 _state.update {
                     it.copy(
                         expenses = validExpenses,
@@ -148,6 +160,7 @@ class SearchViewModel @Inject constructor(
                         totalIncome = income,
                         totalExpense = expense,
                         netAmount = income - expense,
+                        currentCurrency = baseCurrency,
                         isLoading = false
                     )
                 }

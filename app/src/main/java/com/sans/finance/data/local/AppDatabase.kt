@@ -40,7 +40,7 @@ import com.sans.finance.data.local.entity.TagEntity
         com.sans.finance.data.local.entity.AccountTypeEntity::class,
         FxRateEntity::class
     ],
-    version = 41,
+    version = 42,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -85,6 +85,6 @@ abstract class AppDatabase : RoomDatabase() {
     }
 
     companion object {
-        const val DATABASE_VERSION = 39
+        const val DATABASE_VERSION = 42
     }
 }

@@ -524,14 +524,28 @@ fun AddBudgetDialog(
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = amount,
-                    onValueChange = { amount = it.filter { char -> char.isDigit() } },
+                    onValueChange = { input ->
+                        val filtered = buildString {
+                            var hasDot = false
+                            for (ch in input) {
+                                when {
+                                    ch.isDigit() -> append(ch)
+                                    (ch == '.' || ch == ',') && !hasDot -> {
+                                        hasDot = true
+                                        append('.')
+                                    }
+                                }
+                            }
+                        }
+                        amount = filtered
+                    },
                     label = { Text("Monthly Limit") },
                     placeholder = { Text("e.g. 5,000,000") },
                     prefix = { Text("$currencyCode ") },
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation = com.sans.finance.core.util.ThousandsSeparatorVisualTransformation(),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
                     ),
                     shape = MaterialTheme.shapes.large
                 )
@@ -582,9 +596,9 @@ fun AddBudgetDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val target = amount.toLongOrNull() ?: 0L
+                    val target = amount.toDoubleOrNull()?.let { kotlin.math.round(it * 100.0).toLong() } ?: 0L
                     if (target > 0) {
-                        onConfirm(target * 100, selectedCategoryId)
+                        onConfirm(target, selectedCategoryId)
                     }
                 },
                 shape = MaterialTheme.shapes.large

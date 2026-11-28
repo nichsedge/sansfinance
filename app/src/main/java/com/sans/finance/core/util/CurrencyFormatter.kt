@@ -21,6 +21,7 @@ object CurrencyFormatter {
         return map.getOrPut(currencyCode) {
             val locale = when (currencyCode) {
                 "IDR" -> Locale.forLanguageTag("id-ID")
+                "SGD" -> Locale.forLanguageTag("en-SG")
                 "CNY" -> Locale.CHINA
                 "USD" -> Locale.US
                 "EUR" -> Locale.GERMANY
@@ -37,25 +38,35 @@ object CurrencyFormatter {
                 // Fallback
             }
             formatter.isGroupingUsed = true
-            formatter.maximumFractionDigits = 0
+            formatter.maximumFractionDigits = if (isZeroDecimalCurrency(currencyCode)) 0 else 2
             formatter
         }
     }
 
+    private fun isZeroDecimalCurrency(currencyCode: String): Boolean {
+        return currencyCode in setOf("IDR", "JPY", "KRW", "VND")
+    }
+
     /**
      * Formats the amount in cents (Long) into a display string.
-     * Rounds up to the nearest whole number and removes thousands separators.
+     * Zero-decimal currencies (IDR, JPY, KRW, VND) round up to whole units;
+     * decimal currencies (USD, SGD, EUR, etc.) preserve up to 2 decimal places.
      */
     fun formatAmount(amountInCents: Long, currencyCode: String = "USD", isPrivacyMode: Boolean = false): String {
         if (isPrivacyMode) {
             val symbol = if (currencyCode == "IDR") "Rp " else "$"
             return "$symbol••••••••"
         }
-        val amount = ceil(amountInCents / 100.0).toLong()
         val formatter = getFormatter(currencyCode)
-
-        // Include currency symbol and thousands separator
-        var formatted = formatter.format(amount)
+        var formatted = if (isZeroDecimalCurrency(currencyCode)) {
+            val amount = ceil(amountInCents / 100.0).toLong()
+            formatter.format(amount)
+        } else {
+            val hasFraction = amountInCents % 100 != 0L
+            formatter.minimumFractionDigits = if (hasFraction) 2 else 0
+            formatter.maximumFractionDigits = 2
+            formatter.format(amountInCents / 100.0)
+        }
 
         // Special case for IDR if it still shows IDR instead of Rp in some locales
         if (currencyCode == "IDR" && !formatted.contains("Rp")) {
@@ -69,12 +80,12 @@ object CurrencyFormatter {
      * Formats the amount concisely (e.g. 10K, 1M) for UI charts or dense views.
      */
     fun formatAmountCompact(amountInCents: Long, currencyCode: String = "USD"): String {
-        val amount = ceil(amountInCents / 100.0).toLong()
         val symbol = symbolCache.getOrPut(currencyCode) {
             try {
                 val currency = java.util.Currency.getInstance(currencyCode)
                 val displayLocale = when (currencyCode) {
                     "IDR" -> Locale.forLanguageTag("id-ID")
+                    "SGD" -> Locale.forLanguageTag("en-SG")
                     "CNY" -> Locale.CHINA
                     "USD" -> Locale.US
                     "EUR" -> Locale.GERMANY
@@ -89,18 +100,21 @@ object CurrencyFormatter {
             }
         }
 
-        if (amount == 0L) return "${symbol}0"
+        if (amountInCents == 0L) return "${symbol}0"
 
-        val isNegative = amount < 0
-        val absAmount = kotlin.math.abs(amount)
+        val isZeroDecimal = isZeroDecimalCurrency(currencyCode)
+        val exactAmount = if (isZeroDecimal) ceil(amountInCents / 100.0) else (amountInCents / 100.0)
+        val isNegative = exactAmount < 0.0
+        val absAmount = kotlin.math.abs(exactAmount)
         val prefix = if (isNegative) "-$symbol" else symbol
         val decimalFormat = compactDecimalFormatter.get() ?: DecimalFormat("#.#")
 
         return when {
-            absAmount >= 1_000_000_000L -> "$prefix${decimalFormat.format(absAmount / 1_000_000_000.0)}B"
-            absAmount >= 1_000_000L -> "$prefix${decimalFormat.format(absAmount / 1_000_000.0)}M"
-            absAmount >= 1_000L -> "$prefix${decimalFormat.format(absAmount / 1_000.0)}K"
-            else -> "$prefix$absAmount"
+            absAmount >= 1_000_000_000.0 -> "$prefix${decimalFormat.format(absAmount / 1_000_000_000.0)}B"
+            absAmount >= 1_000_000.0 -> "$prefix${decimalFormat.format(absAmount / 1_000_000.0)}M"
+            absAmount >= 1_000.0 -> "$prefix${decimalFormat.format(absAmount / 1_000.0)}K"
+            !isZeroDecimal && amountInCents % 100 != 0L -> "$prefix${DecimalFormat("#.##", java.text.DecimalFormatSymbols(Locale.US)).format(absAmount)}"
+            else -> "$prefix${absAmount.toLong()}"
         }
     }
 

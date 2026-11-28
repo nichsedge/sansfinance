@@ -174,6 +174,9 @@ fun AppNavigation(
                 },
                 onExpenseClick = { id ->
                     navController.navigate(Screen.EditExpense(id))
+                },
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }

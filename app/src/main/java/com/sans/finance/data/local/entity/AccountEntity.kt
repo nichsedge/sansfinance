@@ -14,6 +14,7 @@ data class AccountEntity(
     @ColumnInfo(name = "interest_rate") val interestRate: Double = 0.0,
     @ColumnInfo(name = "min_payment") val minPayment: Long = 0,
     @ColumnInfo(name = "display_order") val displayOrder: Int = 0,
+    @ColumnInfo(name = "parent_account_id") val parentAccountId: Long? = null,
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis()
 )

@@ -919,7 +919,7 @@ class ExpenseRepositoryImpl(
                 if (!matchesTitle && !matchesDetails) continue
             }
             if (categoryIds.isNotEmpty() && !categoryIds.contains(rule.categoryId)) continue
-            if (accountIds.isNotEmpty() && !accountIds.contains(rule.accountId)) continue
+            if (accountIds.isNotEmpty() && !accountIds.contains(rule.accountId) && (rule.toAccountId == null || !accountIds.contains(rule.toAccountId))) continue
             if (minAmount != null && rule.amount < minAmount) continue
             if (maxAmount != null && rule.amount > maxAmount) continue
             if (tags.isNotEmpty() && !rule.tags.any { tags.contains(it) }) continue

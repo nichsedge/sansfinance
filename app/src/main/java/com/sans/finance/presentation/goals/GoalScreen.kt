@@ -419,10 +419,24 @@ fun AddGoalDialog(
                 )
                 OutlinedTextField(
                     value = amount,
-                    onValueChange = { amount = it.filter { char -> char.isDigit() || char == '.' } },
+                    onValueChange = { input ->
+                        val filtered = buildString {
+                            var hasDot = false
+                            for (ch in input) {
+                                when {
+                                    ch.isDigit() -> append(ch)
+                                    (ch == '.' || ch == ',') && !hasDot -> {
+                                        hasDot = true
+                                        append('.')
+                                    }
+                                }
+                            }
+                        }
+                        amount = filtered
+                    },
                     label = { Text("Target Amount") },
                     visualTransformation = com.sans.finance.core.util.ThousandsSeparatorVisualTransformation(),
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large
                 )

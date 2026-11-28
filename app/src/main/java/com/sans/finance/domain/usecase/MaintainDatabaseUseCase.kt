@@ -91,6 +91,16 @@ class MaintainDatabaseUseCase @Inject constructor(
                       AND EXISTS (SELECT 1 FROM accounts WHERE accounts.id = expenses.account_id AND accounts.currency != 'USD')
                     """.trimIndent()
                 )
+
+                // 3b. Detach any subaccounts whose parent account no longer exists
+                db.execSQL(
+                    """
+                    UPDATE accounts
+                    SET parent_account_id = NULL
+                    WHERE parent_account_id IS NOT NULL
+                      AND parent_account_id NOT IN (SELECT id FROM accounts)
+                    """.trimIndent()
+                )
             }
 
             // 4. Count total expenses

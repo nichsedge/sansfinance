@@ -4,6 +4,8 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.core.util.CalendarUtils
+import com.sans.finance.core.util.CurrencyConverter
+import com.sans.finance.data.local.dao.CurrencyDao
 import com.sans.finance.domain.model.Category
 import com.sans.finance.domain.model.Expense
 import com.sans.finance.domain.model.ExpenseFilter
@@ -116,6 +118,7 @@ class ExpenseListViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val getCategoriesUseCase: com.sans.finance.domain.usecase.GetCategoriesUseCase,
     private val budgetRepository: BudgetRepository,
+    private val currencyDao: CurrencyDao,
     private val localeManager: com.sans.finance.data.util.LocaleManager,
     private val savedStateHandle: androidx.lifecycle.SavedStateHandle
 ) : ViewModel() {
@@ -124,11 +127,13 @@ class ExpenseListViewModel @Inject constructor(
     val state: StateFlow<ExpenseListState> = _state.asStateFlow()
 
     private var workerDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.Default
+    private var didExpandParentLedger = false
 
     init {
         val initialCurrency = localeManager.getCurrency()
-        val initialRange = calculateDateRange(DateRangeFilter.THIS_MONTH)
         val filterAccId = savedStateHandle.get<Long>("filterAccountId") ?: -1L
+        val initialDateFilter = if (filterAccId > 0) DateRangeFilter.ALL_TIME else DateRangeFilter.THIS_MONTH
+        val initialRange = calculateDateRange(initialDateFilter)
         val initialAccounts = if (filterAccId > 0) setOf(filterAccId) else emptySet()
 
         _state.update {
@@ -136,7 +141,7 @@ class ExpenseListViewModel @Inject constructor(
                 currentCurrency = initialCurrency,
                 startDate = initialRange.first,
                 endDate = initialRange.second,
-                activeDateFilter = DateRangeFilter.THIS_MONTH,
+                activeDateFilter = initialDateFilter,
                 selectedAccountIds = initialAccounts
             )
         }
@@ -169,12 +174,21 @@ class ExpenseListViewModel @Inject constructor(
                 budgets.find { it.categoryId == null }?.amount ?: 0L
             }
         ) { categories, accounts, tags, budget ->
+            val filterAccId = savedStateHandle.get<Long>("filterAccountId") ?: -1L
+            val expandedAccountIds = if (!didExpandParentLedger && filterAccId > 0 && accounts.isNotEmpty()) {
+                didExpandParentLedger = true
+                val childIds = accounts.filter { it.parentAccountId == filterAccId }.map { it.id }
+                if (childIds.isNotEmpty()) setOf(filterAccId) + childIds else null
+            } else {
+                null
+            }
             _state.update {
                 it.copy(
                     categories = categories,
                     accounts = accounts,
                     availableTags = tags,
-                    monthlyBudget = budget
+                    monthlyBudget = budget,
+                    selectedAccountIds = expandedAccountIds ?: it.selectedAccountIds
                 )
             }
         }.launchIn(viewModelScope)
@@ -200,9 +214,16 @@ class ExpenseListViewModel @Inject constructor(
 
         combine(filterFlow, commitmentFlow) { filter, commitment -> Pair(filter, commitment) }
             .flatMapLatest { (filter, commitmentFilter) ->
-                observeFilteredExpensesUseCase(filter).map { result ->
+                combine(
+                    observeFilteredExpensesUseCase(filter),
+                    currencyDao.getAllRates()
+                ) { result, rates ->
+                    val baseCurrency = localeManager.getCurrency()
+                    val ratesMap = rates.associate { it.code to it.rateToIdr }
                     val expenses = result.expenses
-                    val dailyMap = result.dailySpending.associate { it.day to it.amount }
+                    val dailyMap = result.dailySpending.associate {
+                        it.day to CurrencyConverter.convertFromIdr(it.amount, baseCurrency, ratesMap)
+                    }
 
                     val calendar = CalendarUtils.getInstance()
                     calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -224,8 +245,9 @@ class ExpenseListViewModel @Inject constructor(
                         if (isValid) {
                             validExpenses.add(exp)
                             if (isFromEmail) emailCount++
-                            if (exp.type == "INCOME") totalIncome += exp.amount
-                            else if (exp.type == "EXPENSE") totalExpense += exp.amount
+                            val convertedAmount = CurrencyConverter.convert(exp.amount, exp.currency, baseCurrency, ratesMap)
+                            if (exp.type == "INCOME") totalIncome += convertedAmount
+                            else if (exp.type == "EXPENSE") totalExpense += convertedAmount
                         }
 
                         val shouldDisplay = when (commitmentFilter) {
@@ -254,9 +276,10 @@ class ExpenseListViewModel @Inject constructor(
                         var dayIncome = 0L
                         var dayExpense = 0L
                         for (exp in dayExpenses) {
-                            val amount = if (exp.isInstallment && exp.monthlyPayment > 0) exp.monthlyPayment else exp.amount
-                            if (exp.type == "INCOME") dayIncome += amount
-                            else if (exp.type == "EXPENSE") dayExpense += amount
+                            val rawAmount = if (exp.isInstallment && exp.monthlyPayment > 0) exp.monthlyPayment else exp.amount
+                            val convertedAmount = CurrencyConverter.convert(rawAmount, exp.currency, baseCurrency, ratesMap)
+                            if (exp.type == "INCOME") dayIncome += convertedAmount
+                            else if (exp.type == "EXPENSE") dayExpense += convertedAmount
                         }
 
                         val headerCal = CalendarUtils.getInstance().apply { timeInMillis = date }
@@ -295,7 +318,8 @@ class ExpenseListViewModel @Inject constructor(
                         avgMonthlyExpense = avgMonthlyExpense,
                         installmentCount = installmentCount,
                         recurringCount = recurringCount,
-                        emailCount = emailCount
+                        emailCount = emailCount,
+                        currentCurrency = baseCurrency
                     )
                 }
             }
@@ -314,6 +338,7 @@ class ExpenseListViewModel @Inject constructor(
                         activeInstallmentCount = processed.installmentCount,
                         recurringExpenseCount = processed.recurringCount,
                         emailExpenseCount = processed.emailCount,
+                        currentCurrency = processed.currentCurrency,
                         isLoading = false
                     )
                 }
@@ -332,7 +357,8 @@ class ExpenseListViewModel @Inject constructor(
         val avgMonthlyExpense: Long,
         val installmentCount: Int,
         val recurringCount: Int,
-        val emailCount: Int
+        val emailCount: Int,
+        val currentCurrency: String
     )
 
     fun updateSearchQuery(query: String) {
@@ -361,6 +387,10 @@ class ExpenseListViewModel @Inject constructor(
                 }
             currentState.copy(selectedAccountIds = newSelectedAccountIds)
         }
+    }
+
+    fun clearAccountFilter() {
+        _state.update { it.copy(selectedAccountIds = emptySet()) }
     }
 
     fun updateAmountFilter(min: Long?, max: Long?) {
@@ -524,8 +554,10 @@ class ExpenseListViewModel @Inject constructor(
                 endCal.timeInMillis
             )
 
-        monthExpensesFlow.combine(monthInstallmentsFlow) { exp, inst ->
-            (exp ?: 0L) + (inst ?: 0L)
+        combine(monthExpensesFlow, monthInstallmentsFlow, currencyDao.getAllRates()) { exp, inst, rates ->
+            val totalIdr = (exp ?: 0L) + (inst ?: 0L)
+            val ratesMap = rates.associate { it.code to it.rateToIdr }
+            CurrencyConverter.convertFromIdr(totalIdr, localeManager.getCurrency(), ratesMap)
         }.onEach { total ->
             _state.update { it.copy(thisMonthSpent = total) }
         }.launchIn(viewModelScope)

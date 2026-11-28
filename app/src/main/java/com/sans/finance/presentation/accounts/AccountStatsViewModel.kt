@@ -17,11 +17,20 @@ import java.util.Calendar
 import java.util.Locale
 import javax.inject.Inject
 
+data class AccountBreakdownItem(
+    val name: String,
+    val type: String,
+    val rolledUpBalance: Long,
+    val subaccounts: List<Pair<String, Long>> = emptyList(),
+    val isLiability: Boolean = false
+)
+
 data class AccountStatsState(
     val selectedDate: Calendar = CalendarUtils.getInstance(),
     val totalBalance: Long = 0L,
     val balanceHistory: List<Pair<String, Long>> = emptyList(),
     val incomeExpenseHistory: List<Triple<String, Long, Long>> = emptyList(),
+    val accountBreakdown: List<AccountBreakdownItem> = emptyList(),
     val currentCurrency: String = "USD",
     val isLoading: Boolean = true
 )
@@ -134,11 +143,36 @@ class AccountStatsViewModel @Inject constructor(
             historyCal.add(Calendar.MONTH, -1)
         }
 
+        val accountIds = accounts.map { it.id }.toSet()
+        val childrenByParent = accounts
+            .filter { it.parentAccountId != null && it.parentAccountId in accountIds }
+            .groupBy { it.parentAccountId!! }
+        val accountBreakdown = accounts
+            .filter { it.parentAccountId == null || it.parentAccountId !in accountIds }
+            .map { parent ->
+                val isLiability = parent.type in liabilityTypeNames
+                val children = childrenByParent[parent.id].orEmpty()
+                val parentOwn = convertToBase(parent.balance, parent.currency)
+                val childPairs = children.map { child ->
+                    "${child.name} (${child.currency})" to convertToBase(child.balance, child.currency)
+                }
+                val rolledUp = parentOwn + childPairs.sumOf { it.second }
+                AccountBreakdownItem(
+                    name = parent.name,
+                    type = parent.type,
+                    rolledUpBalance = if (isLiability) -rolledUp else rolledUp,
+                    subaccounts = childPairs.map { (n, v) -> n to (if (isLiability) -v else v) },
+                    isLiability = isLiability
+                )
+            }
+            .sortedByDescending { kotlin.math.abs(it.rolledUpBalance) }
+
         AccountStatsState(
             selectedDate = date,
             totalBalance = simulatedBalanceAtSelectedDate,
             balanceHistory = balanceHistory,
             incomeExpenseHistory = incomeExpenseHistory,
+            accountBreakdown = accountBreakdown,
             currentCurrency = baseCurrency,
             isLoading = false
         )

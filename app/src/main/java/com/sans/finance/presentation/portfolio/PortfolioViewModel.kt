@@ -198,22 +198,14 @@ class PortfolioViewModel @Inject constructor(
 
         val currency = localeManager.getCurrency()
 
-        if (dates.isEmpty()) {
-            return@combine PortfolioScreenState(
-                currentCurrency = currency,
-                isLoading = false,
-                importMessage = importMsg,
-                isPrivacyModeEnabled = privacyMode,
-                chartMode = chartMode
-            )
+        val validIndex = if (dates.isEmpty()) 0 else dateIndex.coerceIn(0, dates.size - 1)
+        val selectedDate = if (dates.isEmpty()) System.currentTimeMillis() else dates[validIndex]
+
+        if (dates.isNotEmpty()) {
+            updateXirr(selectedDate)
         }
 
-        val validIndex = dateIndex.coerceIn(0, dates.size - 1)
-        val selectedDate = dates[validIndex]
-
-        updateXirr(selectedDate)
-
-        val holdings = repository.getSnapshotByDateSync(selectedDate)
+        val holdings = if (dates.isEmpty()) emptyList() else repository.getSnapshotByDateSync(selectedDate)
         val liabilityTypeNames = accountTypes.filter { it.isLiability }.map { it.name }.toSet()
         val investmentTypeNames = accountTypes.filter { it.isInvestment }.map { it.name }.toSet()
         val ratesMap = rates.associate { it.code to it.rateToIdr }
@@ -224,16 +216,24 @@ class PortfolioViewModel @Inject constructor(
                 val rateToIdr = if (account.currency == "IDR") 1.0 else (ratesMap[account.currency] ?: 1.0)
                 val valueIdr = amount * rateToIdr
                 val isInv = account.type in investmentTypeNames
-                val assetClass = if (isInv) {
-                    if (account.type.contains("P2P", ignoreCase = true)) "Fixed Income" else "Investment"
-                } else {
-                    "Cash & Equivalents"
+                val isFixedIncome = isInv && (
+                    account.type.contains("P2P", ignoreCase = true) ||
+                        account.type.contains("Fixed Income", ignoreCase = true) ||
+                        account.name.contains("Sukuk", ignoreCase = true) ||
+                        account.name.contains("SBN", ignoreCase = true) ||
+                        account.name.contains("Bond", ignoreCase = true) ||
+                        account.name.contains("Obligasi", ignoreCase = true)
+                    )
+                val assetClass = when {
+                    isFixedIncome -> "Fixed Income"
+                    isInv -> "Investment"
+                    else -> "Cash & Equivalents"
                 }
                 PortfolioHoldingEntity(
                     id = -((index + 1L) * 100000L + (account.id.takeIf { it > 0 } ?: 0L)),
                     snapshotDate = selectedDate,
                     source = if (isInv) account.type else "Accounts",
-                    category = account.type,
+                    category = if (isFixedIncome) "SBN / Fixed Income" else account.type,
                     asset = account.name,
                     currency = account.currency,
                     quantity = amount,

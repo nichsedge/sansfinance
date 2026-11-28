@@ -1,5 +1,7 @@
 package com.sans.finance.presentation.search
 
+import com.sans.finance.data.local.dao.CurrencyDao
+import com.sans.finance.data.local.entity.ExchangeRateEntity
 import com.sans.finance.data.util.LocaleManager
 import com.sans.finance.domain.model.Category
 import com.sans.finance.domain.model.Expense
@@ -45,9 +47,11 @@ class SearchViewModelTest {
     private lateinit var tagRepository: TagRepository
     private lateinit var userPreferencesRepository: UserPreferencesRepository
     private lateinit var getCategoriesUseCase: GetCategoriesUseCase
+    private lateinit var currencyDao: CurrencyDao
     private lateinit var localeManager: LocaleManager
 
     private val filteredExpensesFlow = MutableStateFlow<List<Expense>>(emptyList())
+    private val ratesFlow = MutableStateFlow<List<ExchangeRateEntity>>(emptyList())
 
     @Before
     fun setUp() {
@@ -76,6 +80,9 @@ class SearchViewModelTest {
             listOf(Category(id = 1, name = "Food", icon = "🍔", type = "EXPENSE", orderIndex = 0))
         )
 
+        currencyDao = mockk(relaxed = true)
+        every { currencyDao.getAllRates() } returns ratesFlow
+
         localeManager = mockk()
         every { localeManager.getCurrency() } returns "IDR"
     }
@@ -92,6 +99,7 @@ class SearchViewModelTest {
         tagRepository = tagRepository,
         userPreferencesRepository = userPreferencesRepository,
         getCategoriesUseCase = getCategoriesUseCase,
+        currencyDao = currencyDao,
         localeManager = localeManager
     )
 
@@ -335,5 +343,26 @@ class SearchViewModelTest {
 
         coVerify { expenseRepository.deleteExpense(exp) }
         assertNull(viewModel.state.value.selectedRecurringExpense)
+    }
+
+    @Test
+    fun `search totals convert SGD and USD transactions to main currency IDR`() = runTest {
+        ratesFlow.value = listOf(
+            ExchangeRateEntity(code = "SGD", rateToIdr = 12_000.0),
+            ExchangeRateEntity(code = "USD", rateToIdr = 16_000.0)
+        )
+        filteredExpensesFlow.value = listOf(
+            sampleExpense(id = 1L, amount = 100_00L, type = "EXPENSE").copy(currency = "IDR"),
+            sampleExpense(id = 2L, amount = 10_00L, type = "EXPENSE").copy(currency = "SGD"),
+            sampleExpense(id = 3L, amount = 5_00L, type = "INCOME").copy(currency = "USD")
+        )
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val state = viewModel.state.value
+        assertEquals(12_010_000L, state.totalExpense)
+        assertEquals(8_000_000L, state.totalIncome)
+        assertEquals(8_000_000L - 12_010_000L, state.netAmount)
     }
 }

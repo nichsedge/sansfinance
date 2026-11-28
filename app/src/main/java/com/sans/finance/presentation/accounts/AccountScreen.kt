@@ -13,8 +13,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
@@ -47,6 +51,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -77,7 +82,8 @@ data class AccountUpdateParams(
     val balance: Long,
     val currency: String,
     val interestRate: Double,
-    val minPayment: Long
+    val minPayment: Long,
+    val parentAccountId: Long? = null
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -91,6 +97,7 @@ fun AccountScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
+    var preselectedParentForAdd by remember { mutableStateOf<AccountEntity?>(null) }
     var accountToEdit by remember { mutableStateOf<AccountEntity?>(null) }
     var selectedAccountForAction by remember { mutableStateOf<AccountEntity?>(null) }
     var showMenu by remember { mutableStateOf(false) }
@@ -236,28 +243,53 @@ fun AccountScreen(
 
         if (showAddDialog || accountToEdit != null) {
             val isEditing = accountToEdit != null
-            var name by remember(accountToEdit) { mutableStateOf(accountToEdit?.name ?: "") }
-            var type by remember(accountToEdit, state.accountTypes) {
-                mutableStateOf(accountToEdit?.type ?: state.accountTypes.firstOrNull()?.name ?: "")
+            val allAccounts = state.accountsByType.values.flatten()
+            val hasChildren = isEditing && allAccounts.any { it.parentAccountId == accountToEdit?.id }
+            var name by remember(accountToEdit, preselectedParentForAdd) { mutableStateOf(accountToEdit?.name ?: "") }
+            var type by remember(accountToEdit, preselectedParentForAdd, state.accountTypes) {
+                mutableStateOf(
+                    accountToEdit?.type
+                        ?: preselectedParentForAdd?.type
+                        ?: state.accountTypes.firstOrNull()?.name
+                        ?: ""
+                )
+            }
+            var parentAccountId by remember(accountToEdit, preselectedParentForAdd) {
+                mutableStateOf(accountToEdit?.parentAccountId ?: preselectedParentForAdd?.id)
             }
             var currency by remember(accountToEdit, state.currentCurrency) {
                 mutableStateOf(accountToEdit?.currency ?: state.currentCurrency)
             }
             var balance by remember(accountToEdit) {
-                mutableStateOf(accountToEdit?.balance?.let { (it / 100).toString() } ?: "")
+                mutableStateOf(
+                    accountToEdit?.balance?.let { cents ->
+                        if (cents % 100 == 0L) (cents / 100).toString()
+                        else String.format(java.util.Locale.US, "%.2f", cents / 100.0).trimEnd('0').trimEnd('.')
+                    } ?: ""
+                )
             }
             var interestRate by remember(accountToEdit) {
                 mutableStateOf(accountToEdit?.interestRate?.toString() ?: "0.0")
             }
             var minPayment by remember(accountToEdit) {
-                mutableStateOf(accountToEdit?.minPayment?.let { (it / 100).toString() } ?: "0")
+                mutableStateOf(
+                    accountToEdit?.minPayment?.let { cents ->
+                        if (cents % 100 == 0L) (cents / 100).toString()
+                        else String.format(java.util.Locale.US, "%.2f", cents / 100.0).trimEnd('0').trimEnd('.')
+                    } ?: "0"
+                )
             }
             var expanded by remember { mutableStateOf(false) }
+            var parentExpanded by remember { mutableStateOf(false) }
             var currencyExpanded by remember { mutableStateOf(false) }
+            val eligibleParents = remember(allAccounts, accountToEdit) {
+                allAccounts.filter { it.parentAccountId == null && it.id != accountToEdit?.id }
+            }
 
             AlertDialog(
                 onDismissRequest = {
                     showAddDialog = false
+                    preselectedParentForAdd = null
                     accountToEdit = null
                 },
                 title = {
@@ -267,7 +299,10 @@ fun AccountScreen(
                     )
                 },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
                         OutlinedTextField(
                             value = name,
                             onValueChange = { name = it },
@@ -275,6 +310,48 @@ fun AccountScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.large
                         )
+
+                        if (!hasChildren && eligibleParents.isNotEmpty()) {
+                            val selectedParentName = eligibleParents.find { it.id == parentAccountId }?.name ?: "None (Top-level)"
+                            ExposedDropdownMenuBox(
+                                expanded = parentExpanded,
+                                onExpandedChange = { parentExpanded = !parentExpanded }
+                            ) {
+                                OutlinedTextField(
+                                    value = selectedParentName,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Parent Account (Optional)") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = parentExpanded) },
+                                    modifier = Modifier
+                                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                                        .fillMaxWidth(),
+                                    shape = MaterialTheme.shapes.large
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = parentExpanded,
+                                    onDismissRequest = { parentExpanded = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("None (Top-level)") },
+                                        onClick = {
+                                            parentAccountId = null
+                                            parentExpanded = false
+                                        }
+                                    )
+                                    eligibleParents.forEach { candidate ->
+                                        DropdownMenuItem(
+                                            text = { Text("${candidate.name} (${candidate.type})") },
+                                            onClick = {
+                                                parentAccountId = candidate.id
+                                                type = candidate.type
+                                                parentExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -368,13 +445,26 @@ fun AccountScreen(
 
                         OutlinedTextField(
                             value = balance,
-                            onValueChange = {
-                                balance = it.filter { char -> char.isDigit() || char == '-' }
+                            onValueChange = { input ->
+                                val filtered = buildString {
+                                    var hasDot = false
+                                    for ((idx, ch) in input.withIndex()) {
+                                        when {
+                                            ch.isDigit() -> append(ch)
+                                            ch == '-' && idx == 0 -> append(ch)
+                                            (ch == '.' || ch == ',') && !hasDot -> {
+                                                hasDot = true
+                                                append('.')
+                                            }
+                                        }
+                                    }
+                                }
+                                balance = filtered
                             },
                             label = { Text("Current Balance ($currency)") },
                             visualTransformation = com.sans.finance.core.util.ThousandsSeparatorVisualTransformation(),
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
                             ),
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
@@ -396,12 +486,26 @@ fun AccountScreen(
                                 )
                                 OutlinedTextField(
                                     value = minPayment,
-                                    onValueChange = { minPayment = it },
+                                    onValueChange = { input ->
+                                        val filtered = buildString {
+                                            var hasDot = false
+                                            for (ch in input) {
+                                                when {
+                                                    ch.isDigit() -> append(ch)
+                                                    (ch == '.' || ch == ',') && !hasDot -> {
+                                                        hasDot = true
+                                                        append('.')
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        minPayment = filtered
+                                    },
                                     label = { Text("Min. Payment") },
                                     modifier = Modifier.weight(1f),
                                     shape = MaterialTheme.shapes.large,
                                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
                                     )
                                 )
                             }
@@ -412,9 +516,9 @@ fun AccountScreen(
                     Button(
                         onClick = {
                             if (name.isBlank() || type.isBlank()) return@Button
-                            val parsedBalance = balance.toLongOrNull()?.times(100) ?: 0L
+                            val parsedBalance = balance.toDoubleOrNull()?.let { kotlin.math.round(it * 100.0).toLong() } ?: 0L
                             val parsedInterest = interestRate.toDoubleOrNull() ?: 0.0
-                            val parsedMinPayment = minPayment.toLongOrNull()?.times(100) ?: 0L
+                            val parsedMinPayment = minPayment.toDoubleOrNull()?.let { kotlin.math.round(it * 100.0).toLong() } ?: 0L
 
                             if (isEditing) {
                                 if (parsedBalance != accountToEdit!!.balance) {
@@ -425,7 +529,8 @@ fun AccountScreen(
                                         balance = parsedBalance,
                                         currency = currency,
                                         interestRate = parsedInterest,
-                                        minPayment = parsedMinPayment
+                                        minPayment = parsedMinPayment,
+                                        parentAccountId = parentAccountId
                                     )
                                     showAdjustmentDialog = true
                                 } else {
@@ -436,7 +541,8 @@ fun AccountScreen(
                                         newBalance = parsedBalance,
                                         newCurrency = currency,
                                         interestRate = parsedInterest,
-                                        minPayment = parsedMinPayment
+                                        minPayment = parsedMinPayment,
+                                        newParentAccountId = parentAccountId
                                     )
                                 }
                             } else {
@@ -446,10 +552,12 @@ fun AccountScreen(
                                     initialBalance = parsedBalance,
                                     currency = currency,
                                     interestRate = parsedInterest,
-                                    minPayment = parsedMinPayment
+                                    minPayment = parsedMinPayment,
+                                    parentAccountId = parentAccountId
                                 )
                             }
                             showAddDialog = false
+                            preselectedParentForAdd = null
                             accountToEdit = null
                         },
                         shape = MaterialTheme.shapes.large,
@@ -464,6 +572,7 @@ fun AccountScreen(
                             IconButton(onClick = {
                                 viewModel.deleteAccount(accountToEdit!!.id)
                                 showAddDialog = false
+                                preselectedParentForAdd = null
                                 accountToEdit = null
                             }) {
                                 Icon(
@@ -475,6 +584,7 @@ fun AccountScreen(
                         }
                         TextButton(onClick = {
                             showAddDialog = false
+                            preselectedParentForAdd = null
                             accountToEdit = null
                         }) {
                             Text("Cancel")
@@ -525,7 +635,8 @@ fun AccountScreen(
                                 newCurrency = data.currency,
                                 recordAdjustment = true,
                                 interestRate = data.interestRate,
-                                minPayment = data.minPayment
+                                minPayment = data.minPayment,
+                                newParentAccountId = data.parentAccountId
                             )
                             showAdjustmentDialog = false
                             pendingUpdateData = null
@@ -545,7 +656,8 @@ fun AccountScreen(
                                 newCurrency = data.currency,
                                 recordAdjustment = false,
                                 interestRate = data.interestRate,
-                                minPayment = data.minPayment
+                                minPayment = data.minPayment,
+                                newParentAccountId = data.parentAccountId
                             )
                             showAdjustmentDialog = false
                             pendingUpdateData = null
@@ -580,13 +692,19 @@ fun AccountScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
+                            val parentName = account.parentAccountId?.let { pid ->
+                                state.accountsByType.values.flatten().find { it.id == pid }?.name
+                            }
                             Text(
                                 text = account.name,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Black
                             )
                             Text(
-                                text = "${account.type} • ${account.currency}",
+                                text = buildString {
+                                    append("${account.type} • ${account.currency}")
+                                    if (parentName != null) append(" • Subaccount of $parentName")
+                                },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -623,6 +741,21 @@ fun AccountScreen(
                             onViewLedger(id)
                         }
                     )
+
+                    if (account.parentAccountId == null) {
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("Add Subaccount") },
+                            supportingContent = { Text("Create a pocket or currency under ${account.name}") },
+                            leadingContent = {
+                                Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
+                            },
+                            modifier = Modifier.clickable {
+                                preselectedParentForAdd = account
+                                selectedAccountForAction = null
+                                showAddDialog = true
+                            }
+                        )
+                    }
 
                     androidx.compose.material3.ListItem(
                         headlineContent = { Text("Edit Account") },
@@ -735,15 +868,36 @@ fun AccountGroupCard(
                 )
             }
 
-            accounts.forEachIndexed { index, account ->
+            val accountIdsInGroup = accounts.map { it.id }.toSet()
+            val childrenByParent = accounts
+                .filter { it.parentAccountId != null && it.parentAccountId in accountIdsInGroup }
+                .groupBy { it.parentAccountId!! }
+            val topLevelAccounts = accounts.filter {
+                it.parentAccountId == null || it.parentAccountId !in accountIdsInGroup
+            }
+            val expandedParents = remember { androidx.compose.runtime.mutableStateMapOf<Long, Boolean>() }
+
+            topLevelAccounts.forEachIndexed { index, account ->
+                val children = childrenByParent[account.id].orEmpty()
+                val isExpanded = expandedParents[account.id] ?: true
                 val convertedBalance = if (account.currency != currentCurrency) {
                     convertToBase(account.balance, account.currency)
+                } else null
+                val rolledUpTotal = if (children.isNotEmpty()) {
+                    convertToBase(account.balance, account.currency) +
+                        children.sumOf { convertToBase(it.balance, it.currency) }
                 } else null
 
                 AccountRowItem(
                     account = account,
                     currentCurrency = currentCurrency,
                     convertedBalance = convertedBalance,
+                    rolledUpTotal = rolledUpTotal,
+                    subaccountCount = children.size,
+                    isExpanded = isExpanded,
+                    onToggleExpand = {
+                        expandedParents[account.id] = !isExpanded
+                    },
                     isPrivacyModeEnabled = isPrivacyModeEnabled,
                     onClick = { onAccountClick(account) },
                     onMoveUp = { onMoveAccountUp(account) },
@@ -751,7 +905,44 @@ fun AccountGroupCard(
                     isReorderMode = isReorderMode,
                     isLiability = isLiability
                 )
-                if (index < accounts.size - 1) {
+
+                if (isExpanded && children.isNotEmpty()) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                    ) {
+                        Column {
+                            children.forEachIndexed { childIndex, child ->
+                                val childConverted = if (child.currency != currentCurrency) {
+                                    convertToBase(child.balance, child.currency)
+                                } else null
+                                AccountRowItem(
+                                    account = child,
+                                    currentCurrency = currentCurrency,
+                                    convertedBalance = childConverted,
+                                    isSubaccount = true,
+                                    isPrivacyModeEnabled = isPrivacyModeEnabled,
+                                    onClick = { onAccountClick(child) },
+                                    onMoveUp = { onMoveAccountUp(child) },
+                                    onMoveDown = { onMoveAccountDown(child) },
+                                    isReorderMode = isReorderMode,
+                                    isLiability = isLiability
+                                )
+                                if (childIndex < children.lastIndex) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(horizontal = 12.dp),
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (index < topLevelAccounts.size - 1) {
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp),
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
@@ -767,6 +958,11 @@ fun AccountRowItem(
     account: AccountEntity,
     currentCurrency: String,
     convertedBalance: Long? = null,
+    rolledUpTotal: Long? = null,
+    subaccountCount: Int = 0,
+    isExpanded: Boolean = true,
+    onToggleExpand: (() -> Unit)? = null,
+    isSubaccount: Boolean = false,
     isPrivacyModeEnabled: Boolean,
     onClick: () -> Unit,
     onMoveUp: () -> Unit,
@@ -781,22 +977,89 @@ fun AccountRowItem(
                 role = androidx.compose.ui.semantics.Role.Button,
                 onClickLabel = "View account details"
             ) { onClick() }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(
+                horizontal = if (isSubaccount) 14.dp else 16.dp,
+                vertical = if (isSubaccount) 10.dp else 14.dp
+            ),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (isSubaccount) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(26.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+                        RoundedCornerShape(2.dp)
+                    )
+            )
+        }
+
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                account.name,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                account.type,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    account.name,
+                    style = if (isSubaccount) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (isSubaccount) FontWeight.SemiBold else FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (isSubaccount) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    ) {
+                        Text(
+                            account.currency,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+            if (!isSubaccount) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    Text(
+                        account.type,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (subaccountCount > 0 && onToggleExpand != null) {
+                        Surface(
+                            onClick = onToggleExpand,
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    "$subaccountCount pockets",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Icon(
+                                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                                    contentDescription = if (isExpanded) "Collapse subaccounts" else "Expand subaccounts",
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         if (isReorderMode) {
@@ -811,20 +1074,38 @@ fun AccountRowItem(
         }
 
         Column(horizontalAlignment = Alignment.End) {
-            PrivacyText(
-                amount = account.balance,
-                currencyCode = account.currency,
-                isVisible = !isPrivacyModeEnabled,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Black,
-                color = if (isLiability) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-            )
-            if (account.currency != currentCurrency && convertedBalance != null) {
-                Text(
-                    text = if (isPrivacyModeEnabled) "••••••" else "≈ ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(convertedBalance, currentCurrency)}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            if (rolledUpTotal != null) {
+                PrivacyText(
+                    amount = rolledUpTotal,
+                    currencyCode = currentCurrency,
+                    isVisible = !isPrivacyModeEnabled,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Black,
+                    color = if (isLiability) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                 )
+                if (account.balance != 0L) {
+                    Text(
+                        text = if (isPrivacyModeEnabled) "••••••" else "Own: ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(account.balance, account.currency)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                PrivacyText(
+                    amount = account.balance,
+                    currencyCode = account.currency,
+                    isVisible = !isPrivacyModeEnabled,
+                    style = if (isSubaccount) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Black,
+                    color = if (isLiability) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                )
+                if (account.currency != currentCurrency && convertedBalance != null) {
+                    Text(
+                        text = if (isPrivacyModeEnabled) "••••••" else "≈ ${com.sans.finance.core.util.CurrencyFormatter.formatAmount(convertedBalance, currentCurrency)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }

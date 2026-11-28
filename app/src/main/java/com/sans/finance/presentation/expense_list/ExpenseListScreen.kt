@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Insights
@@ -72,6 +73,7 @@ fun ExpenseListScreen(
     onStatsClick: () -> Unit,
     onSearchClick: () -> Unit,
     onExpenseClick: (Long) -> Unit,
+    onBack: (() -> Unit)? = null,
     viewModel: ExpenseListViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -109,21 +111,45 @@ fun ExpenseListScreen(
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    IconButton(onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        viewModel.previousMonth()
-                    }) {
-                        Icon(
-                            Icons.Default.ChevronLeft,
-                            contentDescription = "Prev",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    if (onBack != null) {
+                        IconButton(onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onBack()
+                        }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    } else {
+                        IconButton(onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            viewModel.previousMonth()
+                        }) {
+                            Icon(
+                                Icons.Default.ChevronLeft,
+                                contentDescription = "Prev",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 },
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        if (onBack != null) {
+                            IconButton(onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.previousMonth()
+                            }) {
+                                Icon(
+                                    Icons.Default.ChevronLeft,
+                                    contentDescription = "Prev",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                         Surface(
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -227,6 +253,22 @@ fun ExpenseListScreen(
                     .padding(horizontal = 12.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                if (state.selectedAccountIds.isNotEmpty()) {
+                    val accountLabel = if (state.selectedAccountIds.size == 1) {
+                        val accId = state.selectedAccountIds.first()
+                        accountsMap[accId]?.name ?: "Account"
+                    } else {
+                        val selectedAccs = state.selectedAccountIds.mapNotNull { accountsMap[it] }
+                        val parent = selectedAccs.firstOrNull { it.parentAccountId == null }
+                        if (parent != null) "${parent.name} (${selectedAccs.size})" else "${state.selectedAccountIds.size} Accounts"
+                    }
+                    FilterChip(
+                        selected = true,
+                        onClick = { viewModel.clearAccountFilter() },
+                        label = { Text("🏦 $accountLabel ✕", style = MaterialTheme.typography.labelMedium) },
+                        shape = CircleShape
+                    )
+                }
                 FilterChip(
                     selected = state.activeCommitmentFilter == TimelineCommitmentFilter.ALL,
                     onClick = {

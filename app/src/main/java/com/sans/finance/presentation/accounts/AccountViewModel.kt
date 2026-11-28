@@ -93,10 +93,14 @@ class AccountViewModel @Inject constructor(
         initialBalance: Long,
         currency: String = "IDR",
         interestRate: Double = 0.0,
-        minPayment: Long = 0
+        minPayment: Long = 0,
+        parentAccountId: Long? = null
     ) {
         viewModelScope.launch {
-            val currentMax = state.value.accountsByType[type]?.maxOfOrNull { it.displayOrder } ?: 0
+            val siblings = state.value.accountsByType[type]
+                ?.filter { it.parentAccountId == parentAccountId }
+                .orEmpty()
+            val currentMax = siblings.maxOfOrNull { it.displayOrder } ?: 0
             accountRepository.insertAccount(
                 AccountEntity(
                     name = name,
@@ -105,7 +109,8 @@ class AccountViewModel @Inject constructor(
                     currency = currency,
                     interestRate = interestRate,
                     minPayment = minPayment,
-                    displayOrder = currentMax + 1
+                    displayOrder = currentMax + 1,
+                    parentAccountId = parentAccountId
                 )
             )
         }
@@ -119,9 +124,11 @@ class AccountViewModel @Inject constructor(
         newCurrency: String = account.currency,
         recordAdjustment: Boolean = false,
         interestRate: Double = 0.0,
-        minPayment: Long = 0
+        minPayment: Long = 0,
+        newParentAccountId: Long? = account.parentAccountId
     ) {
         viewModelScope.launch {
+            val safeParentId = if (newParentAccountId == account.id) null else newParentAccountId
             val diff = newBalance - account.balance
             if (recordAdjustment && diff != 0L) {
                 val isIncome = diff > 0
@@ -140,30 +147,19 @@ class AccountViewModel @Inject constructor(
                         details = "Manual balance adjustment for ${account.name}"
                     )
                 )
-                accountRepository.updateAccount(
-                    account.copy(
-                        name = newName,
-                        type = newType,
-                        balance = newBalance,
-                        currency = newCurrency,
-                        interestRate = interestRate,
-                        minPayment = minPayment,
-                        updatedAt = System.currentTimeMillis()
-                    )
-                )
-            } else {
-                accountRepository.updateAccount(
-                    account.copy(
-                        name = newName,
-                        type = newType,
-                        balance = newBalance,
-                        currency = newCurrency,
-                        interestRate = interestRate,
-                        minPayment = minPayment,
-                        updatedAt = System.currentTimeMillis()
-                    )
-                )
             }
+            accountRepository.updateAccount(
+                account.copy(
+                    name = newName,
+                    type = newType,
+                    balance = newBalance,
+                    currency = newCurrency,
+                    interestRate = interestRate,
+                    minPayment = minPayment,
+                    parentAccountId = safeParentId,
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
         }
     }
 
@@ -180,47 +176,41 @@ class AccountViewModel @Inject constructor(
     }
 
     fun moveAccountUp(account: AccountEntity) {
-        val list = state.value.accountsByType[account.type] ?: return
-        val index = list.indexOf(account)
+        val siblings = state.value.accountsByType[account.type]
+            ?.filter { it.parentAccountId == account.parentAccountId }
+            ?: return
+        val index = siblings.indexOf(account)
         if (index > 0) {
-            viewModelScope.launch {
-                val prev = list[index - 1]
-                if (account.displayOrder == prev.displayOrder) {
-                    list.forEachIndexed { i, item ->
-                        accountRepository.updateAccount(item.copy(displayOrder = i))
-                    }
-                    val refreshedList = list.mapIndexed { i, item -> item.copy(displayOrder = i) }
-                    val current = refreshedList[index]
-                    val previous = refreshedList[index - 1]
-                    accountRepository.updateAccount(current.copy(displayOrder = index - 1))
-                    accountRepository.updateAccount(previous.copy(displayOrder = index))
-                } else {
-                    accountRepository.updateAccount(account.copy(displayOrder = prev.displayOrder))
-                    accountRepository.updateAccount(prev.copy(displayOrder = account.displayOrder))
-                }
-            }
+            swapAccountOrder(siblings, index, index - 1)
         }
     }
 
     fun moveAccountDown(account: AccountEntity) {
-        val list = state.value.accountsByType[account.type] ?: return
-        val index = list.indexOf(account)
-        if (index < list.size - 1) {
-            viewModelScope.launch {
-                val next = list[index + 1]
-                if (account.displayOrder == next.displayOrder) {
-                    list.forEachIndexed { i, item ->
-                        accountRepository.updateAccount(item.copy(displayOrder = i))
+        val siblings = state.value.accountsByType[account.type]
+            ?.filter { it.parentAccountId == account.parentAccountId }
+            ?: return
+        val index = siblings.indexOf(account)
+        if (index in 0 until siblings.lastIndex) {
+            swapAccountOrder(siblings, index, index + 1)
+        }
+    }
+
+    private fun swapAccountOrder(siblings: List<AccountEntity>, index: Int, targetIndex: Int) {
+        viewModelScope.launch {
+            val current = siblings[index]
+            val target = siblings[targetIndex]
+            if (current.displayOrder == target.displayOrder) {
+                siblings.forEachIndexed { i, item ->
+                    val newOrder = when (i) {
+                        index -> targetIndex
+                        targetIndex -> index
+                        else -> i
                     }
-                    val refreshedList = list.mapIndexed { i, item -> item.copy(displayOrder = i) }
-                    val current = refreshedList[index]
-                    val nextItem = refreshedList[index + 1]
-                    accountRepository.updateAccount(current.copy(displayOrder = index + 1))
-                    accountRepository.updateAccount(nextItem.copy(displayOrder = index))
-                } else {
-                    accountRepository.updateAccount(account.copy(displayOrder = next.displayOrder))
-                    accountRepository.updateAccount(next.copy(displayOrder = account.displayOrder))
+                    accountRepository.updateAccount(item.copy(displayOrder = newOrder))
                 }
+            } else {
+                accountRepository.updateAccount(current.copy(displayOrder = target.displayOrder))
+                accountRepository.updateAccount(target.copy(displayOrder = current.displayOrder))
             }
         }
     }

@@ -64,7 +64,7 @@ interface ExpenseDao {
         LEFT JOIN tags t ON etr.tagId = t.id
         WHERE (:query IS NULL OR e.title LIKE '%' || :query || '%' OR e.details LIKE '%' || :query || '%')
         AND (:categoryCount = 0 OR e.category_id IN (:categoryIds))
-        AND (:accountCount = 0 OR e.account_id IN (:accountIds))
+        AND (:accountCount = 0 OR e.account_id IN (:accountIds) OR e.to_account_id IN (:accountIds))
         AND (e.date >= :since AND e.date < :until)
         AND e.is_installment = 0
         AND e.id NOT IN (SELECT expense_id FROM installments)
@@ -274,14 +274,18 @@ interface ExpenseDao {
         """
         SELECT day, SUM(amount) as amount
         FROM (
-            SELECT (date / 86400000) * 86400000 as day, SUM(amount) as amount
-            FROM expenses
-            WHERE date >= :since AND date < :until AND type = 'EXPENSE' AND is_installment = 0
+            SELECT (e.date / 86400000) * 86400000 as day, SUM(e.amount * COALESCE(er.rateToIdr, 1.0)) as amount
+            FROM expenses e
+            LEFT JOIN exchange_rates er ON e.currency = er.code
+            WHERE e.date >= :since AND e.date < :until AND e.type = 'EXPENSE' AND e.is_installment = 0
             GROUP BY day
             UNION ALL
-            SELECT (due_date / 86400000) * 86400000 as day, SUM(amount) as amount
-            FROM installment_items
-            WHERE due_date >= :since AND due_date < :until AND status = 'Paid'
+            SELECT (ii.due_date / 86400000) * 86400000 as day, SUM(ii.amount * COALESCE(er.rateToIdr, 1.0)) as amount
+            FROM installment_items ii
+            JOIN installments i ON ii.installment_id = i.id
+            JOIN expenses e ON i.expense_id = e.id
+            LEFT JOIN exchange_rates er ON e.currency = er.code
+            WHERE ii.due_date >= :since AND ii.due_date < :until AND ii.status = 'Paid'
             GROUP BY day
         ) sub
         GROUP BY day
@@ -297,15 +301,17 @@ interface ExpenseDao {
         """
         SELECT day, SUM(amount) as amount
         FROM (
-            SELECT (date / 86400000) * 86400000 as day, SUM(amount) as amount
-            FROM expenses
-            WHERE date >= :since AND date < :until AND type = :type AND category_id = :categoryId
+            SELECT (e.date / 86400000) * 86400000 as day, SUM(e.amount * COALESCE(er.rateToIdr, 1.0)) as amount
+            FROM expenses e
+            LEFT JOIN exchange_rates er ON e.currency = er.code
+            WHERE e.date >= :since AND e.date < :until AND e.type = :type AND e.category_id = :categoryId
             GROUP BY day
             UNION ALL
-            SELECT (due_date / 86400000) * 86400000 as day, SUM(ii.amount) as amount
+            SELECT (ii.due_date / 86400000) * 86400000 as day, SUM(ii.amount * COALESCE(er.rateToIdr, 1.0)) as amount
             FROM installment_items ii
             JOIN installments i ON ii.installment_id = i.id
             JOIN expenses e ON i.expense_id = e.id
+            LEFT JOIN exchange_rates er ON e.currency = er.code
             WHERE :type = 'EXPENSE' AND e.category_id = :categoryId AND ii.due_date >= :since AND ii.due_date < :until AND ii.status = 'Paid'
             GROUP BY day
         ) sub
@@ -324,14 +330,16 @@ interface ExpenseDao {
         """
         SELECT day, SUM(amount) as amount
         FROM (
-            SELECT CAST(strftime('%s', date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, amount as amount
-            FROM expenses
-            WHERE type = :type AND category_id = :categoryId AND is_installment = 0 AND date > 0
+            SELECT CAST(strftime('%s', e.date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, (e.amount * COALESCE(er.rateToIdr, 1.0)) as amount
+            FROM expenses e
+            LEFT JOIN exchange_rates er ON e.currency = er.code
+            WHERE e.type = :type AND e.category_id = :categoryId AND e.is_installment = 0 AND e.date > 0
             UNION ALL
-            SELECT CAST(strftime('%s', due_date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, ii.amount
+            SELECT CAST(strftime('%s', ii.due_date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, (ii.amount * COALESCE(er.rateToIdr, 1.0)) as amount
             FROM installment_items ii
             JOIN installments i ON ii.installment_id = i.id
             JOIN expenses e ON i.expense_id = e.id
+            LEFT JOIN exchange_rates er ON e.currency = er.code
             WHERE :type = 'EXPENSE' AND e.category_id = :categoryId AND ii.status = 'Paid' AND ii.due_date > 0
         ) sub
         GROUP BY day
@@ -347,14 +355,16 @@ interface ExpenseDao {
         """
         SELECT day, SUM(amount) as amount
         FROM (
-            SELECT CAST(strftime('%s', date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, amount as amount
-            FROM expenses
-            WHERE type = :type AND category_id = :categoryId AND is_installment = 0 AND date > 0 AND date >= :since AND date < :until
+            SELECT CAST(strftime('%s', e.date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, (e.amount * COALESCE(er.rateToIdr, 1.0)) as amount
+            FROM expenses e
+            LEFT JOIN exchange_rates er ON e.currency = er.code
+            WHERE e.type = :type AND e.category_id = :categoryId AND e.is_installment = 0 AND e.date > 0 AND e.date >= :since AND e.date < :until
             UNION ALL
-            SELECT CAST(strftime('%s', due_date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, ii.amount
+            SELECT CAST(strftime('%s', ii.due_date / 1000, 'unixepoch', 'start of month') AS INTEGER) * 1000 as day, (ii.amount * COALESCE(er.rateToIdr, 1.0)) as amount
             FROM installment_items ii
             JOIN installments i ON ii.installment_id = i.id
             JOIN expenses e ON i.expense_id = e.id
+            LEFT JOIN exchange_rates er ON e.currency = er.code
             WHERE :type = 'EXPENSE' AND e.category_id = :categoryId AND ii.status = 'Paid' AND ii.due_date > 0 AND ii.due_date >= :since AND ii.due_date < :until
         ) sub
         GROUP BY day

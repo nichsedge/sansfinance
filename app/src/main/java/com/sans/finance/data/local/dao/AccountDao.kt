@@ -43,6 +43,9 @@ interface AccountDao {
     @Query("UPDATE accounts SET balance = balance + :delta, updated_at = :updatedAt WHERE id = :accountId")
     suspend fun adjustBalance(accountId: Long, delta: Long, updatedAt: Long)
 
+    @Query("UPDATE accounts SET parent_account_id = NULL, updated_at = :updatedAt WHERE parent_account_id = :parentId")
+    suspend fun detachSubaccounts(parentId: Long, updatedAt: Long)
+
     @Query("DELETE FROM accounts WHERE id = :accountId")
     suspend fun deleteAccountById(accountId: Long)
 }

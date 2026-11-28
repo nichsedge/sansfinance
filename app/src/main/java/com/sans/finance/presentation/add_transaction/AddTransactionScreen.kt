@@ -469,6 +469,8 @@ fun AddTransactionScreen(
                                     onDismissRequest = { accountExpanded = false }
                                 ) {
                                     accounts.forEach { account ->
+                                        val parentName = account.parentAccountId?.let { pid -> accounts.find { it.id == pid }?.name }
+                                        val displayName = if (parentName != null) "$parentName • ${account.name}" else account.name
                                         DropdownMenuItem(
                                             text = {
                                                 Row(
@@ -476,7 +478,7 @@ fun AddTransactionScreen(
                                                     horizontalArrangement = Arrangement.SpaceBetween,
                                                     verticalAlignment = Alignment.CenterVertically
                                                 ) {
-                                                    Text(account.name)
+                                                    Text(displayName)
                                                     Text(
                                                         account.currency,
                                                         style = MaterialTheme.typography.labelSmall,
@@ -538,6 +540,8 @@ fun AddTransactionScreen(
                                     onDismissRequest = { toAccountExpanded = false }
                                 ) {
                                     accounts.forEach { account ->
+                                        val parentName = account.parentAccountId?.let { pid -> accounts.find { it.id == pid }?.name }
+                                        val displayName = if (parentName != null) "$parentName • ${account.name}" else account.name
                                         DropdownMenuItem(
                                             text = {
                                                 Row(
@@ -545,7 +549,7 @@ fun AddTransactionScreen(
                                                     horizontalArrangement = Arrangement.SpaceBetween,
                                                     verticalAlignment = Alignment.CenterVertically
                                                 ) {
-                                                    Text(account.name)
+                                                    Text(displayName)
                                                     Text(
                                                         account.currency,
                                                         style = MaterialTheme.typography.labelSmall,
@@ -619,6 +623,8 @@ fun AddTransactionScreen(
                         onDismissRequest = { accountExpanded = false }
                     ) {
                         accounts.forEach { account ->
+                            val parentName = account.parentAccountId?.let { pid -> accounts.find { it.id == pid }?.name }
+                            val displayName = if (parentName != null) "$parentName • ${account.name}" else account.name
                             DropdownMenuItem(
                                 text = {
                                     Row(
@@ -626,7 +632,7 @@ fun AddTransactionScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(account.name)
+                                        Text(displayName)
                                         Text(
                                             account.currency,
                                             style = MaterialTheme.typography.labelSmall,

@@ -31,13 +31,15 @@ class GetCashFlowPacingUseCase @Inject constructor(
         return combine(
             getDashboardSummaryUseCase(),
             installmentDao.getAllPendingItems(),
+            installmentDao.getActiveInstallments(),
             expenseRepository.getRecurringExpenses(),
             currencyDao.getAllRates()
-        ) { summary, pendingItems, recurringList, rates ->
+        ) { summary, pendingItems, activeInstallments, recurringList, rates ->
             val remainingBudget = (summary.globalBudget - summary.globalSpent).coerceAtLeast(0L)
             val baseCurrency = summary.currentCurrency
             val ratesMap = rates.associate { it.code to it.rateToIdr }
             val baseRate = if (baseCurrency == "IDR") 1.0 else (ratesMap[baseCurrency] ?: 1.0)
+            val installmentCurrencyMap = activeInstallments.associate { it.installment.id to it.expense.currency }
 
             fun convertToBase(amount: Long, from: String?): Long {
                 if (from.isNullOrBlank() || from == baseCurrency) return amount
@@ -50,7 +52,7 @@ class GetCashFlowPacingUseCase @Inject constructor(
             // Find pending installment items due before cycleEndMs
             val committedInstallments = pendingItems
                 .filter { it.dueDate <= cycleEndMs }
-                .sumOf { it.amount }
+                .sumOf { convertToBase(it.amount, installmentCurrencyMap[it.installmentId]) }
 
             // Find pending recurring bills due between now and cycleEndMs
             val committedRecurring = recurringList

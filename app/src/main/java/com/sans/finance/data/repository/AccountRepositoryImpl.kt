@@ -37,6 +37,8 @@ class AccountRepositoryImpl(
         // Prevent orphaned transactions: reassign expenses and transfers to primary Cash account (1)
         expenseDao?.reassignAccountId(fromAccountId = id, toAccountId = 1L)
         expenseDao?.reassignToAccountId(fromAccountId = id, toAccountId = 1L)
+        // Promote any child subaccounts to top-level before deleting parent
+        dao.detachSubaccounts(parentId = id, updatedAt = System.currentTimeMillis())
         dao.deleteAccountById(id)
         context?.let { FinancialSummaryWidgetProvider.updateAllWidgets(it) }
     }

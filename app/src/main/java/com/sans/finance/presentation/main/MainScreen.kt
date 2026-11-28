@@ -160,6 +160,9 @@ fun MainScreen(
                             },
                             onBack = {
                                 navController.popBackStack()
+                            },
+                            onViewLedger = { accountId ->
+                                rootNavController.navigate(Screen.ExpenseList(filterAccountId = accountId))
                             }
                         )
                     }
