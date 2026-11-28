@@ -203,7 +203,7 @@ private fun DashboardBillRowItem(
                 "Installment ${bill.installmentMonth}/${bill.installmentTotalMonths}"
             } else {
                 val dueDate = bill.nextDueDate
-                if (dueDate != null) "Due ${DateFormatterUtils.getStandardFormatter().format(Date(dueDate))}"
+                if (dueDate != null) "Due ${DateFormatterUtils.formatStandardDate(dueDate)}"
                 else "Recurring Bill"
             }
             Text(
@@ -362,7 +362,7 @@ private fun RecentTransactionRowItem(
                 color = statusColor
             )
             Text(
-                text = DateFormatterUtils.getStandardFormatter().format(Date(transaction.date)),
+                text = DateFormatterUtils.formatStandardDate(transaction.date),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.Medium

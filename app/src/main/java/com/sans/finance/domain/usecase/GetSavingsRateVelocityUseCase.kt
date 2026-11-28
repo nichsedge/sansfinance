@@ -59,7 +59,7 @@ class GetSavingsRateVelocityUseCase @Inject constructor(
                 monthCal.timeInMillis = currentMonthStart
                 monthCal.add(Calendar.MONTH, -i)
                 val mStart = monthCal.timeInMillis
-                val mLabel = DateFormatterUtils.getMonthYearFormatter().format(Date(mStart))
+                val mLabel = DateFormatterUtils.formatMonthYear(mStart)
 
                 monthCal.add(Calendar.MONTH, 1)
                 val mEnd = monthCal.timeInMillis

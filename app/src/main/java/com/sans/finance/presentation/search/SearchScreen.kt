@@ -369,8 +369,7 @@ private fun isFiltered(state: SearchState): Boolean {
 fun DateHeader(dateMillis: Long) {
     val calendar = CalendarUtils.getInstance()
     calendar.timeInMillis = dateMillis
-    val dateStr =
-        com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter().format(calendar.time)
+    val dateStr = com.sans.finance.core.util.DateFormatterUtils.formatStandardDate(calendar.time)
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -494,11 +493,9 @@ fun SearchFilterSheet(
             ) {
                 val dateText = if (state.activeDateFilter == DateRangeFilter.CUSTOM) {
                     val startStr =
-                        com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter()
-                            .format(java.util.Date(state.startDate))
+                        com.sans.finance.core.util.DateFormatterUtils.formatStandardDate(state.startDate)
                     val endStr =
-                        com.sans.finance.core.util.DateFormatterUtils.getStandardFormatter()
-                            .format(java.util.Date(state.endDate - 1))
+                        com.sans.finance.core.util.DateFormatterUtils.formatStandardDate(state.endDate - 1)
                     "$startStr - $endStr"
                 } else {
                     "Select Date Range"

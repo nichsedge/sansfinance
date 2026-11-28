@@ -314,7 +314,7 @@ fun ReSyncDryRunScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = "Selected Date: " + DateFormatterUtils.getStandardFormatter().format(Date(customDate)),
+                                                text = "Selected Date: " + DateFormatterUtils.formatStandardDate(customDate),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 fontWeight = FontWeight.SemiBold,
                                                 modifier = Modifier.weight(1f)

@@ -99,36 +99,55 @@ class WealthViewModel @Inject constructor(
         getWealthDistributionUseCase(tab)
     }
 
-    private val baseState = combine(
+    private data class WealthPortfolioInputs(
+        val metrics: WealthMetrics,
+        val freedom: FinancialFreedomStats,
+        val latestHeader: PortfolioSnapshotHeaderEntity?,
+        val latestHoldings: List<PortfolioHoldingEntity>,
+        val portfolioHistory: List<SnapshotTotal>
+    )
+
+    private data class WealthAccountInputs(
+        val accounts: List<AccountEntity>,
+        val accountTypes: List<AccountTypeEntity>,
+        val goals: List<Goal>,
+        val prefs: UserPreferences
+    )
+
+    private val portfolioInputsFlow = combine(
         getWealthMetricsUseCase(),
         getFinancialFreedomStatsUseCase(),
         portfolioRepository.getLatestSnapshotHeader(),
         portfolioRepository.getLatestSnapshot(),
-        portfolioRepository.getTotalValueOverTime(),
+        portfolioRepository.getTotalValueOverTime()
+    ) { metrics, freedom, latestHeader, latestHoldings, portfolioHistory ->
+        WealthPortfolioInputs(metrics, freedom, latestHeader, latestHoldings, portfolioHistory)
+    }
+
+    private val accountInputsFlow = combine(
         accountRepository.getAllAccounts(),
         accountTypeRepository.getAllAccountTypes(),
         goalRepository.getAllGoals(),
-        userPreferencesRepository.userPreferences,
+        userPreferencesRepository.userPreferences
+    ) { accounts, accountTypes, goals, prefs ->
+        WealthAccountInputs(accounts, accountTypes, goals, prefs)
+    }
+
+    private val baseState = combine(
+        portfolioInputsFlow,
+        accountInputsFlow,
         _wealthDistributionTab,
         distributionFlow
-    ) { args ->
-        val metrics = args[0] as WealthMetrics
-        val freedom = args[1] as FinancialFreedomStats
-        val latestHeader = args[2] as PortfolioSnapshotHeaderEntity?
-        @Suppress("UNCHECKED_CAST")
-        val latestHoldings = args[3] as List<PortfolioHoldingEntity>
-        @Suppress("UNCHECKED_CAST")
-        val portfolioHistory = args[4] as List<SnapshotTotal>
-        @Suppress("UNCHECKED_CAST")
-        val accounts = args[5] as List<AccountEntity>
-        @Suppress("UNCHECKED_CAST")
-        val accountTypes = args[6] as List<AccountTypeEntity>
-        @Suppress("UNCHECKED_CAST")
-        val goals = args[7] as List<Goal>
-        val prefs = args[8] as UserPreferences
-        val tab = args[9] as WealthDistributionTab
-        @Suppress("UNCHECKED_CAST")
-        val distribution = args[10] as Map<String, Long>
+    ) { portfolio, account, tab, distribution ->
+        val metrics = portfolio.metrics
+        val freedom = portfolio.freedom
+        val latestHeader = portfolio.latestHeader
+        val latestHoldings = portfolio.latestHoldings
+        val portfolioHistory = portfolio.portfolioHistory
+        val accounts = account.accounts
+        val accountTypes = account.accountTypes
+        val goals = account.goals
+        val prefs = account.prefs
 
         val sources = latestHoldings
             .groupBy { it.source }
@@ -146,7 +165,7 @@ class WealthViewModel @Inject constructor(
             set(Calendar.MONTH, adjMonth)
             set(Calendar.DAY_OF_MONTH, 10)
         }
-        val nextPayoutDateStr = "10 " + DateFormatterUtils.getMonthYearFormatter().format(nextPayoutCal.time)
+        val nextPayoutDateStr = "10 " + DateFormatterUtils.formatMonthYear(nextPayoutCal.time)
 
         val liabilityTypeNames = accountTypes.filter { it.isLiability }.map { it.name }.toSet()
         val investmentTypeNames = accountTypes.filter { it.isInvestment }.map { it.name }.toSet()

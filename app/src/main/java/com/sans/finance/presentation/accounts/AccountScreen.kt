@@ -1,5 +1,7 @@
 package com.sans.finance.presentation.accounts
 
+import com.sans.finance.core.util.groupByParent
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -868,13 +870,9 @@ fun AccountGroupCard(
                 )
             }
 
-            val accountIdsInGroup = accounts.map { it.id }.toSet()
-            val childrenByParent = accounts
-                .filter { it.parentAccountId != null && it.parentAccountId in accountIdsInGroup }
-                .groupBy { it.parentAccountId!! }
-            val topLevelAccounts = accounts.filter {
-                it.parentAccountId == null || it.parentAccountId !in accountIdsInGroup
-            }
+            val hierarchy = accounts.groupByParent()
+            val childrenByParent = hierarchy.childrenByParent
+            val topLevelAccounts = hierarchy.topLevel
             val expandedParents = remember { androidx.compose.runtime.mutableStateMapOf<Long, Boolean>() }
 
             topLevelAccounts.forEachIndexed { index, account ->

@@ -165,7 +165,6 @@ fun ExpandableInstallment(
     val items by viewModel.getItemsForInstallment(installment.id)
         .collectAsState(initial = emptyList())
     var showDeleteDialog by remember { mutableStateOf(false) }
-    val dateFormatter = DateFormatterUtils.getStandardFormatter()
     val monthYearFormatter =
         remember { java.text.SimpleDateFormat("MMM yyyy", Locale.getDefault()) }
     val now = System.currentTimeMillis()
@@ -192,7 +191,7 @@ fun ExpandableInstallment(
                     )
                     installment.expenseDate?.let {
                         Text(
-                            dateFormatter.format(Date(it)),
+                            DateFormatterUtils.formatStandardDate(it),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -311,7 +310,7 @@ fun ExpandableInstallment(
                                     }
                                 }
                                 Text(
-                                    dateFormatter.format(Date(monthlyItem.dueDate)),
+                                    DateFormatterUtils.formatStandardDate(monthlyItem.dueDate),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

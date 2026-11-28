@@ -1,5 +1,7 @@
 package com.sans.finance.presentation.add_transaction
 
+import com.sans.finance.core.util.groupByParent
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -1201,14 +1203,9 @@ private fun AccountDropdownItems(
     accentColor: Color,
     onSelect: (com.sans.finance.data.local.entity.AccountEntity) -> Unit
 ) {
-    val accountIds = remember(accounts) { accounts.map { it.id }.toSet() }
-    val childrenByParent = remember(accounts, accountIds) {
-        accounts.filter { it.parentAccountId != null && it.parentAccountId in accountIds }
-            .groupBy { it.parentAccountId!! }
-    }
-    val topLevel = remember(accounts, accountIds) {
-        accounts.filter { it.parentAccountId == null || it.parentAccountId !in accountIds }
-    }
+    val hierarchy = remember(accounts) { accounts.groupByParent() }
+    val topLevel = hierarchy.topLevel
+    val childrenByParent = hierarchy.childrenByParent
 
     topLevel.forEach { parent ->
         val children = childrenByParent[parent.id].orEmpty()

@@ -95,7 +95,7 @@ fun ExpenseListScreen(
             val cal = com.sans.finance.core.util.CalendarUtils.getInstance().apply {
                 timeInMillis = state.startDate
             }
-            com.sans.finance.core.util.DateFormatterUtils.getMonthYearFormatter().format(cal.time)
+            com.sans.finance.core.util.DateFormatterUtils.formatMonthYear(cal.time)
         }
     }
 

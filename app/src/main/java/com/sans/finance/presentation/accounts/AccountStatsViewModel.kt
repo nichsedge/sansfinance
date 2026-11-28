@@ -3,6 +3,7 @@ package com.sans.finance.presentation.accounts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sans.finance.core.util.CalendarUtils
+import com.sans.finance.core.util.groupByParent
 import com.sans.finance.domain.repository.AccountRepository
 import com.sans.finance.domain.repository.ExpenseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -143,12 +144,9 @@ class AccountStatsViewModel @Inject constructor(
             historyCal.add(Calendar.MONTH, -1)
         }
 
-        val accountIds = accounts.map { it.id }.toSet()
-        val childrenByParent = accounts
-            .filter { it.parentAccountId != null && it.parentAccountId in accountIds }
-            .groupBy { it.parentAccountId!! }
-        val accountBreakdown = accounts
-            .filter { it.parentAccountId == null || it.parentAccountId !in accountIds }
+        val hierarchy = accounts.groupByParent()
+        val childrenByParent = hierarchy.childrenByParent
+        val accountBreakdown = hierarchy.topLevel
             .map { parent ->
                 val isLiability = parent.type in liabilityTypeNames
                 val children = childrenByParent[parent.id].orEmpty()

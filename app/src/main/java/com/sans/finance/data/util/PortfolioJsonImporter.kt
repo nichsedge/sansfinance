@@ -35,7 +35,22 @@ data class SovereignAdvisorJson(
     @SerialName("reinvestment_playbook") val reinvestmentPlaybook: ReinvestmentPlaybookJson? = null,
     @SerialName("vault_summary") val vaultSummary: VaultSummaryJson? = null,
     @SerialName("deposit_router") val depositRouter: DepositRouterJson? = null,
-    @SerialName("adhd_directives") val adhdDirectives: List<String> = emptyList()
+    @SerialName("adhd_directives") val adhdDirectives: List<String> = emptyList(),
+    @SerialName("idx_alpha_signals") val idxAlphaSignals: List<IdxAlphaSignalJson> = emptyList()
+)
+
+@Serializable
+data class IdxAlphaSignalJson(
+    val ticker: String,
+    @SerialName("anomaly_type") val anomalyType: String = "",
+    @SerialName("wyckoff_phase") val wyckoffPhase: String = "",
+    @SerialName("smart_money_delta") val smartMoneyDelta: Double = 0.0,
+    @SerialName("net_foreign_flow_rp") val netForeignFlowRp: Double = 0.0,
+    @SerialName("z_composite") val zComposite: Double = 0.0,
+    @SerialName("compounder_score") val compounderScore: Double = 0.0,
+    @SerialName("dca_verdict") val dcaVerdict: String = "",
+    @SerialName("valuation_status") val valuationStatus: String = "",
+    val playbook: String = ""
 )
 
 @Serializable
@@ -81,7 +96,11 @@ data class EquityVerdictJson(
     @SerialName("value_idr") val valueIdr: Double = 0.0,
     @SerialName("weight_pct") val weightPct: Double = 0.0,
     val verdict: String = "",
-    @SerialName("nff_20d") val nff20d: Double = 0.0
+    @SerialName("trend_regime") val trendRegime: String = "",
+    @SerialName("nff_20d") val nff20d: Double = 0.0,
+    @SerialName("wyckoff_phase") val wyckoffPhase: String = "",
+    @SerialName("smart_money_delta") val smartMoneyDelta: Double = 0.0,
+    @SerialName("compounder_score") val compounderScore: Double = 0.0
 )
 
 data class SnapshotImportResult(

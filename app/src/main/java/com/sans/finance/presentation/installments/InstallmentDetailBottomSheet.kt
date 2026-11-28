@@ -150,7 +150,6 @@ private fun InstallmentHeader(
     installment: Installment,
     onDeleteClick: () -> Unit
 ) {
-    val dateFormatter = DateFormatterUtils.getStandardFormatter()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -164,7 +163,7 @@ private fun InstallmentHeader(
             )
             installment.expenseDate?.let {
                 Text(
-                    text = "Started: ${dateFormatter.format(Date(it))}",
+                    text = "Started: ${DateFormatterUtils.formatStandardDate(it)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -320,11 +319,10 @@ private fun InstallmentScheduleRow(
     now: Long,
     onToggleStatus: (itemId: Long, currentStatus: String) -> Unit
 ) {
-    val dateFormatter = DateFormatterUtils.getStandardFormatter()
     val monthYearFormatter = remember { SimpleDateFormat("MMM yyyy", Locale.getDefault()) }
     val isOverdue = monthlyItem.status == "Pending" && monthlyItem.dueDate < now
     val formattedAmount = CurrencyFormatter.formatAmount(monthlyItem.amount, currencyCode)
-    val formattedDate = dateFormatter.format(Date(monthlyItem.dueDate))
+    val formattedDate = DateFormatterUtils.formatStandardDate(monthlyItem.dueDate)
 
     Row(
         modifier = Modifier

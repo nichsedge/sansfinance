@@ -1,122 +1,49 @@
 package com.sans.finance.core.util
 
-import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Thread-safe date formatting helpers backed by immutable [DateTimeFormatter] instances.
+ */
 object DateFormatterUtils {
-    // dd MMM yyyy -> 01 Jan 2024
-    private val standardFormatter = object : ThreadLocal<SimpleDateFormat>() {
-        override fun initialValue(): SimpleDateFormat {
-            return SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-        }
-    }
+    private fun formatter(pattern: String): DateTimeFormatter =
+        DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
 
-    fun getStandardFormatter(): SimpleDateFormat {
-        val formatter = standardFormatter.get()!!
-        formatter.applyPattern("dd MMM yyyy")
-        return formatter
-    }
+    private fun formatMillis(dateMillis: Long, pattern: String): String =
+        formatter(pattern).format(Instant.ofEpochMilli(dateMillis).atZone(ZoneId.systemDefault()))
+
+    // dd MMM yyyy -> 01 Jan 2024
+    fun formatStandardDate(dateMillis: Long): String = formatMillis(dateMillis, "dd MMM yyyy")
+    fun formatStandardDate(date: Date): String = formatStandardDate(date.time)
 
     // EEE, dd MMM yyyy -> Mon, 01 Jan 2024
-    private val fullHumanReadableFormatter = object : ThreadLocal<SimpleDateFormat>() {
-        override fun initialValue(): SimpleDateFormat {
-            return SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
-        }
-    }
-
-    fun getFullHumanReadableFormatter(): SimpleDateFormat {
-        val formatter = fullHumanReadableFormatter.get()!!
-        formatter.applyPattern("EEE, dd MMM yyyy")
-        return formatter
-    }
+    fun formatFullDate(dateMillis: Long): String = formatMillis(dateMillis, "EEE, dd MMM yyyy")
+    fun formatFullDate(date: Date): String = formatFullDate(date.time)
 
     // yyyy-MM-dd -> 2024-01-01
-    private val isoFormatter = object : ThreadLocal<SimpleDateFormat>() {
-        override fun initialValue(): SimpleDateFormat {
-            return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        }
-    }
-
-    fun getIsoFormatter(): SimpleDateFormat {
-        val formatter = isoFormatter.get()!!
-        formatter.applyPattern("yyyy-MM-dd")
-        return formatter
-    }
+    fun formatIsoDate(dateMillis: Long): String = formatMillis(dateMillis, "yyyy-MM-dd")
+    fun formatIsoDate(date: Date): String = formatIsoDate(date.time)
 
     // EEE -> Mon
-    private val dayOfWeekFormatter = object : ThreadLocal<SimpleDateFormat>() {
-        override fun initialValue(): SimpleDateFormat {
-            return SimpleDateFormat("EEE", Locale.getDefault())
-        }
-    }
-
-    fun getDayOfWeekFormatter(): SimpleDateFormat {
-        val formatter = dayOfWeekFormatter.get()!!
-        formatter.applyPattern("EEE")
-        return formatter
-    }
+    fun formatDayOfWeek(dateMillis: Long): String = formatMillis(dateMillis, "EEE")
+    fun formatDayOfWeek(date: Date): String = formatDayOfWeek(date.time)
 
     // d MMM -> 1 Jan
-    private val dayMonthFormatter = object : ThreadLocal<SimpleDateFormat>() {
-        override fun initialValue(): SimpleDateFormat {
-            return SimpleDateFormat("d MMM", Locale.getDefault())
-        }
-    }
-
-    fun getDayMonthFormatter(): SimpleDateFormat {
-        val formatter = dayMonthFormatter.get()!!
-        formatter.applyPattern("d MMM")
-        return formatter
-    }
+    fun formatDayMonth(dateMillis: Long): String = formatMillis(dateMillis, "d MMM")
+    fun formatDayMonth(date: Date): String = formatDayMonth(date.time)
 
     // MMM yy -> Jan 24
-    private val monthYearFormatter = object : ThreadLocal<SimpleDateFormat>() {
-        override fun initialValue(): SimpleDateFormat {
-            return SimpleDateFormat("MMM yy", Locale.getDefault())
-        }
-    }
-
-    fun getMonthYearFormatter(): SimpleDateFormat {
-        val formatter = monthYearFormatter.get()!!
-        formatter.applyPattern("MMM yy")
-        return formatter
-    }
+    fun formatMonthYear(dateMillis: Long): String = formatMillis(dateMillis, "MMM yy")
+    fun formatMonthYear(date: Date): String = formatMonthYear(date.time)
 
     // yyyy -> 2024
-    private val yearFormatter = object : ThreadLocal<SimpleDateFormat>() {
-        override fun initialValue(): SimpleDateFormat {
-            return SimpleDateFormat("yyyy", Locale.getDefault())
-        }
-    }
+    fun formatYear(dateMillis: Long): String = formatMillis(dateMillis, "yyyy")
+    fun formatYear(date: Date): String = formatYear(date.time)
 
-    fun getYearFormatter(): SimpleDateFormat {
-        val formatter = yearFormatter.get()!!
-        formatter.applyPattern("yyyy")
-        return formatter
-    }
-
-    // Helper formatting methods
-    fun formatStandardDate(dateMillis: Long): String = getStandardFormatter().format(Date(dateMillis))
-    fun formatStandardDate(date: Date): String = getStandardFormatter().format(date)
-
-    fun formatFullDate(dateMillis: Long): String = getFullHumanReadableFormatter().format(Date(dateMillis))
-    fun formatFullDate(date: Date): String = getFullHumanReadableFormatter().format(date)
-
-    fun formatIsoDate(dateMillis: Long): String = getIsoFormatter().format(Date(dateMillis))
-    fun formatIsoDate(date: Date): String = getIsoFormatter().format(date)
-
-    fun formatDayOfWeek(dateMillis: Long): String = getDayOfWeekFormatter().format(Date(dateMillis))
-    fun formatDayOfWeek(date: Date): String = getDayOfWeekFormatter().format(date)
-
-    fun formatDayMonth(dateMillis: Long): String = getDayMonthFormatter().format(Date(dateMillis))
-    fun formatDayMonth(date: Date): String = getDayMonthFormatter().format(date)
-
-    fun formatMonthYear(dateMillis: Long): String = getMonthYearFormatter().format(Date(dateMillis))
-    fun formatMonthYear(date: Date): String = getMonthYearFormatter().format(date)
-
-    fun formatFullMonthYear(dateMillis: Long): String {
-        return java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
-            .format(java.time.Instant.ofEpochMilli(dateMillis).atZone(java.time.ZoneId.systemDefault()))
-    }
+    // MMMM yyyy -> January 2024
+    fun formatFullMonthYear(dateMillis: Long): String = formatMillis(dateMillis, "MMMM yyyy")
 }

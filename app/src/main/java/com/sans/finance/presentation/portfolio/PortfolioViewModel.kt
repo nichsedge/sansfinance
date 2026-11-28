@@ -146,55 +146,101 @@ class PortfolioViewModel @Inject constructor(
         }
     }
 
-    val state: StateFlow<PortfolioScreenState> = combine(
+    private data class PortfolioCoreInputs(
+        val dates: List<Long>,
+        val history: List<SnapshotTotal>,
+        val dbTargets: List<com.sans.finance.data.local.entity.PortfolioTargetEntity>,
+        val goals: List<com.sans.finance.domain.model.Goal>,
+        val dateIndex: Int
+    )
+
+    private data class PortfolioUiControls(
+        val importMsg: String?,
+        val privacyMode: Boolean,
+        val selectedTab: Int,
+        val cashInjectionDeposit: Double,
+        val chartMode: Int
+    )
+
+    private data class PortfolioAccountContext(
+        val accounts: List<com.sans.finance.data.local.entity.AccountEntity>,
+        val accountTypes: List<com.sans.finance.data.local.entity.AccountTypeEntity>,
+        val rates: List<com.sans.finance.data.local.entity.ExchangeRateEntity>,
+        val aliases: List<com.sans.finance.data.local.entity.AccountAliasEntity>,
+        val allExpenses: List<com.sans.finance.domain.model.Expense>
+    )
+
+    private data class PortfolioAnalyticsContext(
+        val xirrValue: Double?,
+        val aiState: PortfolioAiState,
+        val dividendSummary: com.sans.finance.domain.model.DividendYieldSummary,
+        val selectedBenchmark: com.sans.finance.domain.model.BenchmarkType
+    )
+
+    private val coreInputsFlow = combine(
         repository.getAllSnapshotDates(),
         repository.getTotalValueOverTime(),
         repository.getPortfolioTargets(),
         goalRepository.getAllGoals(),
-        _selectedDateIndex,
+        _selectedDateIndex
+    ) { dates, history, dbTargets, goals, dateIndex ->
+        PortfolioCoreInputs(dates, history, dbTargets, goals, dateIndex)
+    }
+
+    private val uiControlsFlow = combine(
         _importMessage,
         userPreferencesRepository.userPreferences.map { it.isPrivacyModeEnabled },
         _selectedTab,
         _cashInjectionAmount,
-        _chartMode,
-        _xirr,
-        _aiState,
+        _chartMode
+    ) { importMsg, privacyMode, selectedTab, cashInjectionDeposit, chartMode ->
+        PortfolioUiControls(importMsg, privacyMode, selectedTab, cashInjectionDeposit, chartMode)
+    }
+
+    private val accountContextFlow = combine(
         accountRepository.getAllAccounts(),
         accountTypeRepository.getAllAccountTypes(),
         currencyDao.getAllRates(),
         accountAliasDao.getAllAliases(),
-        expenseRepository.getExpensesBetween(0, Long.MAX_VALUE),
+        expenseRepository.getExpensesBetween(0, Long.MAX_VALUE)
+    ) { accounts, accountTypes, rates, aliases, allExpenses ->
+        PortfolioAccountContext(accounts, accountTypes, rates, aliases, allExpenses)
+    }
+
+    private val analyticsContextFlow = combine(
+        _xirr,
+        _aiState,
         getDividendYieldSummaryUseCase(),
         _selectedBenchmark
-    ) { args ->
-        @Suppress("UNCHECKED_CAST")
-        val dates = args[0] as List<Long>
-        @Suppress("UNCHECKED_CAST")
-        val history = args[1] as List<SnapshotTotal>
-        @Suppress("UNCHECKED_CAST")
-        val dbTargets = args[2] as List<com.sans.finance.data.local.entity.PortfolioTargetEntity>
-        @Suppress("UNCHECKED_CAST")
-        val goals = args[3] as List<com.sans.finance.domain.model.Goal>
-        val dateIndex = args[4] as Int
-        val importMsg = args[5] as String?
-        val privacyMode = args[6] as Boolean
-        val selectedTab = args[7] as Int
-        val cashInjectionDeposit = args[8] as Double
-        val chartMode = args[9] as Int
-        val xirrValue = args[10] as Double?
-        val aiState = args[11] as PortfolioAiState
-        @Suppress("UNCHECKED_CAST")
-        val accounts = args[12] as List<com.sans.finance.data.local.entity.AccountEntity>
-        @Suppress("UNCHECKED_CAST")
-        val accountTypes = args[13] as List<com.sans.finance.data.local.entity.AccountTypeEntity>
-        @Suppress("UNCHECKED_CAST")
-        val rates = args[14] as List<com.sans.finance.data.local.entity.ExchangeRateEntity>
-        @Suppress("UNCHECKED_CAST")
-        val aliases = args[15] as List<com.sans.finance.data.local.entity.AccountAliasEntity>
-        @Suppress("UNCHECKED_CAST")
-        val allExpenses = args[16] as List<com.sans.finance.domain.model.Expense>
-        val dividendSummary = args[17] as com.sans.finance.domain.model.DividendYieldSummary
-        val selectedBenchmark = args[18] as com.sans.finance.domain.model.BenchmarkType
+    ) { xirrValue, aiState, dividendSummary, selectedBenchmark ->
+        PortfolioAnalyticsContext(xirrValue, aiState, dividendSummary, selectedBenchmark)
+    }
+
+    val state: StateFlow<PortfolioScreenState> = combine(
+        coreInputsFlow,
+        uiControlsFlow,
+        accountContextFlow,
+        analyticsContextFlow
+    ) { core, ui, acct, analytics ->
+        val dates = core.dates
+        val history = core.history
+        val dbTargets = core.dbTargets
+        val goals = core.goals
+        val dateIndex = core.dateIndex
+        val importMsg = ui.importMsg
+        val privacyMode = ui.privacyMode
+        val selectedTab = ui.selectedTab
+        val cashInjectionDeposit = ui.cashInjectionDeposit
+        val chartMode = ui.chartMode
+        val xirrValue = analytics.xirrValue
+        val aiState = analytics.aiState
+        val accounts = acct.accounts
+        val accountTypes = acct.accountTypes
+        val rates = acct.rates
+        val aliases = acct.aliases
+        val allExpenses = acct.allExpenses
+        val dividendSummary = analytics.dividendSummary
+        val selectedBenchmark = analytics.selectedBenchmark
 
         val currency = localeManager.getCurrency()
 

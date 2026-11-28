@@ -19,7 +19,7 @@ class DateFormatterUtilsTest {
         assertEquals("2026-08-30", iso)
 
         val dayOfWeek = DateFormatterUtils.formatDayOfWeek(millis)
-        assertEquals(DateFormatterUtils.getDayOfWeekFormatter().format(cal.time), dayOfWeek)
+        assertEquals(DateFormatterUtils.formatDayOfWeek(cal.time), dayOfWeek)
 
         val standard = DateFormatterUtils.formatStandardDate(millis)
         assertTrue(standard.contains("2026"))
@@ -27,18 +27,14 @@ class DateFormatterUtilsTest {
 
         val full = DateFormatterUtils.formatFullDate(millis)
         assertTrue(full.contains("2026"))
-    }
 
-    @Test
-    fun testStandardFormatterPatternImmunity() {
-        val formatter = DateFormatterUtils.getStandardFormatter()
-        formatter.applyPattern("EEE")
+        val year = DateFormatterUtils.formatYear(millis)
+        assertEquals("2026", year)
 
-        val standardAfter = DateFormatterUtils.getStandardFormatter()
-        val cal = Calendar.getInstance().apply {
-            set(2026, Calendar.AUGUST, 30, 12, 0, 0)
-        }
-        val formatted = standardAfter.format(cal.time)
-        assertTrue(formatted.contains("2026"))
+        val monthYear = DateFormatterUtils.formatMonthYear(millis)
+        assertTrue(monthYear.contains("26"))
+
+        val dayMonth = DateFormatterUtils.formatDayMonth(millis)
+        assertTrue(dayMonth.contains("30"))
     }
 }

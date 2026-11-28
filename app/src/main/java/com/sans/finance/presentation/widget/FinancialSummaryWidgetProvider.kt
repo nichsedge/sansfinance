@@ -82,7 +82,7 @@ class FinancialSummaryWidgetProvider : AppWidgetProvider() {
                     else -> context.getString(R.string.widget_no_transactions_today)
                 }
 
-                val dateStr = DateFormatterUtils.getDayMonthFormatter().format(Date())
+                val dateStr = DateFormatterUtils.formatDayMonth(System.currentTimeMillis())
 
                 // --- Build RemoteViews ---
                 for (widgetId in appWidgetIds) {

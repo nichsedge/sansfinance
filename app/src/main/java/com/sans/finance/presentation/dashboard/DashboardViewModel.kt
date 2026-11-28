@@ -72,27 +72,32 @@ class DashboardViewModel @Inject constructor(
     private val prefsFlow = userPreferencesRepository.userPreferences
     private val trendFlow = getNetWorthTrendUseCase(30)
 
-    val state: StateFlow<DashboardState> = combine(
+    private data class DashboardBaseInputs(
+        val summary: DashboardSummary,
+        val prefs: UserPreferences,
+        val trend: List<Long>,
+        val portfolioHistory: List<SnapshotTotal>
+    )
+
+    private val baseInputsFlow = combine(
         summaryFlow,
         prefsFlow,
         trendFlow,
-        portfolioRepository.getTotalValueOverTime(),
+        portfolioRepository.getTotalValueOverTime()
+    ) { summary, prefs, trend, portfolioHistory ->
+        DashboardBaseInputs(summary, prefs, trend, portfolioHistory)
+    }
+
+    val state: StateFlow<DashboardState> = combine(
+        baseInputsFlow,
         expenseRepository.getExpensesBetween(0, Long.MAX_VALUE),
         expenseRepository.getRecurringExpenses(),
         goalRepository.getAllGoals()
-    ) { args ->
-        val summary = args[0] as DashboardSummary
-        val prefs = args[1] as UserPreferences
-        @Suppress("UNCHECKED_CAST")
-        val trend = args[2] as List<Long>
-        @Suppress("UNCHECKED_CAST")
-        val portfolioHistory = args[3] as List<SnapshotTotal>
-        @Suppress("UNCHECKED_CAST")
-        val allExpenses = args[4] as List<Expense>
-        @Suppress("UNCHECKED_CAST")
-        val recurring = args[5] as List<Expense>
-        @Suppress("UNCHECKED_CAST")
-        val goals = args[6] as List<Goal>
+    ) { base, allExpenses, recurring, goals ->
+        val summary = base.summary
+        val prefs = base.prefs
+        val trend = base.trend
+        val portfolioHistory = base.portfolioHistory
 
         val now = System.currentTimeMillis()
         val suggestions = generateAiSuggestions(summary, recurring, goals)
