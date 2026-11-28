@@ -1,5 +1,6 @@
 package com.sans.finance.presentation.add_transaction
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,9 +21,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.Add
@@ -455,6 +458,7 @@ fun AddTransactionScreen(
                                     value = selectedAccount?.let { "${it.name} (${it.currency})" } ?: "Source",
                                     onValueChange = {},
                                     readOnly = true,
+                                    singleLine = true,
                                     label = { Text("From", fontSize = 12.sp) },
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded) },
                                     modifier = Modifier
@@ -468,31 +472,14 @@ fun AddTransactionScreen(
                                     expanded = accountExpanded,
                                     onDismissRequest = { accountExpanded = false }
                                 ) {
-                                    accounts.forEach { account ->
-                                        val parentName = account.parentAccountId?.let { pid -> accounts.find { it.id == pid }?.name }
-                                        val displayName = if (parentName != null) "$parentName • ${account.name}" else account.name
-                                        DropdownMenuItem(
-                                            text = {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Text(displayName)
-                                                    Text(
-                                                        account.currency,
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.primary,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                }
-                                            },
-                                            onClick = {
-                                                viewModel.onAccountSelected(account)
-                                                accountExpanded = false
-                                            }
-                                        )
-                                    }
+                                    AccountDropdownItems(
+                                        accounts = accounts,
+                                        accentColor = MaterialTheme.colorScheme.primary,
+                                        onSelect = { account ->
+                                            viewModel.onAccountSelected(account)
+                                            accountExpanded = false
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -526,6 +513,7 @@ fun AddTransactionScreen(
                                     value = selectedToAccount?.let { "${it.name} (${it.currency})" } ?: "Destination",
                                     onValueChange = {},
                                     readOnly = true,
+                                    singleLine = true,
                                     label = { Text("To", fontSize = 12.sp) },
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = toAccountExpanded) },
                                     modifier = Modifier
@@ -539,31 +527,14 @@ fun AddTransactionScreen(
                                     expanded = toAccountExpanded,
                                     onDismissRequest = { toAccountExpanded = false }
                                 ) {
-                                    accounts.forEach { account ->
-                                        val parentName = account.parentAccountId?.let { pid -> accounts.find { it.id == pid }?.name }
-                                        val displayName = if (parentName != null) "$parentName • ${account.name}" else account.name
-                                        DropdownMenuItem(
-                                            text = {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Text(displayName)
-                                                    Text(
-                                                        account.currency,
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.secondary,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                }
-                                            },
-                                            onClick = {
-                                                viewModel.toAccountId = account.id
-                                                toAccountExpanded = false
-                                            }
-                                        )
-                                    }
+                                    AccountDropdownItems(
+                                        accounts = accounts,
+                                        accentColor = MaterialTheme.colorScheme.secondary,
+                                        onSelect = { account ->
+                                            viewModel.toAccountId = account.id
+                                            toAccountExpanded = false
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -609,6 +580,7 @@ fun AddTransactionScreen(
                         value = selectedAccount?.let { "${it.name} (${it.currency})" } ?: "Unknown Account",
                         onValueChange = {},
                         readOnly = true,
+                        singleLine = true,
                         label = { Text("Account", fontSize = 12.sp) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded) },
                         modifier = Modifier
@@ -622,31 +594,14 @@ fun AddTransactionScreen(
                         expanded = accountExpanded,
                         onDismissRequest = { accountExpanded = false }
                     ) {
-                        accounts.forEach { account ->
-                            val parentName = account.parentAccountId?.let { pid -> accounts.find { it.id == pid }?.name }
-                            val displayName = if (parentName != null) "$parentName • ${account.name}" else account.name
-                            DropdownMenuItem(
-                                text = {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(displayName)
-                                        Text(
-                                            account.currency,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    viewModel.onAccountSelected(account)
-                                    accountExpanded = false
-                                }
-                            )
-                        }
+                        AccountDropdownItems(
+                            accounts = accounts,
+                            accentColor = MaterialTheme.colorScheme.primary,
+                            onSelect = { account ->
+                                viewModel.onAccountSelected(account)
+                                accountExpanded = false
+                            }
+                        )
                     }
                 }
             }
@@ -1238,4 +1193,94 @@ fun AddTransactionScreen(
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
+}
+
+@Composable
+private fun AccountDropdownItems(
+    accounts: List<com.sans.finance.data.local.entity.AccountEntity>,
+    accentColor: Color,
+    onSelect: (com.sans.finance.data.local.entity.AccountEntity) -> Unit
+) {
+    val accountIds = remember(accounts) { accounts.map { it.id }.toSet() }
+    val childrenByParent = remember(accounts, accountIds) {
+        accounts.filter { it.parentAccountId != null && it.parentAccountId in accountIds }
+            .groupBy { it.parentAccountId!! }
+    }
+    val topLevel = remember(accounts, accountIds) {
+        accounts.filter { it.parentAccountId == null || it.parentAccountId !in accountIds }
+    }
+
+    topLevel.forEach { parent ->
+        val children = childrenByParent[parent.id].orEmpty()
+        AccountDropdownItemRow(
+            account = parent,
+            isSubaccount = false,
+            accentColor = accentColor,
+            onClick = { onSelect(parent) }
+        )
+        children.forEach { child ->
+            AccountDropdownItemRow(
+                account = child,
+                isSubaccount = true,
+                accentColor = accentColor,
+                onClick = { onSelect(child) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AccountDropdownItemRow(
+    account: com.sans.finance.data.local.entity.AccountEntity,
+    isSubaccount: Boolean,
+    accentColor: Color,
+    onClick: () -> Unit
+) {
+    DropdownMenuItem(
+        text = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = if (isSubaccount) 14.dp else 0.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (isSubaccount) {
+                        Box(
+                            modifier = Modifier
+                                .width(2.dp)
+                                .height(16.dp)
+                                .background(accentColor.copy(alpha = 0.5f), CircleShape)
+                        )
+                    }
+                    Text(
+                        text = account.name,
+                        style = if (isSubaccount) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isSubaccount) FontWeight.Medium else FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = accentColor.copy(alpha = if (isSubaccount) 0.14f else 0.1f)
+                ) {
+                    Text(
+                        text = account.currency,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = accentColor,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+        },
+        onClick = onClick
+    )
 }
